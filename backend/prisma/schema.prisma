@@ -1,0 +1,113 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  inn       String
+  category  String?
+  status    String?
+  director  String?
+  phone     String?
+  address   String?
+  account   String?
+  mfo       String?
+  seller    String?
+  createdAt DateTime @default(now())
+  contracts Contract[]
+  sales     Sale[]
+  payments  Payment[]
+  interactions Interaction[]
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  article   String
+  density   Float
+  length    Float
+  width     Float
+  thickness Float
+  sqmPerPce Float
+  cbmPerPce Float
+  kgPerPce  Float
+  priceTon  Float    @default(0)
+  priceCbm  Float    @default(0)
+  priceSqm  Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Contract {
+  id        String   @id @default(uuid())
+  number    String
+  date      DateTime
+  totalValue Float
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  sales     Sale[]
+  payments  Payment[]
+  createdAt DateTime @default(now())
+}
+
+model Sale {
+  id             String   @id @default(uuid())
+  date           DateTime
+  nakladnoy      String
+  sellerName     String
+  transportNum   String?
+  totalAmount    Float
+  clientId       String
+  contractId     String
+  client         Client   @relation(fields: [clientId], references: [id])
+  contract       Contract @relation(fields: [contractId], references: [id])
+  products       SaleProduct[]
+  createdAt      DateTime @default(now())
+}
+
+model SaleProduct {
+  id           String  @id @default(uuid())
+  saleId       String
+  productId    String
+  packType     Int
+  totalPieces  Int
+  totalCbm     Float
+  totalKg      Float
+  totalSqm     Float
+  priceCbm     Float
+  rowAmount    Float
+  sale         Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  date       DateTime
+  amount     Float
+  note       String?
+  isFromExcel Boolean @default(false)
+  clientId   String
+  contractId String
+  client     Client   @relation(fields: [clientId], references: [id])
+  contract   Contract @relation(fields: [contractId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model Interaction {
+  id        String   @id @default(uuid())
+  date      DateTime
+  type      String
+  note      String
+  nextDate  DateTime?
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id        String @id @default("global")
+  data      String
+}
