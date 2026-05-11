@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Box, ShoppingCart, CreditCard,
-  Settings, Search, Bell, TrendingUp, TrendingDown,
-  ArrowUpRight, MoreHorizontal, BarChart2
+  Settings, Bell, TrendingUp, TrendingDown,
+  ArrowUpRight, BarChart2, MessageSquare
 } from 'lucide-react';
-import axios from 'axios';
+import { Toaster } from 'react-hot-toast';
+import api, { API } from './lib/api';
 
-import Clients  from './pages/Clients';
-import Products from './pages/Products';
-import Sales    from './pages/Sales';
-import Payments from './pages/Payments';
-import SettingsPage from './pages/Settings';
-
-const API = 'http://localhost:3001';
+import Clients          from './pages/Clients';
+import Products         from './pages/Products';
+import Sales            from './pages/Sales';
+import Payments         from './pages/Payments';
+import SettingsPage     from './pages/Settings';
+import InteractionsPage from './pages/Interactions';
 
 function fmt(n) {
   if (!n && n !== 0) return '0';
@@ -24,12 +24,13 @@ function fmt(n) {
 function Sidebar() {
   const location = useLocation();
   const navItems = [
-    { name: 'Bosh sahifa',  path: '/',          icon: LayoutDashboard },
-    { name: 'Mijozlar',     path: '/clients',   icon: Users },
-    { name: 'Mahsulotlar',  path: '/products',  icon: Box },
-    { name: 'Savdolar',     path: '/sales',     icon: ShoppingCart },
-    { name: 'Tushumlar',    path: '/payments',  icon: CreditCard },
-    { name: 'Sozlamalar',   path: '/settings',  icon: Settings },
+    { name: 'Bosh sahifa',  path: '/',               icon: LayoutDashboard },
+    { name: 'Mijozlar',     path: '/clients',        icon: Users },
+    { name: 'Mahsulotlar',  path: '/products',       icon: Box },
+    { name: 'Savdolar',     path: '/sales',          icon: ShoppingCart },
+    { name: 'Tushumlar',    path: '/payments',       icon: CreditCard },
+    { name: 'Muloqotlar',   path: '/interactions',   icon: MessageSquare },
+    { name: 'Sozlamalar',   path: '/settings',       icon: Settings },
   ];
 
   return (
@@ -71,12 +72,13 @@ function Sidebar() {
 function TopHeader() {
   const location = useLocation();
   const titles = {
-    '/':          'Bosh sahifa',
-    '/clients':   'Mijozlar (CRM)',
-    '/products':  'Mahsulotlar bazasi',
-    '/sales':     'Savdolar (Yuk xatlari)',
-    '/payments':  'Tushumlar',
-    '/settings':  'Sozlamalar',
+    '/':             'Bosh sahifa',
+    '/clients':      'Mijozlar (CRM)',
+    '/products':     'Mahsulotlar bazasi',
+    '/sales':        'Savdolar (Yuk xatlari)',
+    '/payments':     'Tushumlar',
+    '/interactions': 'Muloqotlar (CRM tarix)',
+    '/settings':     'Sozlamalar',
   };
 
   return (
@@ -128,9 +130,35 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`${API}/api/dashboard`)
-      .then(r => { setStats(r.data); setLoading(false); })
-      .catch(() => setLoading(false));
+    let timer;
+
+    const fetchDashboard = () => {
+      api.get('/api/dashboard')
+        .then(r => { setStats(r.data); setLoading(false); })
+        .catch(() => setLoading(false));
+    };
+
+    const startPolling = () => {
+      timer = setInterval(fetchDashboard, 30_000);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        clearInterval(timer);
+      } else {
+        fetchDashboard();
+        startPolling();
+      }
+    };
+
+    fetchDashboard();
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const cards = stats ? [
@@ -179,7 +207,7 @@ function Dashboard() {
                   <div className="pl-3">
                     <div className="flex items-start justify-between mb-2">
                       <p className="text-sm font-medium text-zinc-500">{c.title}</p>
-                      <div className={`p-1.5 rounded-md bg-zinc-50`}>
+                      <div className="p-1.5 rounded-md bg-zinc-50">
                         <Icon size={15} className={c.color} />
                       </div>
                     </div>
@@ -219,7 +247,7 @@ function Dashboard() {
                 </div>
               ))
             ) : stats?.debtors?.length === 0 ? (
-              <div className="px-5 py-8 text-center text-zinc-400 text-sm">Qarzdorlar yo'q 🎉</div>
+              <div className="px-5 py-8 text-center text-zinc-400 text-sm">Qarzdorlar yo'q</div>
             ) : (
               stats?.debtors?.map((d, i) => (
                 <div key={d.id} className="px-5 py-3 flex items-center justify-between hover:bg-zinc-50 transition">
@@ -292,18 +320,20 @@ function Dashboard() {
 export default function App() {
   return (
     <Router>
+      <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       <div className="flex h-screen bg-[#fafafa] overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopHeader />
           <div className="flex-1 overflow-y-auto pb-10">
             <Routes>
-              <Route path="/"          element={<Dashboard />} />
-              <Route path="/clients"   element={<Clients />} />
-              <Route path="/products"  element={<Products />} />
-              <Route path="/sales"     element={<Sales />} />
-              <Route path="/payments"  element={<Payments />} />
-              <Route path="/settings"  element={<SettingsPage />} />
+              <Route path="/"              element={<Dashboard />} />
+              <Route path="/clients"       element={<Clients />} />
+              <Route path="/products"      element={<Products />} />
+              <Route path="/sales"         element={<Sales />} />
+              <Route path="/payments"      element={<Payments />} />
+              <Route path="/interactions"  element={<InteractionsPage />} />
+              <Route path="/settings"      element={<SettingsPage />} />
             </Routes>
           </div>
         </div>

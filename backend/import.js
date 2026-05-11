@@ -1,42 +1,48 @@
+require('dotenv').config();
 const fs = require('fs');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { randomUUID } = require('crypto');
+const prisma = require('./prisma');
+
+const DRY_RUN = process.argv.includes('--dry-run');
 
 async function migrate() {
+  if (DRY_RUN) console.log('[DRY-RUN] Haqiqiy yozish bo\'lmaydi.');
   console.log('Migratsiya boshlanmoqda...');
-  
+
   if (!fs.existsSync('./erp_backup.json')) {
     console.error('XATOLIK: erp_backup.json fayli topilmadi!');
     return;
   }
 
-  const raw = fs.readFileSync('./erp_backup.json', 'utf8');
-  const data = JSON.parse(raw);
+  const data = JSON.parse(fs.readFileSync('./erp_backup.json', 'utf8'));
 
   try {
-    // Mijozlar
-    if (data.clients && data.clients.length > 0) {
-      console.log(`${data.clients.length} ta mijoz ko'chirilmoqda...`);
+    if (data.clients?.length) {
+      console.log(`${data.clients.length} ta mijoz...`);
       for (const c of data.clients) {
-        await prisma.client.create({
-          data: {
+        if (DRY_RUN) { console.log('[DRY-RUN] client:', c.name); continue; }
+        await prisma.client.upsert({
+          where: { id: c.id },
+          update: { name: c.name, status: c.status || 'Yangi', category: c.category || '' },
+          create: {
             id: c.id,
             name: c.name,
-            inn: c.inn || '',
+            inn: c.inn || c.id,
             status: c.status || 'Yangi',
             category: c.category || '',
-            createdAt: new Date(c.created_at || Date.now())
-          }
+            createdAt: new Date(c.created_at || Date.now()),
+          },
         });
       }
     }
 
-    // Maxsulotlar
-    if (data.products && data.products.length > 0) {
-      console.log(`${data.products.length} ta maxsulot ko'chirilmoqda...`);
+    if (data.products?.length) {
+      console.log(`${data.products.length} ta mahsulot...`);
       for (const p of data.products) {
-        await prisma.product.create({
-          data: {
+        await prisma.product.upsert({
+          where: { id: p.id },
+          update: {},
+          create: {
             id: p.id,
             article: p.article,
             density: parseFloat(p.density || 0),
@@ -44,49 +50,56 @@ async function migrate() {
             width: parseFloat(p.width || 0),
             thickness: parseFloat(p.thickness || 0),
             priceCbm: parseFloat(p.price || p.priceCbm || 0),
-            sqmPerPce: 0, cbmPerPce: 0, kgPerPce: 0
-          }
+            sqmPerPce: 0,
+            cbmPerPce: 0,
+            kgPerPce: 0,
+          },
         });
       }
     }
 
-    // Shartnomalar
-    if (data.contracts && data.contracts.length > 0) {
-      console.log(`${data.contracts.length} ta shartnoma ko'chirilmoqda...`);
+    if (data.contracts?.length) {
+      console.log(`${data.contracts.length} ta shartnoma...`);
       for (const c of data.contracts) {
-        await prisma.contract.create({
-          data: {
+        await prisma.contract.upsert({
+          where: { id: c.id },
+          update: {},
+          create: {
             id: c.id,
             number: c.number,
             date: new Date(c.date || Date.now()),
             totalValue: parseFloat(c.totalValue || 0),
-            clientId: c.clientId
-          }
+            clientId: c.clientId,
+          },
         });
       }
     }
 
-    // Savdolar
-    if (data.sales && data.sales.length > 0) {
-      console.log(`${data.sales.length} ta savdo ko'chirilmoqda...`);
+    if (data.sales?.length) {
+      console.log(`${data.sales.length} ta savdo...`);
+      const fallbackContractId = data.contracts?.[0]?.id || '';
       for (const s of data.sales) {
-        await prisma.sale.create({
-          data: {
+        await prisma.sale.upsert({
+          where: { id: s.id },
+          update: {},
+          create: {
             id: s.id,
             date: new Date(s.date || Date.now()),
             nakladnoy: s.nakladnoy || '',
             sellerName: s.sellerName || 'Sotuvchi',
             totalAmount: parseFloat(s.totalAmount || 0),
             clientId: s.clientId,
-            contractId: s.contractId || (data.contracts[0] ? data.contracts[0].id : '') 
-          }
+            contractId: s.contractId || fallbackContractId,
+          },
         });
-        // Mahsulotlari
-        if (s.products) {
+        if (s.products?.length) {
           for (const sp of s.products) {
-            await prisma.saleProduct.create({
-              data: {
-                id: sp.id || require('crypto').randomUUID(),
+            const spId = sp.id || randomUUID();
+            await prisma.saleProduct.upsert({
+              where: { id: spId },
+              update: {},
+              create: {
+                id: spId,
                 saleId: s.id,
                 productId: sp.productId,
                 packType: parseInt(sp.packType || 3),
@@ -95,34 +108,39 @@ async function migrate() {
                 totalKg: parseFloat(sp.totalKg || 0),
                 totalSqm: parseFloat(sp.totalSqm || 0),
                 priceCbm: parseFloat(sp.price || 0),
-                rowAmount: parseFloat(sp.rowAmount || 0)
-              }
+                rowAmount: parseFloat(sp.rowAmount || 0),
+              },
             });
           }
         }
       }
     }
 
-    // Tushumlar
-    if (data.payments && data.payments.length > 0) {
-      console.log(`${data.payments.length} ta tushum ko'chirilmoqda...`);
+    if (data.payments?.length) {
+      console.log(`${data.payments.length} ta tushum...`);
       for (const p of data.payments) {
-        await prisma.payment.create({
-          data: {
+        await prisma.payment.upsert({
+          where: { id: p.id },
+          update: {
+            amount: parseFloat(p.amount || 0),
+            note: p.note || '',
+          },
+          create: {
             id: p.id,
             date: new Date(p.date || Date.now()),
             amount: parseFloat(p.amount || 0),
             note: p.note || '',
+            isFromExcel: true,
             clientId: p.clientId,
-            contractId: p.contractId || ''
-          }
+            contractId: p.contractId || null,
+          },
         });
       }
     }
 
-    console.log('Muvaffaqiyatli! Barcha ma`lumotlar yangi bazaga o`tkazildi.');
+    console.log('Muvaffaqiyatli! Barcha ma\'lumotlar ko\'chirildi.');
   } catch (err) {
-    console.error('Xatolik yuz berdi:', err);
+    console.error('Xatolik:', err.message);
   } finally {
     await prisma.$disconnect();
   }

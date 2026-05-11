@@ -1,6 +1,6 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -10,7 +10,7 @@ generator client {
 model Client {
   id        String   @id @default(uuid())
   name      String
-  inn       String
+  inn       String   @unique
   category  String?
   status    String?
   director  String?
@@ -24,11 +24,14 @@ model Client {
   sales     Sale[]
   payments  Payment[]
   interactions Interaction[]
+
+  @@index([seller])
+  @@index([createdAt])
 }
 
 model Product {
   id        String   @id @default(uuid())
-  article   String
+  article   String   @unique
   density   Float
   length    Float
   width     Float
@@ -40,6 +43,7 @@ model Product {
   priceCbm  Float    @default(0)
   priceSqm  Float    @default(0)
   createdAt DateTime @default(now())
+  saleProducts SaleProduct[]
 }
 
 model Contract {
@@ -52,6 +56,9 @@ model Contract {
   sales     Sale[]
   payments  Payment[]
   createdAt DateTime @default(now())
+
+  @@unique([number, clientId])
+  @@index([clientId])
 }
 
 model Sale {
@@ -67,6 +74,9 @@ model Sale {
   contract       Contract @relation(fields: [contractId], references: [id])
   products       SaleProduct[]
   createdAt      DateTime @default(now())
+
+  @@index([clientId, date])
+  @@index([contractId])
 }
 
 model SaleProduct {
@@ -81,19 +91,26 @@ model SaleProduct {
   priceCbm     Float
   rowAmount    Float
   sale         Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product      Product @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@index([productId])
 }
 
 model Payment {
-  id         String   @id @default(uuid())
-  date       DateTime
-  amount     Float
-  note       String?
-  isFromExcel Boolean @default(false)
-  clientId   String
-  contractId String
-  client     Client   @relation(fields: [clientId], references: [id])
-  contract   Contract @relation(fields: [contractId], references: [id])
-  createdAt  DateTime @default(now())
+  id          String    @id @default(uuid())
+  date        DateTime
+  amount      Float
+  note        String?
+  isFromExcel Boolean   @default(false)
+  clientId    String
+  contractId  String?
+  client      Client    @relation(fields: [clientId], references: [id])
+  contract    Contract? @relation(fields: [contractId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([clientId, date])
+  @@index([contractId])
 }
 
 model Interaction {
@@ -105,9 +122,13 @@ model Interaction {
   clientId  String
   client    Client   @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([clientId])
+  @@index([nextDate])
 }
 
 model Setting {
-  id        String @id @default("global")
+  id        String   @id @default("global")
   data      String
+  updatedAt DateTime @updatedAt
 }

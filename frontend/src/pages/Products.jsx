@@ -1,33 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
-import { Plus, X, Trash2, Edit2, RefreshCw, Calculator } from 'lucide-react';
+import Pagination from '../components/Pagination';
+import { Plus, X, Trash2, Edit2, RefreshCw, Calculator, Search } from 'lucide-react';
 
-const API = 'http://localhost:3001';
 const fmtN = n => (!n && n !== 0) ? '—' : Math.round(n).toLocaleString('ru-RU');
 const fmtD = (n, d = 6) => (!n && n !== 0) ? '—' : parseFloat(n).toFixed(d).replace(/\.?0+$/, '');
 
-// Auto-artikul generatsiya
 const makeArticle = (density, length, width, thickness) => {
   if (!density || !length || !width || !thickness) return '';
   return `${density}' ${length}x${width}x${thickness}`;
 };
 
-// Birliklarni hisoblash
 const calcUnits = (length, width, thickness, density) => {
   const l = parseFloat(length) || 0, w = parseFloat(width) || 0;
   const t = parseFloat(thickness) || 0, d = parseFloat(density) || 0;
   const sqm = (l * w) / 1_000_000;
   const cbm = (l * w * t) / 1_000_000_000;
-  const kg = cbm * d;
+  const kg  = cbm * d;
   return { sqmPerPce: sqm, cbmPerPce: cbm, kgPerPce: kg };
 };
 
-// Narxlarni hisoblash (bir mahsulot uchun)
 const calcPrices = (mode, value, product) => {
-  const val = parseFloat(value) || 0;
-  const density = parseFloat(product.density) || 1;
-  const thickness = parseFloat(product.thickness) || 1;
+  const val      = parseFloat(value) || 0;
+  const density  = parseFloat(product.density)   || 1;
+  const thickness= parseFloat(product.thickness) || 1;
   let priceCbm = 0, priceTon = 0, priceSqm = 0;
   if (mode === 'cbm') {
     priceCbm = val;
@@ -48,38 +46,46 @@ const calcPrices = (mode, value, product) => {
 const EMPTY_FORM = { density: '', length: '', width: '', thickness: '' };
 
 export default function Products() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [modal, setModal]       = useState(null); // null | 'add' | 'edit'
-  const [editId, setEditId]     = useState(null);
-  const [form, setForm]         = useState(EMPTY_FORM);
-  const [saving, setSaving]     = useState(false);
-  const [delId, setDelId]       = useState(null);
-  const [applying, setApplying] = useState(false);
+  const [products,  setProducts]  = useState([]);
+  const [total,     setTotal]     = useState(0);
+  const [page,      setPage]      = useState(1);
+  const LIMIT = 50;
 
-  // Global narx paneli
-  const [priceMode, setPriceMode]   = useState('cbm'); // 'ton' | 'cbm' | 'sqm'
+  const [loading,   setLoading]   = useState(true);
+  const [search,    setSearch]    = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [modal,     setModal]     = useState(null);
+  const [editId,    setEditId]    = useState(null);
+  const [form,      setForm]      = useState(EMPTY_FORM);
+  const [saving,    setSaving]    = useState(false);
+  const [delId,     setDelId]     = useState(null);
+  const [applying,  setApplying]  = useState(false);
+
+  const [priceMode,  setPriceMode]  = useState('cbm');
   const [priceValue, setPriceValue] = useState('');
 
-  // Forma uchun computed values
-  const units = calcUnits(form.length, form.width, form.thickness, form.density);
+  const units   = calcUnits(form.length, form.width, form.thickness, form.density);
   const article = makeArticle(form.density, form.length, form.width, form.thickness);
+
+  // 300ms debounce
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const fetchProducts = useCallback(() => {
     setLoading(true);
-    axios.get(`${API}/api/products`)
-      .then(r => { setProducts(r.data); setLoading(false); })
+    api.get('/api/products', { params: { page, limit: LIMIT, search: debouncedSearch } })
+      .then(r => { setProducts(r.data.data); setTotal(r.data.total); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  }, [page, debouncedSearch]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Narx paneli preview (birinchi mahsulot uchun)
   const previewPrices = products.length > 0 && priceValue
     ? calcPrices(priceMode, priceValue, products[0])
     : null;
 
-  // Barcha mahsulotlarga narx qo'llash
   const applyPrices = async () => {
     if (!priceValue || products.length === 0) return;
     setApplying(true);
@@ -88,11 +94,10 @@ export default function Products() {
         id: p.id,
         ...calcPrices(priceMode, priceValue, p),
       }));
-      const updated = await axios.put(`${API}/api/products/bulk-price`, { updates });
-      setProducts(updated.data);
-    } catch (err) {
-      alert('Xatolik: ' + (err.response?.data?.error || err.message));
-    } finally {
+      await api.put('/api/products/bulk-price', { updates });
+      toast.success('Narxlar yangilandi');
+      fetchProducts();
+    } catch { /* interceptor shows toast */ } finally {
       setApplying(false);
     }
   };
@@ -107,13 +112,13 @@ export default function Products() {
 
   const handleSave = async e => {
     e.preventDefault();
-    if (!article) return alert('O\'lchamlarni to\'liq kiriting!');
+    if (!article) { toast.error('O\'lchamlarni to\'liq kiriting!'); return; }
     setSaving(true);
     const payload = {
       article,
-      density: parseFloat(form.density),
-      length: parseFloat(form.length),
-      width: parseFloat(form.width),
+      density:   parseFloat(form.density),
+      length:    parseFloat(form.length),
+      width:     parseFloat(form.width),
       thickness: parseFloat(form.thickness),
       ...units,
       priceCbm: editId ? (products.find(p => p.id === editId)?.priceCbm || 0) : 0,
@@ -121,23 +126,23 @@ export default function Products() {
       priceSqm: editId ? (products.find(p => p.id === editId)?.priceSqm || 0) : 0,
     };
     try {
-      if (modal === 'add') await axios.post(`${API}/api/products`, payload);
-      else await axios.put(`${API}/api/products/${editId}`, payload);
+      if (modal === 'add') await api.post('/api/products', payload);
+      else await api.put(`/api/products/${editId}`, payload);
+      toast.success(modal === 'add' ? 'Mahsulot qo\'shildi' : 'Mahsulot yangilandi');
       fetchProducts();
       closeModal();
-    } catch (err) {
-      alert('Xatolik: ' + (err.response?.data?.error || err.message));
-    } finally {
+    } catch { /* interceptor shows toast */ } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`${API}/api/products/${delId}`);
+      await api.delete(`/api/products/${delId}`);
       setDelId(null);
       fetchProducts();
-    } catch { alert('O\'chirib bo\'lmadi'); }
+      toast.success('O\'chirildi');
+    } catch { /* interceptor shows toast */ }
   };
 
   useModalKeys(!!modal, handleSave, closeModal);
@@ -152,11 +157,10 @@ export default function Products() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-zinc-900">Mahsulotlar bazasi</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{products.length} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
+          <p className="text-sm text-zinc-500 mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
         </div>
         <button onClick={openAdd} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
           <Plus size={16}/> Yangi Mahsulot
@@ -176,25 +180,19 @@ export default function Products() {
             {modeBtn('sqm', '1 m²')}
           </div>
           <div className="flex items-center gap-2 flex-1 min-w-48">
-            <input
-              type="number" min="0" value={priceValue}
+            <input type="number" min="0" value={priceValue}
               onChange={e => setPriceValue(e.target.value)}
               placeholder="Narxni kiriting (UZS)"
-              className="flex-1 px-3 py-2 border border-zinc-300 bg-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+              className="flex-1 px-3 py-2 border border-zinc-300 bg-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none"/>
             <span className="text-sm text-zinc-500 shrink-0">UZS</span>
           </div>
-          <button
-            onClick={applyPrices}
+          <button onClick={applyPrices}
             disabled={applying || !priceValue || products.length === 0}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shrink-0"
-          >
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shrink-0">
             <RefreshCw size={14} className={applying ? 'animate-spin' : ''}/>
-            {applying ? 'Yangilanmoqda...' : `Barcha ${products.length} ta mahsulotga qo'llash`}
+            {applying ? 'Yangilanmoqda...' : `Ko'rinayotgan ${products.length} ta mahsulotga qo'llash`}
           </button>
         </div>
-
-        {/* Preview */}
         {previewPrices && (
           <div className="mt-3 pt-3 border-t border-blue-200 flex gap-6 text-xs text-zinc-600">
             <span className="text-zinc-400">Birinchi mahsulot uchun preview:</span>
@@ -206,8 +204,16 @@ export default function Products() {
         )}
       </div>
 
-      {/* Table */}
       <div className="mini-card p-0">
+        <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4"/>
+            <input type="text" placeholder="Artikul bo'yicha qidirish..." value={search} onChange={e => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"/>
+          </div>
+          {search && <span className="text-xs text-zinc-500">{total} natija</span>}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -232,7 +238,9 @@ export default function Products() {
                   ))}</tr>
                 ))
               ) : products.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-zinc-400">Hozircha mahsulotlar yo'q</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-zinc-400">
+                  {search ? 'Topilmadi' : 'Hozircha mahsulotlar yo\'q'}
+                </td></tr>
               ) : products.map(p => (
                 <tr key={p.id} className="hover:bg-zinc-50 transition-colors group">
                   <td className="px-4 py-3 font-semibold text-zinc-900 font-mono text-xs">{p.article}</td>
@@ -255,9 +263,9 @@ export default function Products() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={LIMIT} onPage={setPage} />
       </div>
 
-      {/* Add / Edit Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -266,7 +274,6 @@ export default function Products() {
               <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded hover:bg-zinc-100"><X size={20}/></button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-5">
-              {/* Artikul preview */}
               <div className="bg-zinc-900 rounded-lg px-4 py-3 flex items-center justify-between">
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Artikul (auto)</span>
                 <span className="text-white font-mono font-bold text-lg">{article || '—'}</span>
@@ -304,7 +311,6 @@ export default function Products() {
                 </div>
               </div>
 
-              {/* Auto-hisoblangan qiymatlar */}
               {article && (
                 <div className="grid grid-cols-3 gap-3 bg-zinc-50 border border-zinc-200 rounded-lg p-4">
                   <div className="text-center">
@@ -337,7 +343,6 @@ export default function Products() {
         </div>
       )}
 
-      {/* Delete Confirm */}
       {delId && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">

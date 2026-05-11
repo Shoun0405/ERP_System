@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useModalKeys } from '../hooks/useModalKeys';
-import axios from 'axios';
-import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
+import * as XLSX from 'xlsx';
+import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
 
-const API = 'http://localhost:3001';
 const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', seller:'' };
 const SC = { 'Faol':'bg-emerald-50 text-emerald-700 border-emerald-200', "Muddati o'tgan":'bg-red-50 text-red-700 border-red-200', 'Yangi':'bg-blue-50 text-blue-700 border-blue-200', 'Kutilmoqda':'bg-amber-50 text-amber-700 border-amber-200' };
 const fmt = n => (!n && n!==0)?'0':Math.round(n).toLocaleString('ru-RU');
@@ -47,37 +49,54 @@ function SellerSearch({ sellers, value, onChange }) {
 }
 
 export default function Clients() {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sellers, setSellers] = useState([]);
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState({ col:'name', dir:'asc' });
+  const [clients,  setClients]  = useState([]);
+  const [total,    setTotal]    = useState(0);
+  const [page,     setPage]     = useState(1);
+  const LIMIT = 50;
+
+  const [loading,  setLoading]  = useState(true);
+  const [sellers,  setSellers]  = useState([]);
+  const [search,   setSearch]   = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sort,     setSort]     = useState({ col:'createdAt', dir:'desc' });
   const [expanded, setExpanded] = useState(null);
   const [expandContracts, setExpandContracts] = useState({});
-  const [modal, setModal] = useState(null);
-  const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState(EMPTY);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [delId, setDelId] = useState(null);
+  const [modal,    setModal]    = useState(null);
+  const [editId,   setEditId]   = useState(null);
+  const [form,     setForm]     = useState(EMPTY);
+  const [errors,   setErrors]   = useState({});
+  const [saving,   setSaving]   = useState(false);
+  const [delId,    setDelId]    = useState(null);
   const [phoneInput, setPhoneInput] = useState('');
 
-  const fetch_ = useCallback(()=>{
+  // 300ms debounce for search
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const fetchClients = useCallback(() => {
     setLoading(true);
-    Promise.all([axios.get(`${API}/api/clients`), axios.get(`${API}/api/settings`)]).then(([c,s])=>{
-      setClients(c.data); setSellers((s.data.sellers)||[]); setLoading(false);
-    }).catch(()=>setLoading(false));
-  },[]);
-  useEffect(()=>{ fetch_(); },[fetch_]);
+    api.get('/api/clients', {
+      params: { page, limit: LIMIT, search: debouncedSearch, sortBy: sort.col, sortDir: sort.dir },
+    }).then(r => {
+      setClients(r.data.data);
+      setTotal(r.data.total);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [page, debouncedSearch, sort]);
+
+  useEffect(() => { fetchClients(); }, [fetchClients]);
+
+  useEffect(() => {
+    api.get('/api/settings').then(r => setSellers(r.data.sellers || [])).catch(() => {});
+  }, []);
 
   const validate = () => {
     const e={};
     if(!form.name.trim()) e.name='Nom majburiy';
-    const existing = clients.filter(c=>c.id!==editId);
-    if(existing.some(c=>c.name.toLowerCase()===form.name.toLowerCase().trim())) e.name='Bu nom allaqachon mavjud';
     const inn=rawINN(form.inn);
     if(inn&&inn.length!==9) e.inn='INN aynan 9 ta raqam bo\'lishi kerak';
-    if(inn&&existing.some(c=>rawINN(c.inn)===inn)) e.inn='Bu INN allaqachon mavjud';
     if(form.account&&form.account.replace(/\D/g,'').length!==20) e.account='Hisob raqam aynan 20 ta raqam bo\'lishi kerak';
     if(form.mfo&&form.mfo.replace(/\D/g,'').length!==5) e.mfo='MFO aynan 5 ta raqam bo\'lishi kerak';
     const phone=rawPhone(phoneInput);
@@ -100,35 +119,45 @@ export default function Clients() {
     setSaving(true);
     const payload = { ...form, inn:fmtINN(form.inn), phone:rawPhone(phoneInput) };
     try {
-      if(modal==='add') await axios.post(`${API}/api/clients`, payload);
-      else await axios.put(`${API}/api/clients/${editId}`, payload);
-      fetch_(); closeModal();
-    } catch(err){ alert('Xatolik: '+(err.response?.data?.error||err.message)); }
+      if(modal==='add') await api.post('/api/clients', payload);
+      else await api.put(`/api/clients/${editId}`, payload);
+      toast.success(modal==='add' ? 'Mijoz qo\'shildi' : 'Mijoz yangilandi');
+      fetchClients(); closeModal();
+    } catch { /* interceptor shows toast */ }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
-    try { await axios.delete(`${API}/api/clients/${delId}`); setDelId(null); fetch_(); }
-    catch(err){ alert('O\'chirib bo\'lmadi'); }
+    try { await api.delete(`/api/clients/${delId}`); setDelId(null); fetchClients(); toast.success('O\'chirildi'); }
+    catch { /* interceptor shows toast */ }
   };
 
-  const toggleSort = col => setSort(s=>({ col, dir: s.col===col&&s.dir==='asc'?'desc':'asc' }));
+  const handleExport = async () => {
+    try {
+      const r = await api.get('/api/clients', {
+        params: { limit: 1000, search: debouncedSearch, sortBy: sort.col, sortDir: sort.dir },
+      });
+      const rows = r.data.data.map(c => ({
+        'Nomi': c.name, 'STIR': c.inn, 'Telefon': c.phone,
+        'Direktor': c.director, 'Manzil': c.address,
+        'Kategoriya': c.category, 'Holati': c.status,
+        'Sotuvchi': c.seller, 'Qarzdorlik (UZS)': Math.round(c.debt),
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Mijozlar');
+      XLSX.writeFile(wb, `mijozlar_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch { /* interceptor shows toast */ }
+  };
 
-  const filtered = clients.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.inn||'').includes(search) ||
-    (c.phone||'').includes(search) ||
-    (c.seller||'').toLowerCase().includes(search.toLowerCase())
-  ).sort((a,b)=>{
-    let av=a[sort.col]??'', bv=b[sort.col]??'';
-    if(sort.col==='debt'){ av=a.debt||0; bv=b.debt||0; }
-    if(typeof av==='number') return sort.dir==='asc'?av-bv:bv-av;
-    return sort.dir==='asc'?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
-  });
+  const toggleSort = col => {
+    setSort(s => ({ col, dir: s.col===col && s.dir==='asc' ? 'desc' : 'asc' }));
+    setPage(1);
+  };
 
   const loadContracts = async id => {
     if(expandContracts[id]) return;
-    try { const r=await axios.get(`${API}/api/contracts?clientId=${id}`); setExpandContracts(p=>({...p,[id]:r.data})); }
+    try { const r=await api.get(`/api/contracts?clientId=${id}`); setExpandContracts(p=>({...p,[id]:r.data})); }
     catch{ setExpandContracts(p=>({...p,[id]:[]})); }
   };
 
@@ -147,11 +176,16 @@ export default function Clients() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-zinc-900">Mijozlar (CRM)</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{clients.length} ta mijoz</p>
+          <p className="text-sm text-zinc-500 mt-0.5">{total} ta mijoz</p>
         </div>
-        <button onClick={openAdd} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
-          <Plus size={16}/> Yangi Mijoz
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleExport} className="px-4 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
+            <Download size={16}/> Excel
+          </button>
+          <button onClick={openAdd} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
+            <Plus size={16}/> Yangi Mijoz
+          </button>
+        </div>
       </div>
 
       <div className="mini-card p-0">
@@ -161,7 +195,7 @@ export default function Clients() {
             <input type="text" placeholder="Mijoz, STIR, telefon, sotuvchi..." value={search} onChange={e=>setSearch(e.target.value)}
               className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"/>
           </div>
-          {search&&<span className="text-xs text-zinc-500">{filtered.length} natija</span>}
+          {search&&<span className="text-xs text-zinc-500">{total} natija</span>}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -180,9 +214,9 @@ export default function Clients() {
                 <tr key={i}>{[...Array(COLS)].map((_,j)=>(
                   <td key={j} className="px-6 py-4"><div className="h-4 bg-zinc-100 animate-pulse rounded"/></td>
                 ))}</tr>
-              )) : filtered.length===0 ? (
+              )) : clients.length===0 ? (
                 <tr><td colSpan={COLS} className="px-6 py-12 text-center text-zinc-400 text-sm">{search?'Topilmadi':'Hozircha mijozlar yo\'q'}</td></tr>
-              ) : filtered.map(c=>(
+              ) : clients.map(c=>(
                 <React.Fragment key={c.id}>
                   <tr className={`hover:bg-zinc-50 transition-colors group ${expanded===c.id?'bg-zinc-50':''}`}>
                     <td className="px-6 py-4">
@@ -251,6 +285,7 @@ export default function Clients() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={LIMIT} onPage={p => { setPage(p); setExpanded(null); }} />
       </div>
 
       {modal&&(

@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Environment files
+**/.env
+**/.env.production
+**/.env.local
+
+# Build output
+dist/
+
+# SQLite (eski backup — artiq ishlatilmaydi)
+prisma/dev.db
+backend/prisma/dev.db
+*.db
+*.db-journal
+
+# Logs
+*.log
+logs/
+
+# PostgreSQL backups
+pg-backup/
+scripts/backups/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.swp

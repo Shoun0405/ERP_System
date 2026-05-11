@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import { Save, Plus, Trash2, Building2, Users, Database } from 'lucide-react';
-
-const API = 'http://localhost:3001';
 
 const EMPTY = {
   companyName: '', companyAddress: '', companyInn: '',
@@ -19,7 +18,7 @@ export default function Settings() {
   const [newSeller, setNewSeller] = useState('');
 
   const fetchSettings = useCallback(() => {
-    axios.get(`${API}/api/settings`)
+    api.get('/api/settings')
       .then(r => { setData({ ...EMPTY, ...r.data }); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
@@ -30,11 +29,11 @@ export default function Settings() {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.put(`${API}/api/settings`, data);
+      await api.put('/api/settings', data);
       setSaved(true);
+      toast.success('Sozlamalar saqlandi');
       setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      alert('Xatolik: ' + (err.response?.data?.error || err.message));
+    } catch { /* interceptor shows toast */
     } finally {
       setSaving(false);
     }
@@ -75,7 +74,11 @@ export default function Settings() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-zinc-900">Sozlamalar</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">Tizim konfiguratsiyasi</p>
+          <p className="text-sm text-zinc-500 mt-0.5">
+            {data.updatedAt
+              ? `Oxirgi yangilanish: ${new Date(data.updatedAt).toLocaleString('ru-RU')}`
+              : 'Tizim konfiguratsiyasi'}
+          </p>
         </div>
       </div>
 
