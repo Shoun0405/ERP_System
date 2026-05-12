@@ -41,7 +41,7 @@ const paymentSchema = z.object({
   amount:     z.coerce.number().positive(),
   note:       z.string().max(500).default(''),
   clientId:   z.string().uuid(),
-  contractId: z.string().uuid(),
+  contractId: z.string().uuid().nullable().optional(),
 });
 
 const contractSchema = z.object({

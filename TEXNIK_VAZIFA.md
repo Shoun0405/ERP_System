@@ -5,13 +5,13 @@
 
 ---
 
-## Joriy holat (oxirgi yangilanish: 2026-05-04)
+## Joriy holat (oxirgi yangilanish: 2026-05-12)
 
-**Bosqich 1–12 HAMMASI BAJARILDI.**
+**Bosqich 1–13 HAMMASI BAJARILDI.**
 
-Bosqich 10 da bajarildi: `react-hot-toast` (barcha `alert()` o'chirildi, api.js interceptor); Sales detail bug fix (article ko'rsatish); `react-to-print` yuk xati A4 chop etish; Sales+Payments sana va mijoz filtri; Clients XLSX export; `Interactions.jsx` to'liq UI (CRM tarix); Settings `updatedAt`.
+Bosqich 13 da bajarildi: `contracts.js` PUT/DELETE (linked bo'lsa 409); `interactions.js` PUT/DELETE + server-side pagination + search; `Interactions.jsx` edit/delete UI + debounced search; `Clients.jsx` shartnoma CRUD UI (expand panelda); `paymentSchema.contractId` optional qilindi (DB bilan moslik); `Payments.jsx` shartnoma ixtiyoriy; `frontend/src/lib/format.js` — `fmt`, `fmtOrDash`, `fmtDate` umumiy helperlar (barcha sahifalar import qiladi); `contracts.test.mjs` va `interactions.test.mjs` yozildi.
 
-**Keyingi qadam:** Bosqich 11 (Production hardening) — `.gitignore`, graceful shutdown, `/api/health`, PM2, PostgreSQL backup.
+**Keyingi qadam:** Bosqich 14 (JWT Authentication) — login sahifasi, token, middleware.
 
 ---
 
@@ -398,3 +398,19 @@ Bu muammolar performance, xavfsizlik va kelajakdagi rivojlanishga to'sqinlik qil
 > 4. **Uptime monitor.** Ichki variant: `scripts/uptime-check.js` — `/api/health` ni har 5 daqiqada urib, xato bo'lsa Telegram bot orqali xabar (Telegram bot token + chat_id `.env` da).
 >
 > **Tugaganda:** `npm test` muvaffaqiyatli o'tsin, Playwright UI mode da har 3 flow yashil bo'lsin, Sentry dashboard da test xato ko'rinsin. TEXNIK_VAZIFA.md da Bosqich 12 DONE.
+
+---
+
+## Bosqich 13 — Yarim feature larni yopish va DRY
+**Holat: DONE ✅**
+
+- [x] `backend/routes/_schemas.js` — `paymentSchema.contractId` → `z.string().uuid().nullable().optional()` (DB bilan moslik)
+- [x] `backend/routes/payments.js` POST — `contractId: contractId || null` (FK uchun null, qoida #17)
+- [x] `frontend/src/pages/Payments.jsx` — shartnoma ixtiyoriy (label, required olib tashlandi, submit guard o'chirildi)
+- [x] `backend/routes/contracts.js` — PUT `/:id` + DELETE `/:id` (linked bo'lsa Prisma P2003 → 409 "Bog'langan savdo yoki to'lov mavjud")
+- [x] `backend/routes/interactions.js` — to'liq qayta yozildi: GET pagination (`page`, `limit`, `search`, `clientId`), PUT `/:id`, DELETE `/:id`
+- [x] `frontend/src/pages/Interactions.jsx` — server-side pagination, debounced search, edit modal ('add'|'edit'), delete confirm modal
+- [x] `frontend/src/pages/Clients.jsx` — expand panelda shartnoma CRUD UI: `+ Yangi`, Edit, Delete tugmalari; ContractModal + delContractId confirm modal; `useModalKeys` ikki marta (client + contract modal uchun)
+- [x] `frontend/src/lib/format.js` — `fmt`, `fmtOrDash`, `fmtDate` umumiy helperlar; `App.jsx`, `Clients.jsx`, `Sales.jsx`, `Payments.jsx`, `Products.jsx` dan local `fmt`/`fmtN` o'chirildi
+- [x] `backend/tests/contracts.test.mjs` — 4 ta test: POST, PUT, DELETE linked→409, DELETE clean→200
+- [x] `backend/tests/interactions.test.mjs` — 4 ta test: POST, GET pagination metadata, PUT, DELETE

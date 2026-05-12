@@ -6,7 +6,8 @@ import {
   ArrowUpRight, BarChart2, MessageSquare
 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
-import api, { API } from './lib/api';
+import api from './lib/api';
+import { fmt } from './lib/format';
 
 import Clients          from './pages/Clients';
 import Products         from './pages/Products';
@@ -14,11 +15,6 @@ import Sales            from './pages/Sales';
 import Payments         from './pages/Payments';
 import SettingsPage     from './pages/Settings';
 import InteractionsPage from './pages/Interactions';
-
-function fmt(n) {
-  if (!n && n !== 0) return '0';
-  return Math.round(n).toLocaleString('ru-RU');
-}
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────
 function Sidebar() {

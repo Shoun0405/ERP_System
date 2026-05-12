@@ -4,15 +4,12 @@ import toast from 'react-hot-toast';
 import { useReactToPrint } from 'react-to-print';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
+import { fmt } from '../lib/format';
 import {
   Plus, X, Trash2, Package, Eye, Printer,
   FileText, Truck, User, Calendar, Hash, Search
 } from 'lucide-react';
 
-function fmt(n) {
-  if (!n && n !== 0) return '0';
-  return Math.round(n).toLocaleString('ru-RU');
-}
 function today() { return new Date().toISOString().split('T')[0]; }
 
 const PACK_TYPES = { 1: '1 dona', 2: '2 dona', 4: '4 dona', 8: '8 dona', 16: '16 dona' };

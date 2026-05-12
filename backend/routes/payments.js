@@ -49,7 +49,7 @@ router.post('/', async (req, res, next) => {
   try {
     const { date, amount, note, clientId, contractId } = paymentSchema.parse(req.body);
     const payment = await prisma.payment.create({
-      data: { date: new Date(date), amount, note, clientId, contractId },
+      data: { date: new Date(date), amount, note, clientId, contractId: contractId || null },
       include: { client: true, contract: true },
     });
     res.json(payment);

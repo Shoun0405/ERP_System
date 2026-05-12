@@ -4,8 +4,8 @@ import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
 import { Plus, X, Trash2, Edit2, RefreshCw, Calculator, Search } from 'lucide-react';
+import { fmtOrDash as fmtN } from '../lib/format';
 
-const fmtN = n => (!n && n !== 0) ? '—' : Math.round(n).toLocaleString('ru-RU');
 const fmtD = (n, d = 6) => (!n && n !== 0) ? '—' : parseFloat(n).toFixed(d).replace(/\.?0+$/, '');
 
 const makeArticle = (density, length, width, thickness) => {

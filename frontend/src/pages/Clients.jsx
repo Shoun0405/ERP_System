@@ -4,11 +4,11 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 import * as XLSX from 'xlsx';
-import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { fmt } from '../lib/format';
+import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText } from 'lucide-react';
 
 const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', seller:'' };
 const SC = { 'Faol':'bg-emerald-50 text-emerald-700 border-emerald-200', "Muddati o'tgan":'bg-red-50 text-red-700 border-red-200', 'Yangi':'bg-blue-50 text-blue-700 border-blue-200', 'Kutilmoqda':'bg-amber-50 text-amber-700 border-amber-200' };
-const fmt = n => (!n && n!==0)?'0':Math.round(n).toLocaleString('ru-RU');
 
 const fmtINN = v => { const d=v.replace(/\D/g,'').slice(0,9); return d.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1 $2 $3').trim(); };
 const rawINN = v => v.replace(/\D/g,'');
@@ -68,6 +68,15 @@ export default function Clients() {
   const [saving,   setSaving]   = useState(false);
   const [delId,    setDelId]    = useState(null);
   const [phoneInput, setPhoneInput] = useState('');
+
+  // Shartnoma CRUD state
+  const EMPTY_CONTRACT = { number: '', date: '', totalValue: '' };
+  const [contractModal,  setContractModal]  = useState(null); // 'add' | 'edit' | null
+  const [contractForm,   setContractForm]   = useState(EMPTY_CONTRACT);
+  const [contractEditId, setContractEditId] = useState(null);
+  const [contractClientId, setContractClientId] = useState(null);
+  const [contractSaving, setContractSaving] = useState(false);
+  const [delContractId,  setDelContractId]  = useState(null);
 
   // 300ms debounce for search
   useEffect(() => {
@@ -155,8 +164,8 @@ export default function Clients() {
     setPage(1);
   };
 
-  const loadContracts = async id => {
-    if(expandContracts[id]) return;
+  const loadContracts = async (id, force = false) => {
+    if(!force && expandContracts[id]) return;
     try { const r=await api.get(`/api/contracts?clientId=${id}`); setExpandContracts(p=>({...p,[id]:r.data})); }
     catch{ setExpandContracts(p=>({...p,[id]:[]})); }
   };
@@ -166,7 +175,52 @@ export default function Clients() {
     setExpanded(id); await loadContracts(id);
   };
 
+  const openContractAdd = (clientId) => {
+    setContractForm(EMPTY_CONTRACT);
+    setContractEditId(null);
+    setContractClientId(clientId);
+    setContractModal('add');
+  };
+  const openContractEdit = (ct, clientId) => {
+    setContractForm({ number: ct.number, date: ct.date.split('T')[0], totalValue: String(ct.totalValue) });
+    setContractEditId(ct.id);
+    setContractClientId(clientId);
+    setContractModal('edit');
+  };
+  const closeContractModal = () => { setContractModal(null); setContractEditId(null); setContractClientId(null); };
+
+  const handleContractSave = async (e) => {
+    if (e) e.preventDefault();
+    if (!contractForm.number.trim()) { toast.error('Shartnoma raqami majburiy!'); return; }
+    if (!contractForm.date)          { toast.error('Sanani kiriting!'); return; }
+    if (!contractForm.totalValue || parseFloat(contractForm.totalValue) < 0) { toast.error('Summani kiriting!'); return; }
+    setContractSaving(true);
+    const payload = { number: contractForm.number, date: contractForm.date, totalValue: parseFloat(contractForm.totalValue), clientId: contractClientId };
+    try {
+      if (contractModal === 'edit') {
+        await api.put(`/api/contracts/${contractEditId}`, payload);
+        toast.success('Shartnoma yangilandi');
+      } else {
+        await api.post('/api/contracts', payload);
+        toast.success("Shartnoma qo'shildi");
+      }
+      closeContractModal();
+      await loadContracts(contractClientId, true);
+    } catch { /* interceptor shows toast */ } finally { setContractSaving(false); }
+  };
+
+  const handleContractDelete = async () => {
+    const { id, clientId } = delContractId;
+    try {
+      await api.delete(`/api/contracts/${id}`);
+      setDelContractId(null);
+      toast.success("O'chirildi");
+      await loadContracts(clientId, true);
+    } catch { /* interceptor shows toast */ }
+  };
+
   useModalKeys(!!modal, handleSave, closeModal);
+  useModalKeys(!!contractModal, handleContractSave, closeContractModal);
 
   const inp = (field) => `w-full px-3 py-2 border ${errors[field]?'border-red-400':'border-zinc-300'} rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition`;
   const COLS = 8;
@@ -263,14 +317,28 @@ export default function Clients() {
                             </div>
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Shartnomalar</p>
-                            {!expandContracts[c.id]?<p className="text-xs text-zinc-400">Yuklanmoqda...</p>:expandContracts[c.id].length===0?<p className="text-xs text-zinc-400">Shartnomalar yo'q</p>:(
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Shartnomalar</p>
+                              <button onClick={() => openContractAdd(c.id)}
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                <Plus size={12}/> Yangi
+                              </button>
+                            </div>
+                            {!expandContracts[c.id] ? (
+                              <p className="text-xs text-zinc-400">Yuklanmoqda...</p>
+                            ) : expandContracts[c.id].length === 0 ? (
+                              <p className="text-xs text-zinc-400">Shartnomalar yo'q</p>
+                            ) : (
                               <div className="space-y-1.5">
-                                {expandContracts[c.id].map(ct=>(
-                                  <div key={ct.id} className="flex justify-between text-xs bg-white border border-zinc-200 rounded px-2.5 py-1.5">
+                                {expandContracts[c.id].map(ct => (
+                                  <div key={ct.id} className="flex items-center justify-between text-xs bg-white border border-zinc-200 rounded px-2.5 py-1.5 group/ct">
                                     <span className="font-semibold text-zinc-700">№{ct.number}</span>
                                     <span className="text-zinc-400">{new Date(ct.date).toLocaleDateString('ru-RU')}</span>
                                     <span className="text-blue-600 font-medium">{fmt(ct.totalValue)} UZS</span>
+                                    <div className="flex gap-1 opacity-0 group-hover/ct:opacity-100 transition-opacity">
+                                      <button onClick={() => openContractEdit(ct, c.id)} className="p-0.5 text-zinc-400 hover:text-blue-600 rounded"><Edit2 size={11}/></button>
+                                      <button onClick={() => setDelContractId({ id: ct.id, clientId: c.id })} className="p-0.5 text-zinc-400 hover:text-red-600 rounded"><Trash2 size={11}/></button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -375,6 +443,61 @@ export default function Clients() {
             <div className="flex gap-3">
               <button onClick={()=>setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
               <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {contractModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                <FileText size={18} className="text-blue-600"/>
+                {contractModal === 'edit' ? 'Shartnomani tahrirlash' : 'Yangi shartnoma'}
+              </h3>
+              <button onClick={closeContractModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleContractSave} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Shartnoma raqami *</label>
+                <input type="text" value={contractForm.number} onChange={e => setContractForm(f => ({ ...f, number: e.target.value }))}
+                  className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="2024/001"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Sana *</label>
+                  <input type="date" value={contractForm.date} onChange={e => setContractForm(f => ({ ...f, date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"/>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Summa (UZS) *</label>
+                  <input type="number" min="0" value={contractForm.totalValue} onChange={e => setContractForm(f => ({ ...f, totalValue: e.target.value }))}
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    placeholder="0"/>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
+                <button type="button" onClick={closeContractModal} className="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition">Bekor</button>
+                <button type="submit" disabled={contractSaving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition shadow-sm">
+                  {contractSaving ? 'Saqlanmoqda...' : 'Saqlash'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {delContractId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
+            <h3 className="text-lg font-bold text-zinc-900 mb-2">Shartnomani o'chirish</h3>
+            <p className="text-sm text-zinc-500 mb-6">Bog'langan savdo yoki to'lov bo'lsa o'chirib bo'lmaydi.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDelContractId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
+              <button onClick={handleContractDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
             </div>
           </div>
         </div>

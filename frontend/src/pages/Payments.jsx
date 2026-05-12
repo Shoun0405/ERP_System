@@ -3,12 +3,9 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
+import { fmt } from '../lib/format';
 import { Plus, X, Trash2, AlertCircle, Search } from 'lucide-react';
 
-function fmt(n) {
-  if (!n && n !== 0) return '0';
-  return Math.round(n).toLocaleString('ru-RU');
-}
 function today() { return new Date().toISOString().split('T')[0]; }
 
 export default function Payments() {
@@ -68,11 +65,10 @@ export default function Payments() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.clientId)   { toast.error('Mijozni tanlang!'); return; }
-    if (!form.contractId) { toast.error('Shartnomani tanlang!'); return; }
     if (!form.amount || parseFloat(form.amount) <= 0) { toast.error('Summani kiriting!'); return; }
     setSaving(true);
     try {
-      await api.post('/api/payments', form);
+      await api.post('/api/payments', { ...form, contractId: form.contractId || null });
       toast.success('To\'lov kiritildi');
       setModal(false);
       fetchPayments();
@@ -220,8 +216,8 @@ export default function Payments() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Shartnoma *</label>
-                <select required value={form.contractId} onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))} className={inp} disabled={!form.clientId}>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Shartnoma (ixtiyoriy)</label>
+                <select value={form.contractId} onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))} className={inp} disabled={!form.clientId}>
                   <option value="">— Shartnomani tanlang —</option>
                   {contracts.map(c => <option key={c.id} value={c.id}>№{c.number} ({new Date(c.date).toLocaleDateString('ru-RU')})</option>)}
                 </select>
