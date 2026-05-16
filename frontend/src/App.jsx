@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import {
   LayoutDashboard, Users, Box, ShoppingCart, CreditCard,
   Settings, Bell, TrendingUp, TrendingDown,
-  ArrowUpRight, BarChart2, MessageSquare
+  ArrowUpRight, BarChart2, MessageSquare, FileText
 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import api from './lib/api';
@@ -13,6 +13,7 @@ import Clients          from './pages/Clients';
 import Products         from './pages/Products';
 import Sales            from './pages/Sales';
 import Payments         from './pages/Payments';
+import Contracts        from './pages/Contracts';
 import SettingsPage     from './pages/Settings';
 import InteractionsPage from './pages/Interactions';
 
@@ -23,6 +24,7 @@ function Sidebar() {
     { name: 'Bosh sahifa',  path: '/',               icon: LayoutDashboard },
     { name: 'Mijozlar',     path: '/clients',        icon: Users },
     { name: 'Mahsulotlar',  path: '/products',       icon: Box },
+    { name: 'Shartnomalar', path: '/contracts',      icon: FileText },
     { name: 'Savdolar',     path: '/sales',          icon: ShoppingCart },
     { name: 'Tushumlar',    path: '/payments',       icon: CreditCard },
     { name: 'Muloqotlar',   path: '/interactions',   icon: MessageSquare },
@@ -326,6 +328,7 @@ export default function App() {
               <Route path="/"              element={<Dashboard />} />
               <Route path="/clients"       element={<Clients />} />
               <Route path="/products"      element={<Products />} />
+              <Route path="/contracts"     element={<Contracts />} />
               <Route path="/sales"         element={<Sales />} />
               <Route path="/payments"      element={<Payments />} />
               <Route path="/interactions"  element={<InteractionsPage />} />

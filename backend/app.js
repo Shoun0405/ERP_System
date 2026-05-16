@@ -38,6 +38,8 @@ app.use('/api/health',       require('./routes/health'));
 app.use('/api/clients',      require('./routes/clients'));
 app.use('/api/products',     require('./routes/products'));
 app.use('/api/contracts',    require('./routes/contracts'));
+app.use('/api/specs',        require('./routes/specs'));
+app.use('/api/export',       require('./routes/export'));
 app.use('/api/sales',        require('./routes/sales'));
 app.use('/api/payments',     require('./routes/payments'));
 app.use('/api/interactions', require('./routes/interactions'));

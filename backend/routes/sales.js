@@ -32,7 +32,12 @@ router.get('/', async (req, res, next) => {
     const [sales, total] = await Promise.all([
       prisma.sale.findMany({
         where,
-        include: { client: true, contract: true, products: true },
+        include: {
+          client:   { select: { id: true, name: true } },
+          contract: { select: { id: true, number: true } },
+          spec:     { select: { id: true, number: true } },
+          products: true,
+        },
         orderBy: { date: 'desc' },
         skip: offset,
         take: limit,
@@ -51,8 +56,9 @@ router.get('/:id', async (req, res, next) => {
     const sale = await prisma.sale.findUnique({
       where: { id: req.params.id },
       include: {
-        client: true,
-        contract: true,
+        client:   true,
+        contract: { select: { id: true, number: true } },
+        spec:     { select: { id: true, number: true } },
         products: { include: { product: true } },
       },
     });
@@ -69,7 +75,19 @@ router.post('/', async (req, res, next) => {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
 
-  const { date, nakladnoy, sellerName, transportNum, clientId, contractId, products } = parsed.data;
+  const { date, nakladnoy, sellerName, transportNum, clientId, products } = parsed.data;
+  let { contractId, specId } = parsed.data;
+
+  // specId bo'lsa — contractId ni Spec dan avtomatik olamiz
+  if (specId) {
+    const spec = await prisma.specification.findUnique({
+      where: { id: specId },
+      select: { contractId: true },
+    });
+    if (!spec) return res.status(400).json({ error: 'Spetsifikatsiya topilmadi' });
+    contractId = spec.contractId;
+  }
+
   const totalAmount = products.reduce((sum, p) => sum + p.rowAmount, 0);
 
   try {
@@ -79,10 +97,11 @@ router.post('/', async (req, res, next) => {
           date: new Date(date),
           nakladnoy,
           sellerName,
-          transportNum: transportNum ?? '',
+          transportNum: transportNum || null,
           totalAmount,
           clientId,
-          contractId,
+          contractId: contractId || null,
+          specId:     specId     || null,
         },
       });
       await tx.saleProduct.createMany({
@@ -90,7 +109,12 @@ router.post('/', async (req, res, next) => {
       });
       return tx.sale.findUnique({
         where: { id: s.id },
-        include: { client: true, contract: true, products: true },
+        include: {
+          client:   { select: { id: true, name: true } },
+          contract: { select: { id: true, number: true } },
+          spec:     { select: { id: true, number: true } },
+          products: true,
+        },
       });
     });
     res.json(sale);

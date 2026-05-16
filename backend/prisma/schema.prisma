@@ -20,9 +20,9 @@ model Client {
   mfo       String?
   seller    String?
   createdAt DateTime @default(now())
-  contracts Contract[]
-  sales     Sale[]
-  payments  Payment[]
+  contracts    Contract[]
+  sales        Sale[]
+  payments     Payment[]
   interactions Interaction[]
 
   @@index([seller])
@@ -44,39 +44,87 @@ model Product {
   priceSqm  Float    @default(0)
   createdAt DateTime @default(now())
   saleProducts SaleProduct[]
+  specProducts SpecProduct[]
 }
 
 model Contract {
-  id        String   @id @default(uuid())
-  number    String
-  date      DateTime
-  totalValue Float
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id])
-  sales     Sale[]
-  payments  Payment[]
-  createdAt DateTime @default(now())
+  id           String          @id @default(uuid())
+  number       String
+  numericPart  Int             @default(0)
+  yearPart     Int             @default(0)
+  date         DateTime
+  totalValue   Float
+  notes        String?
+  status       String          @default("yangi")
+  specCounter  Int             @default(0)
+  clientId     String
+  client       Client          @relation(fields: [clientId], references: [id])
+  sales        Sale[]
+  payments     Payment[]
+  specifications Specification[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@unique([number, clientId])
   @@index([clientId])
+  @@index([status])
+  @@index([date])
+}
+
+model Specification {
+  id          String        @id @default(uuid())
+  number      Int
+  date        DateTime      @default(now())
+  totalValue  Float         @default(0)
+  notes       String?
+  contractId  String
+  contract    Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  products    SpecProduct[]
+  sales       Sale[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([contractId, number])
+  @@index([contractId])
+  @@index([date])
+}
+
+model SpecProduct {
+  id           String        @id @default(uuid())
+  specId       String
+  productId    String
+  unit         String
+  quantity     Float
+  unitPriceVat Float
+  vatAmount    Float
+  rowTotal     Float
+  spec         Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
+  product      Product       @relation(fields: [productId], references: [id])
+  createdAt    DateTime      @default(now())
+
+  @@index([specId])
+  @@index([productId])
 }
 
 model Sale {
-  id             String   @id @default(uuid())
-  date           DateTime
-  nakladnoy      String
-  sellerName     String
-  transportNum   String?
-  totalAmount    Float
-  clientId       String
-  contractId     String
-  client         Client   @relation(fields: [clientId], references: [id])
-  contract       Contract @relation(fields: [contractId], references: [id])
-  products       SaleProduct[]
-  createdAt      DateTime @default(now())
+  id           String         @id @default(uuid())
+  date         DateTime
+  nakladnoy    String
+  sellerName   String
+  transportNum String?
+  totalAmount  Float
+  clientId     String
+  contractId   String?
+  specId       String?
+  client       Client         @relation(fields: [clientId], references: [id])
+  contract     Contract?      @relation(fields: [contractId], references: [id])
+  spec         Specification? @relation(fields: [specId], references: [id])
+  products     SaleProduct[]
+  createdAt    DateTime       @default(now())
 
   @@index([clientId, date])
   @@index([contractId])
+  @@index([specId])
 }
 
 model SaleProduct {
@@ -114,14 +162,14 @@ model Payment {
 }
 
 model Interaction {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   date      DateTime
   type      String
   note      String
   nextDate  DateTime?
   clientId  String
-  client    Client   @relation(fields: [clientId], references: [id])
-  createdAt DateTime @default(now())
+  client    Client    @relation(fields: [clientId], references: [id])
+  createdAt DateTime  @default(now())
 
   @@index([clientId])
   @@index([nextDate])
