@@ -31,7 +31,10 @@ router.get('/', async (req, res, next) => {
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
         where,
-        include: { client: true, contract: true },
+        include: {
+          client:   { select: { id: true, name: true } },
+          contract: { select: { id: true, number: true } },
+        },
         orderBy: { date: 'desc' },
         skip: offset,
         take: limit,
@@ -50,7 +53,10 @@ router.post('/', async (req, res, next) => {
     const { date, amount, note, clientId, contractId } = paymentSchema.parse(req.body);
     const payment = await prisma.payment.create({
       data: { date: new Date(date), amount, note, clientId, contractId: contractId || null },
-      include: { client: true, contract: true },
+      include: {
+        client:   { select: { id: true, name: true } },
+        contract: { select: { id: true, number: true } },
+      },
     });
     res.json(payment);
   } catch (e) {

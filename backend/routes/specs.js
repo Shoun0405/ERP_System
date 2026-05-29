@@ -138,13 +138,12 @@ router.put('/:id', async (req, res, next) => {
 // DELETE /api/specs/:id — bog'langan Sale bo'lsa 409
 router.delete('/:id', async (req, res, next) => {
   try {
-    const linked = await prisma.sale.count({ where: { specId: req.params.id } });
-    if (linked > 0) {
-      return res.status(409).json({ error: "Bu spets bo'yicha savdo mavjud, avval savdoni o'chiring" });
-    }
     await prisma.specification.delete({ where: { id: req.params.id } });
     res.json({ success: true });
-  } catch (e) { next(e); }
+  } catch (e) {
+    if (e.code === 'P2003') return res.status(409).json({ error: "Bu spets bo'yicha savdo mavjud, avval savdoni o'chiring" });
+    next(e);
+  }
 });
 
 module.exports = router;

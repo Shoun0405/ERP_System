@@ -12,18 +12,24 @@ describe('Contracts API', () => {
   beforeAll(async () => {
     const client = await makeClient();
     clientId = client.id;
+    // Turn off autoContractNumbering in settings for this test suite
+    await prisma.setting.upsert({
+      where: { id: 'global' },
+      create: { id: 'global', data: JSON.stringify({ autoContractNumbering: false }) },
+      update: { data: JSON.stringify({ autoContractNumbering: false }) },
+    });
   });
   afterAll(() => prisma.$disconnect());
 
   it('POST / — yangi shartnoma yaratish', async () => {
     const res = await request(app).post('/api/contracts').send({
-      number:     `T-${n}`,
+      number:     `26-${n.slice(-4)}`,
       date:       '2026-01-15',
       totalValue: 5_000_000,
       clientId,
     });
     expect(res.status).toBe(200);
-    expect(res.body.number).toBe(`T-${n}`);
+    expect(res.body.number).toBe(`26-${n.slice(-4)}`);
     contractId = res.body.id;
   });
 

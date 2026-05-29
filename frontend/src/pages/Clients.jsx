@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import { useModalKeys } from '../hooks/useModalKeys';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -8,9 +8,14 @@ import { fmt } from '../lib/format';
 import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText } from 'lucide-react';
 
 const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', seller:'' };
-const SC = { 'Faol':'bg-emerald-50 text-emerald-700 border-emerald-200', "Muddati o'tgan":'bg-red-50 text-red-700 border-red-200', 'Yangi':'bg-blue-50 text-blue-700 border-blue-200', 'Kutilmoqda':'bg-amber-50 text-amber-700 border-amber-200' };
+const SC = {
+  'Faol': 'bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] border-[oklch(0.88_0.06_155)]',
+  "Muddati o'tgan": 'bg-[oklch(0.96_0.04_25)] text-[oklch(0.42_0.13_25)] border-[oklch(0.88_0.07_25)]',
+  'Yangi': 'bg-[oklch(0.96_0.03_250)] text-[var(--accent)] border-[oklch(0.88_0.05_250)]',
+  'Kutilmoqda': 'bg-[oklch(0.96_0.05_80)] text-[oklch(0.40_0.12_70)] border-[oklch(0.88_0.08_80)]'
+};
 
-const fmtINN = v => { const d=v.replace(/\D/g,'').slice(0,9); return d.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1 $2 $3').trim(); };
+const fmtINN = v => { if (!v) return ''; const d=v.replace(/\D/g,'').slice(0,9); return d.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1 $2 $3').trim(); };
 const rawINN = v => v.replace(/\D/g,'');
 const fmtPhone = raw => {
   if(!raw) return '';
@@ -166,7 +171,7 @@ export default function Clients() {
 
   const loadContracts = async (id, force = false) => {
     if(!force && expandContracts[id]) return;
-    try { const r=await api.get(`/api/contracts?clientId=${id}`); setExpandContracts(p=>({...p,[id]:r.data})); }
+    try { const r=await api.get(`/api/contracts?clientId=${id}`); setExpandContracts(p=>({...p,[id]:r.data.data||[]})); }
     catch{ setExpandContracts(p=>({...p,[id]:[]})); }
   };
 
@@ -222,122 +227,122 @@ export default function Clients() {
   useModalKeys(!!modal, handleSave, closeModal);
   useModalKeys(!!contractModal, handleContractSave, closeContractModal);
 
-  const inp = (field) => `w-full px-3 py-2 border ${errors[field]?'border-red-400':'border-zinc-300'} rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition`;
+  const inp = (field) => `w-full px-3 py-2 bg-[var(--surface)] border ${errors[field]?'border-red-400':'border-[var(--border)]'} rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)]`;
   const COLS = 8;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Mijozlar (CRM)</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} ta mijoz</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Mijozlar (CRM)</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mijoz</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleExport} className="px-4 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
-            <Download size={16}/> Excel
+          <button onClick={handleExport} className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
+            <Download size={14}/> Excel
           </button>
-          <button onClick={openAdd} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
-            <Plus size={16}/> Yangi Mijoz
+          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+            <Plus size={14}/> Yangi Mijoz
           </button>
         </div>
       </div>
 
       <div className="mini-card p-0">
-        <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center gap-3">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4"/>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
             <input type="text" placeholder="Mijoz, STIR, telefon, sotuvchi..." value={search} onChange={e=>setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"/>
+              className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-full focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
-          {search&&<span className="text-xs text-zinc-500">{total} natija</span>}
+          {search&&<span className="text-xs text-[var(--text-3)]">{total} natija</span>}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-zinc-200">
+              <tr className="border-b border-[var(--border)]">
                 {[['name','Mijoz / Tashkilot'],['inn','STIR'],['phone','Telefon'],['seller','Sotuvchi'],['status','Holati'],['debt','Qarzdorlik']].map(([col,label])=>(
-                  <th key={col} onClick={()=>toggleSort(col)} className="px-6 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-700 select-none whitespace-nowrap">
+                  <th key={col} onClick={()=>toggleSort(col)} className="px-5 py-3 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider cursor-pointer hover:text-[var(--text)] select-none whitespace-nowrap">
                     {label}<SortIcon col={col} sort={sort}/>
                   </th>
                 ))}
-                <th className="px-6 py-3 w-24"/>
+                <th className="px-5 py-3 w-24 bg-[var(--surface-2)]"/>
               </tr>
             </thead>
             <tbody>
               {loading ? [...Array(5)].map((_,i)=>(
                 <tr key={i}>{[...Array(COLS)].map((_,j)=>(
-                  <td key={j} className="px-6 py-4"><div className="h-4 bg-zinc-100 animate-pulse rounded"/></td>
+                  <td key={j} className="px-5 py-3"><div className="h-4 bg-[var(--surface-2)] animate-pulse rounded"/></td>
                 ))}</tr>
               )) : clients.length===0 ? (
-                <tr><td colSpan={COLS} className="px-6 py-12 text-center text-zinc-400 text-sm">{search?'Topilmadi':'Hozircha mijozlar yo\'q'}</td></tr>
+                <tr><td colSpan={COLS} className="px-5 py-12 text-center text-[var(--text-3)] text-xs">{search?'Topilmadi':'Hozircha mijozlar yo\'q'}</td></tr>
               ) : clients.map(c=>(
-                <React.Fragment key={c.id}>
-                  <tr className={`hover:bg-zinc-50 transition-colors group ${expanded===c.id?'bg-zinc-50':''}`}>
-                    <td className="px-6 py-4">
+                <Fragment key={c.id}>
+                  <tr className={`hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group ${expanded===c.id?'bg-[var(--surface-2)]':''}`}>
+                    <td className="px-5 py-2.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600 text-xs font-bold shrink-0">{c.name.charAt(0).toUpperCase()}</div>
+                        <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)] text-[11px] font-semibold shrink-0">{c.name.charAt(0).toUpperCase()}</div>
                         <div>
-                          <p className="text-sm font-semibold text-zinc-900">{c.name}</p>
-                          {c.director&&<p className="text-xs text-zinc-400">{c.director}</p>}
+                          <p className="text-xs font-semibold text-[var(--text)]">{c.name}</p>
+                          {c.director&&<p className="text-[10px] text-[var(--text-3)] mt-0.5">{c.director}</p>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-500 font-mono">{fmtINN(c.inn||'')}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-600">{fmtPhone(c.phone||'')||<span className="text-zinc-300">—</span>}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-500">{c.seller||<span className="text-zinc-300">—</span>}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${SC[c.status]||SC['Yangi']}`}>{c.status||'Yangi'}</span>
+                    <td className="px-5 py-2.5 text-xs text-[var(--text-2)] font-mono tracking-tight">{fmtINN(c.inn||'')}</td>
+                    <td className="px-5 py-2.5 text-xs text-[var(--text)]">{fmtPhone(c.phone||'')||<span className="text-[var(--text-3)]">—</span>}</td>
+                    <td className="px-5 py-2.5 text-xs text-[var(--text-2)]">{c.seller||<span className="text-[var(--text-3)]">—</span>}</td>
+                    <td className="px-5 py-2.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${SC[c.status]||SC['Yangi']}`}>{c.status||'Yangi'}</span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold">
-                      {c.debt>0?<span className="text-red-600">{fmt(c.debt)} UZS</span>:c.debt<0?<span className="text-emerald-600">+{fmt(Math.abs(c.debt))} UZS</span>:<span className="text-zinc-400">0</span>}
+                    <td className="px-5 py-2.5 text-xs text-right font-semibold font-mono">
+                      {c.debt>0?<span className="text-red-500">{fmt(c.debt)} UZS</span>:c.debt<0?<span className="text-emerald-600">+{fmt(Math.abs(c.debt))} UZS</span>:<span className="text-[var(--text-3)]">0</span>}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-2.5">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={()=>openEdit(c)} className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={14}/></button>
-                        <button onClick={()=>setDelId(c.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={14}/></button>
-                        <button onClick={()=>toggleExpand(c.id)} className={`p-1.5 rounded-md transition ${expanded===c.id?'text-blue-600 bg-blue-50':'text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100'}`} title="Batafsil">
-                          {expanded===c.id?<ChevronUp size={14}/>:<ChevronDown size={14}/>}
+                        <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={13}/></button>
+                        <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={13}/></button>
+                        <button onClick={()=>toggleExpand(c.id)} className={`p-1 rounded transition ${expanded===c.id?'text-[var(--accent)] bg-[oklch(0.96_0.03_250)]':'text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`} title="Batafsil">
+                          {expanded===c.id?<ChevronUp size={13}/>:<ChevronDown size={13}/>}
                         </button>
                       </div>
                     </td>
                   </tr>
                   {expanded===c.id&&(
-                    <tr className="bg-zinc-50">
-                      <td colSpan={COLS} className="px-6 py-4 border-b border-zinc-200">
-                        <div className="grid grid-cols-3 gap-6">
+                    <tr className="bg-[var(--surface-2)]/60">
+                      <td colSpan={COLS} className="px-5 py-3 border-b border-[var(--border)]">
+                        <div className="grid grid-cols-3 gap-6 animate-in">
                           <div className="col-span-2 space-y-3">
-                            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Rekvizitlar</p>
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <p className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider mb-2">Rekvizitlar</p>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
                               {[['STIR',fmtINN(c.inn||'')],['Telefon',fmtPhone(c.phone||'')],['Manzil',c.address],['Kategoriya',c.category],['Hisob raqam',c.account],['MFO',c.mfo],['Direktor',c.director],['Sotuvchi',c.seller]].map(([label,val])=>val?(
                                 <div key={label} className="flex gap-2">
-                                  <span className="text-zinc-400 shrink-0">{label}:</span>
-                                  <span className="text-zinc-800 font-medium font-mono text-xs">{val}</span>
+                                  <span className="text-[var(--text-3)] shrink-0">{label}:</span>
+                                  <span className="text-[var(--text)] font-medium font-mono text-[11px]">{val}</span>
                                 </div>
                               ):null)}
                             </div>
                           </div>
                           <div>
                             <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Shartnomalar</p>
+                              <p className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnomalar</p>
                               <button onClick={() => openContractAdd(c.id)}
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
-                                <Plus size={12}/> Yangi
+                                className="flex items-center gap-0.5 text-xs text-[var(--accent)] hover:underline font-medium">
+                                <Plus size={11}/> Yangi
                               </button>
                             </div>
                             {!expandContracts[c.id] ? (
-                              <p className="text-xs text-zinc-400">Yuklanmoqda...</p>
+                              <p className="text-xs text-[var(--text-3)]">Yuklanmoqda...</p>
                             ) : expandContracts[c.id].length === 0 ? (
-                              <p className="text-xs text-zinc-400">Shartnomalar yo'q</p>
+                              <p className="text-xs text-[var(--text-3)]">Shartnomalar yo'q</p>
                             ) : (
                               <div className="space-y-1.5">
                                 {expandContracts[c.id].map(ct => (
-                                  <div key={ct.id} className="flex items-center justify-between text-xs bg-white border border-zinc-200 rounded px-2.5 py-1.5 group/ct">
-                                    <span className="font-semibold text-zinc-700">№{ct.number}</span>
-                                    <span className="text-zinc-400">{new Date(ct.date).toLocaleDateString('ru-RU')}</span>
-                                    <span className="text-blue-600 font-medium">{fmt(ct.totalValue)} UZS</span>
+                                  <div key={ct.id} className="flex items-center justify-between text-xs bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 group/ct shadow-sm">
+                                    <span className="font-semibold text-[var(--text)]">№{ct.number}</span>
+                                    <span className="text-[var(--text-3)] font-mono text-[10px]">{new Date(ct.date).toLocaleDateString('uz-UZ')}</span>
+                                    <span className="text-[var(--accent)] font-semibold font-mono">{fmt(ct.totalValue)}</span>
                                     <div className="flex gap-1 opacity-0 group-hover/ct:opacity-100 transition-opacity">
-                                      <button onClick={() => openContractEdit(ct, c.id)} className="p-0.5 text-zinc-400 hover:text-blue-600 rounded"><Edit2 size={11}/></button>
-                                      <button onClick={() => setDelContractId({ id: ct.id, clientId: c.id })} className="p-0.5 text-zinc-400 hover:text-red-600 rounded"><Trash2 size={11}/></button>
+                                      <button onClick={() => openContractEdit(ct, c.id)} className="p-0.5 text-[var(--text-3)] hover:text-[var(--accent)] rounded"><Edit2 size={10}/></button>
+                                      <button onClick={() => setDelContractId({ id: ct.id, clientId: c.id })} className="p-0.5 text-[var(--text-3)] hover:text-red-500 rounded"><Trash2 size={10}/></button>
                                     </div>
                                   </div>
                                 ))}
@@ -348,7 +353,7 @@ export default function Clients() {
                       </td>
                     </tr>
                   )}
-                </React.Fragment>
+                </Fragment>
               ))}
             </tbody>
           </table>

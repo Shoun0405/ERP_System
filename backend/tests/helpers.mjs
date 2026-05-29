@@ -5,10 +5,12 @@ const prisma  = require('../prisma');
 /** Test fayllar orasida tozalash uchun */
 export async function cleanAll() {
   await prisma.saleProduct.deleteMany();
-  await prisma.interaction.deleteMany();
-  await prisma.payment.deleteMany();
+  await prisma.specProduct.deleteMany();
   await prisma.sale.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.specification.deleteMany();
   await prisma.contract.deleteMany();
+  await prisma.interaction.deleteMany();
   await prisma.client.deleteMany();
   await prisma.product.deleteMany();
 }

@@ -29,21 +29,26 @@ router.get('/', async (req, res, next) => {
         _sum: { totalAmount: true },
       }),
       prisma.client.count(),
+      // Pre-aggregate to avoid Cartesian product between Sale and Payment
       prisma.$queryRaw`
-        SELECT c.id, c.name,
-          COALESCE(SUM(s."totalAmount"), 0) - COALESCE(SUM(p.amount), 0) AS debt
+        SELECT
+          c.id, c.name,
+          (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0))::float AS debt
         FROM "Client" c
-        LEFT JOIN "Sale" s ON s."clientId" = c.id
-        LEFT JOIN "Payment" p ON p."clientId" = c.id
-        GROUP BY c.id, c.name
-        HAVING COALESCE(SUM(s."totalAmount"), 0) - COALESCE(SUM(p.amount), 0) > 0
+        LEFT JOIN (
+          SELECT "clientId", SUM("totalAmount") AS total FROM "Sale" GROUP BY "clientId"
+        ) s_agg ON s_agg."clientId" = c.id
+        LEFT JOIN (
+          SELECT "clientId", SUM(amount) AS total FROM "Payment" GROUP BY "clientId"
+        ) p_agg ON p_agg."clientId" = c.id
+        WHERE (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0)) > 0
         ORDER BY debt DESC
         LIMIT 5
       `,
       prisma.sale.findMany({
         take: 5,
         orderBy: { date: 'desc' },
-        include: { client: true },
+        include: { client: { select: { id: true, name: true } } },
       }),
       prisma.$queryRaw`
         SELECT

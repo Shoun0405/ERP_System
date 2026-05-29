@@ -2,7 +2,7 @@ const { z } = require('zod');
 
 const clientSchema = z.object({
   name:     z.string().min(1, 'Nom majburiy').max(200),
-  inn:      z.string().max(30).default(''),
+  inn:      z.string().max(30).nullable().default(null).transform(v => v || null),
   phone:    z.string().max(20).default(''),
   director: z.string().max(200).default(''),
   address:  z.string().max(500).default(''),
@@ -110,6 +110,11 @@ const specSchema = z.object({
   products:   z.array(specProductSchema).min(1),
 });
 
+const loginSchema = z.object({
+  username: z.string().min(1, 'Foydalanuvchi nomi majburiy'),
+  password: z.string().min(1, 'Parol majburiy'),
+});
+
 module.exports = {
   clientSchema,
   productSchema,
@@ -121,4 +126,5 @@ module.exports = {
   saleSchema,
   specSchema,
   specProductSchema,
+  loginSchema,
 };

@@ -202,19 +202,19 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
     api.get(`/api/contracts?clientId=${form.clientId}&limit=100`)
       .then(r => setContracts(r.data.data || []))
       .catch(() => {});
-  }, [form.clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.clientId]);
 
   const prevContractId = useRef(initialValues?.contractId || '');
   useEffect(() => {
     if (prevContractId.current === form.contractId) return;
     prevContractId.current = form.contractId;
-    setSpecs([]); // eslint-disable-line react-hooks/set-state-in-effect
-    setForm(f => ({ ...f, specId: '' })); // eslint-disable-line react-hooks/set-state-in-effect
+    setSpecs([]);
+    setForm(f => ({ ...f, specId: '' }));
     if (!form.contractId) return;
     api.get(`/api/specs?contractId=${form.contractId}`)
       .then(r => setSpecs(r.data.data || []))
       .catch(() => {});
-  }, [form.contractId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.contractId]);
 
   // Spets tanlanganda — mahsulotlarni prefill
   useEffect(() => {
@@ -234,7 +234,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
         rowAmount: 0,
       };
     });
-    setForm(f => ({ ...f, rows })); // eslint-disable-line react-hooks/set-state-in-effect
+    setForm(f => ({ ...f, rows }));
   }, [form.specId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateRow = (idx, updated) => {
@@ -461,7 +461,6 @@ export default function Sales() {
       .finally(() => setLoading(false));
   }, [page, debouncedSearch, filterClient, dateFrom, dateTo]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchSales(); }, [fetchSales]);
 
   useEffect(() => {
@@ -505,7 +504,7 @@ export default function Sales() {
   useModalKeys(!!detail, null, () => setDetail(null));
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       {/* Hidden print area */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
         <div ref={printRef}><PrintableInvoice sale={detail} company={settings} /></div>
@@ -514,12 +513,12 @@ export default function Sales() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-900">Savdolar (Yuk xatlari)</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} ta yuk xati</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Savdolar (Yuk xatlari)</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yuk xati</p>
         </div>
         <button onClick={inlineForm.toggle}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition">
-          <Plus size={16} />
+          className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-sm shadow-blue-500/10">
+          <Plus size={14} />
           {inlineForm.isOpen ? 'Yopish' : 'Yangi Yuk Xati'}
         </button>
       </div>
@@ -536,30 +535,30 @@ export default function Sales() {
       )}
 
       {/* Table card */}
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm">
+      <div className="mini-card p-0">
         {/* Filters */}
-        <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex flex-wrap items-center gap-3">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4" />
             <input type="text" placeholder="Yuk xati №, mijoz..." value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm w-48 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" />
+              className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-48 focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]" />
           </div>
           <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-            className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none">
+            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
             <option value="">Barcha mijozlar</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none" title="Dan" />
+            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]" title="Dan" />
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none" title="Gacha" />
+            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]" title="Gacha" />
           {hasFilter && (
-            <button onClick={clearFilters} className="text-xs text-zinc-500 hover:text-zinc-700 flex items-center gap-1">
+            <button onClick={clearFilters} className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
               <X size={12} /> Tozalash
             </button>
           )}
-          <span className="ml-auto text-xs text-zinc-500">{total} natija</span>
+          <span className="ml-auto text-xs text-[var(--text-3)]">{total} natija</span>
         </div>
 
         {/* Table */}
@@ -634,7 +633,7 @@ export default function Sales() {
         </div>
 
         <div className="px-4 py-3 border-t border-zinc-100">
-          <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
+          <Pagination page={page} total={total} limit={LIMIT} onPage={setPage} />
         </div>
       </div>
 

@@ -5,14 +5,27 @@ import toast from 'react-hot-toast';
 // Production (Variant A): VITE_API_URL bo'sh → same-origin relative URL
 export const API = import.meta.env.VITE_API_URL ?? '';
 
-const api = axios.create({ baseURL: API });
+const api = axios.create({ 
+  baseURL: API,
+  withCredentials: true 
+});
 
 api.interceptors.response.use(
   res => res,
   err => {
-    const msg = err.response?.data?.error || err.message || 'Server xatosi';
-    toast.error(msg);
-    return Promise.reject(new Error(msg));
+    if (err.response?.status === 401) {
+      if (!window.location.pathname.includes('/login')) {
+        // Silent redirect on initial /me check, but toast for other protected endpoints
+        if (err.config && !err.config.url.endsWith('/me')) {
+          toast.error('Sessiya muddati tugadi. Iltimos, qayta tizimga kiring.');
+        }
+        window.location.href = '/login';
+      }
+    } else {
+      const msg = err.response?.data?.error || err.message || 'Server xatosi';
+      toast.error(msg);
+    }
+    return Promise.reject(err);
   }
 );
 

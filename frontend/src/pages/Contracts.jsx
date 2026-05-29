@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronDown, ChevronRight, MoreVertical, Pencil, Trash2,
   FileText, FileSpreadsheet, X, Check, AlertTriangle,
-  ShoppingCart, RefreshCw
+  ShoppingCart, RefreshCw, Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../lib/api';
+import api, { API } from '../lib/api';
 import { fmt, fmtDate } from '../lib/format';
 import { calcRowTotal, calcVat } from '../lib/vat';
 import { useInlineForm } from '../hooks/useInlineForm';
@@ -15,9 +15,9 @@ import Pagination from '../components/Pagination';
 
 const STATUS_LABELS = { yangi: 'Yangi', amalda: 'Amalda', yopilgan: 'Yopilgan' };
 const STATUS_COLORS = {
-  yangi:    'bg-blue-50 text-blue-700',
-  amalda:   'bg-emerald-50 text-emerald-700',
-  yopilgan: 'bg-zinc-100 text-zinc-500',
+  yangi:    'bg-[oklch(0.96_0.03_250)] text-[var(--accent)] border-[oklch(0.88_0.05_250)] border',
+  amalda:   'bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] border-[oklch(0.88_0.06_155)] border',
+  yopilgan: 'bg-[var(--surface-2)] text-[var(--text-3)] border border-[var(--border)]',
 };
 const UNITS = ['kv.m', 'kub.m', 'kg'];
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -346,7 +346,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
             {c.specCount} spets
           </button>
         </td>
-        <td className="px-4 py-3 text-sm text-right text-zinc-400">—</td>
+        <td className="px-4 py-3 text-sm text-right text-zinc-600 font-medium">{fmt(c.invoiceAmount || 0)}</td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || STATUS_COLORS.yangi}`}>
             {STATUS_LABELS[c.status] || c.status}
@@ -367,12 +367,12 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50">
                 <Pencil size={14} /> Tahrirlash
               </button>
-              <a href={`/api/export/contracts/${c.id}/pdf`} target="_blank" rel="noreferrer"
+              <a href={`${API}/api/export/contracts/${c.id}/pdf`} target="_blank" rel="noreferrer"
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50 text-zinc-700"
                 onClick={() => setMenuOpen(false)}>
                 <FileText size={14} /> PDF yuklab olish
               </a>
-              <a href={`/api/export/contracts/${c.id}/excel`}
+              <a href={`${API}/api/export/contracts/${c.id}/excel`}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50 text-zinc-700"
                 onClick={() => setMenuOpen(false)}>
                 <FileSpreadsheet size={14} /> Excel yuklab olish
@@ -905,7 +905,6 @@ export default function Contracts() {
     setPage(1);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(page); }, [page, debouncedSearch, status, sortBy, sortDir]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaved = (saved) => {
@@ -929,27 +928,23 @@ export default function Contracts() {
   };
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       {/* Delete confirm modal */}
       {delContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm space-y-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="text-amber-500 shrink-0" size={22} />
-              <div>
-                <p className="font-semibold text-zinc-900">Shartnomani o'chirish</p>
-                <p className="text-sm text-zinc-500 mt-0.5">
-                  №{delContract.number} — {delContract.client?.name}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-[var(--surface)] rounded-xl shadow-2xl p-6 w-full max-w-sm border border-[var(--border)] text-center animate-in">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
+            <h3 className="text-sm font-bold text-[var(--text)] mb-1">Shartnomani o'chirish</h3>
+            <p className="text-xs text-[var(--text-3)] mb-6">
+              №{delContract.number} — {delContract.client?.name}
+            </p>
+            <div className="flex gap-2">
               <button onClick={() => setDelContract(null)}
-                className="px-3 py-2 text-sm border border-zinc-200 rounded-md hover:bg-zinc-50">
+                className="flex-1 px-3 py-1.5 text-xs border border-[var(--border)] rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-2)] transition">
                 Bekor
               </button>
               <button onClick={deleteContract}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">
+                className="flex-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                 O'chirish
               </button>
             </div>
@@ -960,12 +955,12 @@ export default function Contracts() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Shartnomalar</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Jami: {total} ta</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Shartnomalar</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">Jami: {total} ta</p>
         </div>
-        <button onClick={() => { form.toggle(); setEditContract(null); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
-          <Plus size={16} />
+        <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90 transition shadow-sm shadow-blue-500/10">
+          <Plus size={14} />
           {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
         </button>
       </div>
@@ -990,13 +985,16 @@ export default function Contracts() {
 
       {/* Filters */}
       <div className="flex gap-3">
-        <input
-          value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Qidirish: mijoz, INN, raqam..."
-          className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-        />
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+          <input
+            value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Qidirish: mijoz, INN, raqam..."
+            className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"
+          />
+        </div>
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
-          className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+          className="border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
           <option value="">Barcha status</option>
           <option value="yangi">Yangi</option>
           <option value="amalda">Amalda</option>
@@ -1078,7 +1076,7 @@ export default function Contracts() {
 
         {total > LIMIT && (
           <div className="border-t border-zinc-100 px-4 py-3">
-            <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
+            <Pagination page={page} total={total} limit={LIMIT} onPage={setPage} />
           </div>
         )}
       </div>

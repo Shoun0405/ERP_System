@@ -2,6 +2,26 @@ const router   = require('express').Router();
 const prisma   = require('../prisma');
 const PDFDocument = require('pdfkit');
 const ExcelJS  = require('exceljs');
+const fs       = require('fs');
+
+// Windows sistemasida Arial (Cyrillic qo'llab-quvvatlaydi), yo'q bo'lsa Helvetica
+const WIN_ARIAL      = 'C:/Windows/Fonts/arial.ttf';
+const WIN_ARIAL_BOLD = 'C:/Windows/Fonts/arialbd.ttf';
+const HAS_CYRILLIC   = fs.existsSync(process.env.PDF_FONT_PATH || WIN_ARIAL);
+
+function makePdfDoc(options = {}) {
+  const doc = new PDFDocument({ size: 'A4', margin: 50, ...options });
+  const fontPath     = process.env.PDF_FONT_PATH      || WIN_ARIAL;
+  const fontBoldPath = process.env.PDF_FONT_BOLD_PATH || WIN_ARIAL_BOLD;
+  if (HAS_CYRILLIC) {
+    doc.registerFont('PDF-Regular', fontPath);
+    doc.registerFont('PDF-Bold', fs.existsSync(fontBoldPath) ? fontBoldPath : fontPath);
+  }
+  return doc;
+}
+
+const F  = HAS_CYRILLIC ? 'PDF-Regular' : 'Helvetica';
+const FB = HAS_CYRILLIC ? 'PDF-Bold'    : 'Helvetica-Bold';
 
 async function loadContract(id) {
   return prisma.contract.findUnique({
@@ -29,49 +49,49 @@ router.get('/contracts/:id/pdf', async (req, res, next) => {
     res.setHeader('Content-Disposition',
       `inline; filename="shartnoma-${contract.number}.pdf"`);
 
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const doc = makePdfDoc();
     doc.pipe(res);
 
     // SAHIFA 1 — Shartnoma
-    doc.font('Helvetica-Bold').fontSize(18)
+    doc.font(FB).fontSize(18)
        .text(`SHARTNOMA № ${contract.number}`, { align: 'center' });
     doc.moveDown(0.5);
-    doc.font('Helvetica').fontSize(10)
+    doc.font(F).fontSize(10)
        .text(`Sana: ${new Date(contract.date).toLocaleDateString('ru-RU')}`, { align: 'center' });
     doc.moveDown(1.5);
 
-    doc.font('Helvetica-Bold').fontSize(11).text('Sotuvchi:');
-    doc.font('Helvetica').fontSize(10);
+    doc.font(FB).fontSize(11).text('Sotuvchi:');
+    doc.font(F).fontSize(10);
     doc.text(`Kompaniya: ${cfg.companyName || '—'}`);
     doc.text(`INN: ${cfg.companyInn || '—'}`);
     doc.text(`Manzil: ${cfg.companyAddress || '—'}`);
     doc.text(`Telefon: ${cfg.companyPhone || '—'}`);
     doc.moveDown();
 
-    doc.font('Helvetica-Bold').fontSize(11).text('Xaridor (Mijoz):');
-    doc.font('Helvetica').fontSize(10);
+    doc.font(FB).fontSize(11).text('Xaridor (Mijoz):');
+    doc.font(F).fontSize(10);
     doc.text(`Kompaniya: ${contract.client.name}`);
     doc.text(`INN: ${contract.client.inn || '—'}`);
     doc.text(`Manzil: ${contract.client.address || '—'}`);
     doc.text(`Telefon: ${contract.client.phone || '—'}`);
     doc.moveDown();
 
-    doc.font('Helvetica-Bold').fontSize(11)
+    doc.font(FB).fontSize(11)
        .text(`Umumiy shartnoma summasi: ${Math.round(contract.totalValue).toLocaleString('ru-RU')} so'm`);
     doc.moveDown();
 
     if (contract.notes) {
-      doc.font('Helvetica-Bold').fontSize(11).text('Izoh:');
-      doc.font('Helvetica').fontSize(10).text(contract.notes);
+      doc.font(FB).fontSize(11).text('Izoh:');
+      doc.font(F).fontSize(10).text(contract.notes);
       doc.moveDown();
     }
 
-    doc.font('Helvetbu-Bold').fontSize(10)
+    doc.font(FB).fontSize(10)
        .text(`Status: ${contract.status}`, { align: 'right' });
 
     // Imzo joyi
     doc.moveDown(3);
-    doc.font('Helvetica').fontSize(10);
+    doc.font(F).fontSize(10);
     const y = doc.y;
     doc.text('Sotuvchi: ____________________', 50, y);
     doc.text('Xaridor: ____________________', 300, y);
@@ -79,17 +99,17 @@ router.get('/contracts/:id/pdf', async (req, res, next) => {
     // SAHIFA 2 — Spetsifikatsiyalar
     if (contract.specifications.length > 0) {
       doc.addPage();
-      doc.font('Helvetica-Bold').fontSize(16)
+      doc.font(FB).fontSize(16)
          .text('SPETSIFIKATSIYALAR', { align: 'center' });
       doc.moveDown();
 
       for (const spec of contract.specifications) {
-        doc.font('Helvetica-Bold').fontSize(12)
+        doc.font(FB).fontSize(12)
            .text(`Spets № ${spec.number} — ${new Date(spec.date).toLocaleDateString('ru-RU')}`);
         if (spec.notes) {
-          doc.font('Helvetica').fontSize(9).text(`Izoh: ${spec.notes}`);
+          doc.font(F).fontSize(9).text(`Izoh: ${spec.notes}`);
         }
-        doc.font('Helvetica').fontSize(8);
+        doc.font(F).fontSize(8);
 
         const colW = [140, 45, 45, 80, 70, 80];
         const headers = ['Mahsulot (artikul)', 'Birlik', 'Soni', 'Narx (QQS bilan)', 'QQS summasi', 'Jami summa'];
@@ -97,14 +117,14 @@ router.get('/contracts/:id/pdf', async (req, res, next) => {
         let x = startX;
         const headerY = doc.y + 5;
 
-        doc.font('Helvetica-Bold').fontSize(8);
+        doc.font(FB).fontSize(8);
         headers.forEach((h, i) => {
           doc.text(h, x, headerY, { width: colW[i], align: 'left' });
           x += colW[i];
         });
         doc.moveDown(1.5);
 
-        doc.font('Helvetica').fontSize(8);
+        doc.font(F).fontSize(8);
         for (const p of spec.products) {
           x = startX;
           const rowY = doc.y;
@@ -123,7 +143,7 @@ router.get('/contracts/:id/pdf', async (req, res, next) => {
           doc.moveDown(1);
         }
 
-        doc.font('Helvetica-Bold').fontSize(9)
+        doc.font(FB).fontSize(9)
            .text(`Spets jami: ${Math.round(spec.totalValue).toLocaleString('ru-RU')} so'm`);
         doc.moveDown(1.5);
       }

@@ -72,6 +72,7 @@ router.delete('/:id', async (req, res, next) => {
     await prisma.product.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (e) {
+    if (e.code === 'P2003') return res.status(409).json({ error: 'Mahsulot savdo yoki spetsifikatsiyada ishlatilgan' });
     next(e);
   }
 });

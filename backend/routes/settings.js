@@ -10,12 +10,12 @@ const DEFAULT_SETTINGS = {
 
 router.get('/', async (req, res, next) => {
   try {
-    let setting = await prisma.setting.findUnique({ where: { id: 'global' } });
-    if (!setting) {
-      setting = await prisma.setting.create({
-        data: { id: 'global', data: JSON.stringify(DEFAULT_SETTINGS) },
-      });
-    }
+    // upsert to avoid race condition on first request (findUnique + create is not atomic)
+    const setting = await prisma.setting.upsert({
+      where:  { id: 'global' },
+      update: {},
+      create: { id: 'global', data: JSON.stringify(DEFAULT_SETTINGS) },
+    });
     res.json({ ...JSON.parse(setting.data), updatedAt: setting.updatedAt });
   } catch (e) {
     next(e);

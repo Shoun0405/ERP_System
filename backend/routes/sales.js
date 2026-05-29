@@ -70,28 +70,32 @@ router.get('/:id', async (req, res, next) => {
 });
 
 router.post('/', async (req, res, next) => {
-  const parsed = saleSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0].message });
-  }
-
-  const { date, nakladnoy, sellerName, transportNum, clientId, products } = parsed.data;
-  let { contractId, specId } = parsed.data;
-
-  // specId bo'lsa — contractId ni Spec dan avtomatik olamiz
-  if (specId) {
-    const spec = await prisma.specification.findUnique({
-      where: { id: specId },
-      select: { contractId: true },
-    });
-    if (!spec) return res.status(400).json({ error: 'Spetsifikatsiya topilmadi' });
-    contractId = spec.contractId;
-  }
-
-  const totalAmount = products.reduce((sum, p) => sum + p.rowAmount, 0);
-
   try {
+    const parsed = saleSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0].message });
+    }
+
+    const { date, nakladnoy, sellerName, transportNum, clientId, products } = parsed.data;
+    let { contractId, specId } = parsed.data;
+    const totalAmount = products.reduce((sum, p) => sum + p.rowAmount, 0);
+
     const sale = await prisma.$transaction(async (tx) => {
+      // specId lookup inside transaction to avoid TOCTOU race
+      if (specId) {
+        const spec = await tx.specification.findUnique({
+          where: { id: specId },
+          select: { contractId: true },
+        });
+        if (!spec) {
+          const err = new Error('Spetsifikatsiya topilmadi');
+          err.status = 400;
+          err.publicMessage = 'Spetsifikatsiya topilmadi';
+          throw err;
+        }
+        contractId = spec.contractId;
+      }
+
       const s = await tx.sale.create({
         data: {
           date: new Date(date),
@@ -117,6 +121,7 @@ router.post('/', async (req, res, next) => {
         },
       });
     });
+
     res.json(sale);
   } catch (e) {
     next(e);

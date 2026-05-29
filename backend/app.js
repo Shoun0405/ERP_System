@@ -16,9 +16,11 @@ const helmet   = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan   = require('morgan');
 const path     = require('path');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 
+app.use(cookieParser());
 app.use(compression());
 app.use(helmet({ contentSecurityPolicy: false }));
 
@@ -28,23 +30,27 @@ if (process.env.NODE_ENV === 'production') {
 
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',').map(s => s.trim());
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 app.use(express.json());
 
 app.use('/api', rateLimit({ windowMs: 60_000, max: 200, standardHeaders: true, legacyHeaders: false }));
 
+const auth = require('./middleware/auth');
+
 app.use('/api/health',       require('./routes/health'));
-app.use('/api/clients',      require('./routes/clients'));
-app.use('/api/products',     require('./routes/products'));
-app.use('/api/contracts',    require('./routes/contracts'));
-app.use('/api/specs',        require('./routes/specs'));
-app.use('/api/export',       require('./routes/export'));
-app.use('/api/sales',        require('./routes/sales'));
-app.use('/api/payments',     require('./routes/payments'));
-app.use('/api/interactions', require('./routes/interactions'));
-app.use('/api/dashboard',    require('./routes/dashboard'));
-app.use('/api/settings',     require('./routes/settings'));
+app.use('/api/auth',         require('./routes/auth'));
+
+app.use('/api/clients',      auth, require('./routes/clients'));
+app.use('/api/products',     auth, require('./routes/products'));
+app.use('/api/contracts',    auth, require('./routes/contracts'));
+app.use('/api/specs',        auth, require('./routes/specs'));
+app.use('/api/export',       auth, require('./routes/export'));
+app.use('/api/sales',        auth, require('./routes/sales'));
+app.use('/api/payments',     auth, require('./routes/payments'));
+app.use('/api/interactions', auth, require('./routes/interactions'));
+app.use('/api/dashboard',    auth, require('./routes/dashboard'));
+app.use('/api/settings',     auth, require('./routes/settings'));
 
 // Frontend static serve (production)
 const distPath = path.join(__dirname, '../frontend/dist');

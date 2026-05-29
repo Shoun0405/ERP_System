@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
@@ -16,10 +16,10 @@ const TYPE_ICONS = {
 const TYPE_LIST = Object.keys(TYPE_ICONS);
 
 const TYPE_COLORS = {
-  "Qo'ng'iroq": 'bg-blue-50 text-blue-700 border-blue-200',
-  'Uchrashuv':  'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'Email':      'bg-violet-50 text-violet-700 border-violet-200',
-  'Boshqa':     'bg-zinc-50 text-zinc-600 border-zinc-200',
+  "Qo'ng'iroq": 'bg-[oklch(0.96_0.03_250)] text-[var(--accent)] border-[oklch(0.88_0.05_250)] border',
+  'Uchrashuv':  'bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] border-[oklch(0.88_0.06_155)] border',
+  'Email':      'bg-[oklch(0.96_0.04_290)] text-[oklch(0.40_0.12_290)] border-[oklch(0.88_0.05_290)] border',
+  'Boshqa':     'bg-[var(--surface-2)] text-[var(--text-2)] border border-[var(--border)]',
 };
 
 const EMPTY = { date: today(), type: "Qo'ng'iroq", note: '', nextDate: '', clientId: '' };
@@ -109,75 +109,75 @@ export default function InteractionsPage() {
   const hasFilter = filterClient || search;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Muloqotlar (CRM tarix)</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} ta yozuv</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Muloqotlar (CRM tarix)</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yozuv</p>
         </div>
-        <button onClick={openAdd} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
-          <Plus size={16}/> Yangi muloqot
+        <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+          <Plus size={14}/> Yangi muloqot
         </button>
       </div>
 
       <div className="mini-card p-0">
-        <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center gap-3 flex-wrap">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3 flex-wrap">
           <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-            className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none">
+            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
             <option value="">Barcha mijozlar</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4"/>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
             <input type="text" placeholder="Mijoz, izoh, tur..." value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm focus:border-blue-500 outline-none transition w-44"/>
+              className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] outline-none transition w-44 text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
           {hasFilter && (
             <button onClick={() => { setFilterClient(''); setSearch(''); }}
-              className="text-xs text-zinc-500 hover:text-zinc-700 flex items-center gap-1">
+              className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
               <X size={12}/> Tozalash
             </button>
           )}
         </div>
 
-        <div className="divide-y divide-zinc-100">
+        <div className="divide-y divide-[var(--border)] bg-[var(--surface)]">
           {loading ? (
             [...Array(5)].map((_, i) => (
-              <div key={i} className="px-6 py-4 flex gap-4">
-                <div className="w-9 h-9 bg-zinc-100 animate-pulse rounded-lg shrink-0"/>
+              <div key={i} className="px-5 py-3 flex gap-4">
+                <div className="w-8 h-8 bg-[var(--surface-2)] animate-pulse rounded-lg shrink-0"/>
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-zinc-100 animate-pulse rounded w-1/3"/>
-                  <div className="h-3 bg-zinc-100 animate-pulse rounded w-2/3"/>
+                  <div className="h-4 bg-[var(--surface-2)] animate-pulse rounded w-1/3"/>
+                  <div className="h-3 bg-[var(--surface-2)] animate-pulse rounded w-2/3"/>
                 </div>
               </div>
             ))
           ) : interactions.length === 0 ? (
-            <div className="px-6 py-12 text-center text-zinc-400 text-sm">
+            <div className="px-5 py-12 text-center text-[var(--text-3)] text-xs">
               {hasFilter ? 'Topilmadi' : "Hozircha muloqotlar yo'q"}
             </div>
           ) : interactions.map(it => {
             const Icon = TYPE_ICONS[it.type] || MessageSquare;
             return (
-              <div key={it.id} className="px-6 py-4 flex gap-4 hover:bg-zinc-50 transition-colors group">
-                <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${TYPE_COLORS[it.type] || TYPE_COLORS['Boshqa']}`}>
-                  <Icon size={15}/>
+              <div key={it.id} className="px-5 py-3 flex gap-4 hover:bg-[var(--surface-2)] transition-colors group border-b border-[var(--border)] last:border-none">
+                <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${TYPE_COLORS[it.type] || TYPE_COLORS['Boshqa']}`}>
+                  <Icon size={14}/>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-zinc-900">{it.client?.name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${TYPE_COLORS[it.type] || TYPE_COLORS['Boshqa']}`}>{it.type}</span>
-                    <span className="text-xs text-zinc-400">{new Date(it.date).toLocaleDateString('ru-RU')}</span>
+                    <span className="text-xs font-semibold text-[var(--text)]">{it.client?.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${TYPE_COLORS[it.type] || TYPE_COLORS['Boshqa']}`}>{it.type}</span>
+                    <span className="text-[10px] text-[var(--text-3)] font-mono">{new Date(it.date).toLocaleDateString('uz-UZ')}</span>
                   </div>
-                  {it.note && <p className="text-sm text-zinc-600 mt-1">{it.note}</p>}
+                  {it.note && <p className="text-xs text-[var(--text-2)] mt-1">{it.note}</p>}
                   {it.nextDate && (
-                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                      <Calendar size={11}/> Keyingi: {new Date(it.nextDate).toLocaleDateString('ru-RU')}
+                    <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1 font-semibold">
+                      <Calendar size={11}/> Keyingi: {new Date(it.nextDate).toLocaleDateString('uz-UZ')}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button onClick={() => openEdit(it)} className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition"><Edit2 size={14}/></button>
-                  <button onClick={() => setDelId(it.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"><Trash2 size={14}/></button>
+                  <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition"><Edit2 size={12}/></button>
+                  <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition"><Trash2 size={12}/></button>
                 </div>
               </div>
             );

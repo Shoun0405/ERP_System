@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
-import { fmt } from '../lib/format';
+import { fmt, fmtDate } from '../lib/format';
 import { Plus, X, Trash2, AlertCircle, Search } from 'lucide-react';
 
 function today() { return new Date().toISOString().split('T')[0]; }
@@ -51,7 +51,7 @@ export default function Payments() {
 
   useEffect(() => {
     if (!form.clientId) { setContracts([]); return; }
-    api.get(`/api/contracts?clientId=${form.clientId}`).then(r => setContracts(r.data)).catch(() => setContracts([]));
+    api.get(`/api/contracts?clientId=${form.clientId}`).then(r => setContracts(r.data.data || [])).catch(() => setContracts([]));
   }, [form.clientId]);
 
   const totalIn = payments.reduce((s, p) => s + p.amount, 0);
@@ -95,33 +95,33 @@ export default function Payments() {
     .slice(0, 8);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Tushumlar</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} ta to'lov</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Tushumlar</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta to'lov</p>
         </div>
-        <button onClick={openModal} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
-          <Plus size={16}/> Yangi Tushum
+        <button onClick={openModal} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+          <Plus size={14}/> Yangi Tushum
         </button>
       </div>
 
       {debtSummary.length > 0 && (
         <div className="mini-card p-0">
-          <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center gap-2">
-            <AlertCircle size={15} className="text-red-500"/>
-            <h3 className="text-sm font-semibold text-zinc-900">Qarzdorlik holati</h3>
+          <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-2">
+            <AlertCircle size={14} className="text-red-500"/>
+            <h3 className="text-xs font-semibold text-[var(--text)]">Qarzdorlik holati</h3>
           </div>
-          <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
             {debtSummary.map(c => (
               <div key={c.id} onClick={() => setFilterClient(filterClient === c.id ? '' : c.id)}
-                className={`p-3 rounded-lg border cursor-pointer transition ${
-                  filterClient === c.id ? 'border-blue-300 bg-blue-50'
-                  : c.debt > 0 ? 'border-red-100 bg-red-50/50 hover:border-red-200'
-                  : 'border-emerald-100 bg-emerald-50/50 hover:border-emerald-200'
+                className={`p-3 rounded-xl border cursor-pointer transition ${
+                  filterClient === c.id ? 'border-[var(--accent)] bg-[oklch(0.96_0.03_250)]'
+                  : c.debt > 0 ? 'border-[oklch(0.88_0.07_25)] bg-[oklch(0.96_0.04_25)] text-[oklch(0.42_0.13_25)] hover:bg-[oklch(0.96_0.04_25)]/70'
+                  : 'border-[oklch(0.88_0.06_155)] bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] hover:bg-[oklch(0.96_0.04_155)]/70'
                 }`}>
-                <p className="text-xs font-medium text-zinc-600 truncate">{c.name}</p>
-                <p className={`text-sm font-bold mt-1 ${c.debt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                <p className="text-[11px] font-medium opacity-80 truncate">{c.name}</p>
+                <p className="text-xs font-bold font-mono mt-1">
                   {c.debt > 0 ? '' : '+'}{fmt(c.debt)} UZS
                 </p>
               </div>
@@ -131,31 +131,31 @@ export default function Payments() {
       )}
 
       <div className="mini-card p-0">
-        <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between flex-wrap gap-3">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-              className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none">
+              className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
               <option value="">Barcha mijozlar</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4"/>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
               <input type="text" placeholder="Mijoz, izoh..." value={search} onChange={e => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm focus:border-blue-500 outline-none transition w-40"/>
+                className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] outline-none transition w-40 text-[var(--text)] placeholder-[var(--text-3)]"/>
             </div>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none" title="Dan"/>
+              className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]" title="Dan"/>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="px-3 py-1.5 border border-zinc-200 rounded-md text-sm bg-white focus:border-blue-500 outline-none" title="Gacha"/>
+              className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]" title="Gacha"/>
             {hasFilter && (
               <button onClick={() => { setFilterClient(''); setSearch(''); setDateFrom(''); setDateTo(''); }}
-                className="text-xs text-zinc-500 hover:text-zinc-700 flex items-center gap-1">
+                className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
                 <X size={12}/> Tozalash
               </button>
             )}
           </div>
-          <div className="text-sm font-semibold text-zinc-700">
-            Jami: <span className="text-emerald-600">{fmt(totalIn)} UZS</span>
+          <div className="text-xs font-semibold text-[var(--text)]">
+            Jami: <span className="text-emerald-600 font-mono">{fmt(totalIn)} UZS</span>
           </div>
         </div>
 
@@ -182,7 +182,7 @@ export default function Payments() {
                 </td></tr>
               ) : payments.map(p => (
                 <tr key={p.id} className="hover:bg-zinc-50 transition-colors group">
-                  <td className="px-6 py-4 text-sm text-zinc-600">{new Date(p.date).toLocaleDateString('ru-RU')}</td>
+                  <td className="px-6 py-4 text-sm text-zinc-600">{fmtDate(p.date)}</td>
                   <td className="px-6 py-4 text-sm font-medium text-zinc-900">{p.client?.name}</td>
                   <td className="px-6 py-4 text-sm text-zinc-500">{p.contract ? `№${p.contract.number}` : '—'}</td>
                   <td className="px-6 py-4 text-sm text-zinc-500">{p.note || '—'}</td>

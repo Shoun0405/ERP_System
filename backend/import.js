@@ -77,7 +77,6 @@ async function migrate() {
 
     if (data.sales?.length) {
       console.log(`${data.sales.length} ta savdo...`);
-      const fallbackContractId = data.contracts?.[0]?.id || '';
       for (const s of data.sales) {
         await prisma.sale.upsert({
           where: { id: s.id },
@@ -89,7 +88,7 @@ async function migrate() {
             sellerName: s.sellerName || 'Sotuvchi',
             totalAmount: parseFloat(s.totalAmount || 0),
             clientId: s.clientId,
-            contractId: s.contractId || fallbackContractId,
+            contractId: s.contractId || null,
           },
         });
         if (s.products?.length) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
@@ -147,32 +147,32 @@ export default function Products() {
 
   useModalKeys(!!modal, handleSave, closeModal);
 
-  const inp = 'w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition';
+  const inp = 'w-full px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)]';
   const modeBtn = (m, label) => (
     <button type="button" onClick={() => setPriceMode(m)}
-      className={`px-4 py-2 text-sm font-medium rounded-md transition ${priceMode === m ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-300 text-zinc-600 hover:bg-zinc-50'}`}>
+      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${priceMode === m ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'}`}>
       {label}
     </button>
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Mahsulotlar bazasi</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Mahsulotlar bazasi</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
         </div>
-        <button onClick={openAdd} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shadow-sm">
-          <Plus size={16}/> Yangi Mahsulot
+        <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+          <Plus size={14}/> Yangi Mahsulot
         </button>
       </div>
 
       {/* Global Narx Paneli */}
-      <div className="mini-card border-blue-200 bg-blue-50/30">
-        <div className="flex items-start gap-6 flex-wrap">
+      <div className="mini-card border-[oklch(0.88_0.05_250)] bg-[oklch(0.96_0.03_250)]/30">
+        <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-1.5 shrink-0">
-            <Calculator size={15} className="text-blue-600"/>
-            <span className="text-sm font-semibold text-zinc-800">Global narx</span>
+            <Calculator size={14} className="text-[var(--accent)]"/>
+            <span className="text-xs font-semibold text-[var(--text)]">Global narx</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {modeBtn('ton', '1 tonna')}
@@ -183,79 +183,79 @@ export default function Products() {
             <input type="number" min="0" value={priceValue}
               onChange={e => setPriceValue(e.target.value)}
               placeholder="Narxni kiriting (UZS)"
-              className="flex-1 px-3 py-2 border border-zinc-300 bg-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none"/>
-            <span className="text-sm text-zinc-500 shrink-0">UZS</span>
+              className="flex-1 px-3 py-1.5 border border-[var(--border)] bg-[var(--surface)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none text-[var(--text)] placeholder-[var(--text-3)]"/>
+            <span className="text-xs text-[var(--text-2)] shrink-0 font-medium font-mono">UZS</span>
           </div>
           <button onClick={applyPrices}
             disabled={applying || !priceValue || products.length === 0}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-md text-sm font-medium transition flex items-center gap-2 shrink-0">
-            <RefreshCw size={14} className={applying ? 'animate-spin' : ''}/>
+            className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shrink-0 shadow-sm">
+            <RefreshCw size={13} className={applying ? 'animate-spin' : ''}/>
             {applying ? 'Yangilanmoqda...' : `Ko'rinayotgan ${products.length} ta mahsulotga qo'llash`}
           </button>
         </div>
         {previewPrices && (
-          <div className="mt-3 pt-3 border-t border-blue-200 flex gap-6 text-xs text-zinc-600">
-            <span className="text-zinc-400">Birinchi mahsulot uchun preview:</span>
-            <span>1 tonna → <strong className="text-zinc-800">{fmtN(previewPrices.priceTon)} UZS</strong></span>
-            <span>1 m³ → <strong className="text-zinc-800">{fmtN(previewPrices.priceCbm)} UZS</strong></span>
-            <span>1 m² → <strong className="text-zinc-800">{fmtN(previewPrices.priceSqm)} UZS</strong></span>
-            <span className="text-zinc-400 italic">*Har mahsulot zichlik va qalinligiga qarab farq qiladi</span>
+          <div className="mt-3 pt-3 border-t border-[var(--border)] flex gap-6 text-[10.5px] text-[var(--text-2)]">
+            <span className="text-[var(--text-3)]">Birinchi mahsulot uchun preview:</span>
+            <span>1 tonna → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceTon)} UZS</strong></span>
+            <span>1 m³ → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceCbm)} UZS</strong></span>
+            <span>1 m² → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceSqm)} UZS</strong></span>
+            <span className="text-[var(--text-3)] italic">*Har mahsulot zichlik va qalinligiga qarab farq qiladi</span>
           </div>
         )}
       </div>
 
       <div className="mini-card p-0">
-        <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center gap-3">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4"/>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
             <input type="text" placeholder="Artikul bo'yicha qidirish..." value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white border border-zinc-200 rounded-md text-sm w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"/>
+              className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-full focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
-          {search && <span className="text-xs text-zinc-500">{total} natija</span>}
+          {search && <span className="text-xs text-[var(--text-3)]">{total} natija</span>}
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50">
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider whitespace-nowrap">Artikul</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider whitespace-nowrap">O'lcham (mm)</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap">Zichlik</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap">1 dona m²</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap">1 dona m³</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap">1 dona kg</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap bg-amber-50">UZS / tonna</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap bg-emerald-50">UZS / m³</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right whitespace-nowrap bg-blue-50">UZS / m²</th>
-                <th className="px-4 py-3 w-16"/>
+              <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                <th className="px-3 py-2 text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider whitespace-nowrap">Artikul</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider whitespace-nowrap">O'lcham (mm)</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider text-right whitespace-nowrap">Zichlik</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider text-right whitespace-nowrap">1 dona m²</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider text-right whitespace-nowrap">1 dona m³</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider text-right whitespace-nowrap">1 dona kg</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 bg-[oklch(0.97_0.02_70)]/40 uppercase tracking-wider text-right whitespace-nowrap">UZS / tonna</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-emerald-700 bg-[oklch(0.97_0.03_150)]/40 uppercase tracking-wider text-right whitespace-nowrap">UZS / m³</th>
+                <th className="px-3 py-2 text-[10px] font-semibold text-blue-700 bg-[oklch(0.96_0.03_250)]/40 uppercase tracking-wider text-right whitespace-nowrap">UZS / m²</th>
+                <th className="px-3 py-2 w-16 bg-[var(--surface-2)]"/>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-[var(--border)]">
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>{[...Array(10)].map((_, j) => (
-                    <td key={j} className="px-4 py-3"><div className="h-4 bg-zinc-100 animate-pulse rounded"/></td>
+                    <td key={j} className="px-3 py-2"><div className="h-4 bg-[var(--surface-2)] animate-pulse rounded"/></td>
                   ))}</tr>
                 ))
               ) : products.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-zinc-400">
+                <tr><td colSpan={10} className="px-3 py-10 text-center text-[var(--text-3)] text-xs">
                   {search ? 'Topilmadi' : 'Hozircha mahsulotlar yo\'q'}
                 </td></tr>
               ) : products.map(p => (
-                <tr key={p.id} className="hover:bg-zinc-50 transition-colors group">
-                  <td className="px-4 py-3 font-semibold text-zinc-900 font-mono text-xs">{p.article}</td>
-                  <td className="px-4 py-3 text-zinc-600">{p.length}×{p.width}×{p.thickness}</td>
-                  <td className="px-4 py-3 text-right text-zinc-600">{p.density} kg/m³</td>
-                  <td className="px-4 py-3 text-right font-medium text-zinc-700">{fmtD(p.sqmPerPce, 4)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-zinc-700">{fmtD(p.cbmPerPce, 6)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-zinc-700">{fmtD(p.kgPerPce, 3)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-amber-700 bg-amber-50/50">{p.priceTon > 0 ? fmtN(p.priceTon) : <span className="text-zinc-300 font-normal">—</span>}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-emerald-700 bg-emerald-50/50">{p.priceCbm > 0 ? fmtN(p.priceCbm) : <span className="text-zinc-300 font-normal">—</span>}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-blue-700 bg-blue-50/50">{p.priceSqm > 0 ? fmtN(p.priceSqm) : <span className="text-zinc-300 font-normal">—</span>}</td>
-                  <td className="px-4 py-3">
+                <tr key={p.id} className="hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group">
+                  <td className="px-3 py-2 font-semibold text-[var(--text)] font-mono text-[11px] tracking-tight">{p.article}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-2)] font-mono">{p.length}×{p.width}×{p.thickness}</td>
+                  <td className="px-3 py-2 text-right text-xs text-[var(--text-2)] font-mono">{p.density} <span className="text-[var(--text-3)]">kg/m³</span></td>
+                  <td className="px-3 py-2 text-right font-medium text-[var(--text-2)] font-mono text-[11px]">{fmtD(p.sqmPerPce, 4)}</td>
+                  <td className="px-3 py-2 text-right font-medium text-[var(--text-2)] font-mono text-[11px]">{fmtD(p.cbmPerPce, 6)}</td>
+                  <td className="px-3 py-2 text-right font-medium text-[var(--text-2)] font-mono text-[11px]">{fmtD(p.kgPerPce, 3)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-amber-700 bg-[oklch(0.97_0.02_70)]/20 font-mono text-[11px]">{p.priceTon > 0 ? fmtN(p.priceTon) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-emerald-700 bg-[oklch(0.97_0.03_150)]/20 font-mono text-[11px]">{p.priceCbm > 0 ? fmtN(p.priceCbm) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-blue-700 bg-[oklch(0.96_0.03_250)]/20 font-mono text-[11px]">{p.priceSqm > 0 ? fmtN(p.priceSqm) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
+                  <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(p)} className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition" title="Tahrirlash"><Edit2 size={13}/></button>
-                      <button onClick={() => setDelId(p.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={13}/></button>
+                      <button onClick={() => openEdit(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={12}/></button>
+                      <button onClick={() => setDelId(p.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={12}/></button>
                     </div>
                   </td>
                 </tr>
@@ -312,29 +312,29 @@ export default function Products() {
               </div>
 
               {article && (
-                <div className="grid grid-cols-3 gap-3 bg-zinc-50 border border-zinc-200 rounded-lg p-4">
+                <div className="grid grid-cols-3 gap-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
                   <div className="text-center">
-                    <p className="text-xs text-zinc-500 mb-1">1 dona m²</p>
-                    <p className="text-sm font-bold text-zinc-900">{fmtD(units.sqmPerPce, 4)}</p>
+                    <p className="text-[10px] text-[var(--text-3)] mb-1">1 dona m²</p>
+                    <p className="text-xs font-bold text-[var(--text)] font-mono">{fmtD(units.sqmPerPce, 4)}</p>
                   </div>
-                  <div className="text-center border-x border-zinc-200">
-                    <p className="text-xs text-zinc-500 mb-1">1 dona m³</p>
-                    <p className="text-sm font-bold text-zinc-900">{fmtD(units.cbmPerPce, 6)}</p>
+                  <div className="text-center border-x border-[var(--border)]">
+                    <p className="text-[10px] text-[var(--text-3)] mb-1">1 dona m³</p>
+                    <p className="text-xs font-bold text-[var(--text)] font-mono">{fmtD(units.cbmPerPce, 6)}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-zinc-500 mb-1">1 dona kg</p>
-                    <p className="text-sm font-bold text-zinc-900">{fmtD(units.kgPerPce, 3)}</p>
+                    <p className="text-[10px] text-[var(--text-3)] mb-1">1 dona kg</p>
+                    <p className="text-xs font-bold text-[var(--text)] font-mono">{fmtD(units.kgPerPce, 3)}</p>
                   </div>
                 </div>
               )}
 
-              <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-                <Calculator size={12}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
+              <p className="text-[10px] text-[var(--text-3)] flex items-center gap-1.5 justify-center">
+                <Calculator size={11}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
               </p>
 
-              <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition">Bekor</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition shadow-sm">
+              <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-2">
+                <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg transition">Bekor</button>
+                <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
                   {saving ? 'Saqlanmoqda...' : 'Saqlash'}
                 </button>
               </div>
