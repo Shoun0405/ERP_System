@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, HelpCircle,
   LogOut, Calendar, Download, Plus, Search
 } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import api from './lib/api';
 import { fmt } from './lib/format';
 
@@ -127,7 +127,9 @@ function TopHeader({ user }) {
       await api.post('/api/auth/logout');
       toast.success('Xavfsiz ravishda tizimdan chiqildi.');
       window.location.href = '/login';
-    } catch (err) {}
+    } catch {
+      // ignore
+    }
   };
 
   const initials = user?.username ? user.username.slice(0, 2).toUpperCase() : 'US';

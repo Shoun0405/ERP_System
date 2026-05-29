@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { User, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -23,7 +24,7 @@ export default function Login() {
         // Redirect to dashboard
         window.location.href = '/';
       }
-    } catch (err) {
+    } catch {
       // Axios error interceptor will handle standard display, 
       // but in case of manual handling we keep loading state off
     } finally {
@@ -85,14 +86,23 @@ export default function Login() {
                 <Lock size={15} />
               </span>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-10 pl-10 pr-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--text-3)] outline-none focus:border-blue-500 focus:bg-white transition-all duration-200"
+                className="w-full h-10 pl-10 pr-10 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--text-3)] outline-none focus:border-blue-500 focus:bg-white transition-all duration-200"
                 required
                 disabled={loading}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-[var(--text-3)] hover:text-[var(--text)] transition cursor-pointer flex items-center justify-center"
+                disabled={loading}
+                title={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
           </div>
 
