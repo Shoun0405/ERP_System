@@ -15,15 +15,15 @@ export default function Pagination({ page, total, limit, onPage }) {
   };
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 border-t border-zinc-200 bg-zinc-50/50">
-      <p className="text-sm text-zinc-500">
+    <div className="flex items-center justify-between px-6 py-3 border-t border-[var(--border)] bg-[var(--surface-2)]/50">
+      <p className="text-sm text-[var(--text-3)]">
         {start}–{end} / {total} ta
       </p>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPage(page - 1)}
           disabled={page === 1}
-          className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+          className="p-1.5 rounded-md text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-30 disabled:cursor-not-allowed transition"
         >
           <ChevronLeft size={16} />
         </button>
@@ -33,8 +33,8 @@ export default function Pagination({ page, total, limit, onPage }) {
             onClick={() => onPage(n)}
             className={`w-8 h-8 rounded-md text-sm font-medium transition ${
               n === page
-                ? 'bg-blue-600 text-white'
-                : 'text-zinc-600 hover:bg-zinc-200'
+                ? 'bg-[var(--accent)] text-[var(--accent-text)]'
+                : 'text-[var(--text-2)] hover:bg-[var(--surface-2)]'
             }`}
           >
             {n}
@@ -43,7 +43,7 @@ export default function Pagination({ page, total, limit, onPage }) {
         <button
           onClick={() => onPage(page + 1)}
           disabled={page === pages}
-          className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+          className="p-1.5 rounded-md text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-30 disabled:cursor-not-allowed transition"
         >
           <ChevronRight size={16} />
         </button>

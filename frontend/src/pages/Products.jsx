@@ -156,7 +156,7 @@ export default function Products() {
   const inp = 'w-full px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)]';
   const modeBtn = (m, label) => (
     <button type="button" onClick={() => setPriceMode(m)}
-      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${priceMode === m ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'}`}>
+      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${priceMode === m ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'}`}>
       {label}
     </button>
   );
@@ -169,7 +169,7 @@ export default function Products() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Mahsulotlar bazasi</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
           </div>
-          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+          <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
             <Plus size={14}/> Yangi Mahsulot
           </button>
         </div>
@@ -177,20 +177,20 @@ export default function Products() {
 
       {/* Inline Accordion Form for adding Product */}
       {modal === 'add' && (
-        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
               <Plus size={16} className="text-[var(--accent)]"/>
               Yangi Mahsulot Qo'shish
             </h3>
-            <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+            <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
               <X size={16}/>
             </button>
           </div>
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="bg-zinc-900 rounded-lg px-4 py-3 flex items-center justify-between">
-              <span className="text-xs text-zinc-500 uppercase tracking-wider">Artikul (auto)</span>
-              <span className="text-white font-mono font-bold text-lg">{article || '—'}</span>
+            <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center justify-between">
+              <span className="text-xs text-[var(--text-3)] uppercase tracking-wider">Artikul (auto)</span>
+              <span className="text-[var(--text)] font-mono font-bold text-lg">{article || '—'}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -200,7 +200,7 @@ export default function Products() {
                   onChange={e => setForm(f => ({...f, density: e.target.value}))} className={inp} placeholder="80"/>
               </div>
               <div className="flex items-end">
-                <p className="text-xs text-zinc-400 pb-2">Zichlik artikulning boshi bo'ladi</p>
+                <p className="text-xs text-[var(--text-3)] pb-2">Zichlik artikulning boshi bo'ladi</p>
               </div>
             </div>
 
@@ -210,17 +210,17 @@ export default function Products() {
                 <div>
                   <input required type="number" min="1" value={form.length}
                     onChange={e => setForm(f => ({...f, length: e.target.value}))} className={inp} placeholder="Uzunlik"/>
-                  <p className="text-[10px] text-zinc-400 mt-1 text-center">Uzunlik</p>
+                  <p className="text-[10px] text-[var(--text-3)] mt-1 text-center">Uzunlik</p>
                 </div>
                 <div>
                   <input required type="number" min="1" value={form.width}
                     onChange={e => setForm(f => ({...f, width: e.target.value}))} className={inp} placeholder="Eni"/>
-                  <p className="text-[10px] text-zinc-400 mt-1 text-center">Eni</p>
+                  <p className="text-[10px] text-[var(--text-3)] mt-1 text-center">Eni</p>
                 </div>
                 <div>
                   <input required type="number" min="1" value={form.thickness}
                     onChange={e => setForm(f => ({...f, thickness: e.target.value}))} className={inp} placeholder="Qalinlik"/>
-                  <p className="text-[10px] text-zinc-400 mt-1 text-center">Qalinlik</p>
+                  <p className="text-[10px] text-[var(--text-3)] mt-1 text-center">Qalinlik</p>
                 </div>
               </div>
             </div>
@@ -248,7 +248,7 @@ export default function Products() {
 
             <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
               <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
-              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-[var(--accent-text)] text-xs font-medium rounded-lg transition shadow-sm">
                 {saving ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
             </div>
@@ -277,7 +277,7 @@ export default function Products() {
           </div>
           <button onClick={applyPrices}
             disabled={applying || !priceValue || products.length === 0}
-            className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shrink-0 shadow-sm">
+            className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-40 text-[var(--accent-text)] rounded-lg text-xs font-medium transition flex items-center gap-2 shrink-0 shadow-sm">
             <RefreshCw size={13} className={applying ? 'animate-spin' : ''}/>
             {applying ? 'Yangilanmoqda...' : `Ko'rinayotgan ${products.length} ta mahsulotga qo'llash`}
           </button>
@@ -357,46 +357,46 @@ export default function Products() {
       </div>
 
       {modal === 'edit' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">Mahsulotni tahrirlash</h3>
-              <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded hover:bg-zinc-100"><X size={20}/></button>
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-[var(--border)] flex justify-between items-center">
+              <h3 className="text-lg font-bold text-[var(--text)]">Mahsulotni tahrirlash</h3>
+              <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded hover:bg-[var(--surface-2)]"><X size={20}/></button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-5">
-              <div className="bg-zinc-900 rounded-lg px-4 py-3 flex items-center justify-between">
-                <span className="text-xs text-zinc-500 uppercase tracking-wider">Artikul (auto)</span>
-                <span className="text-white font-mono font-bold text-lg">{article || '—'}</span>
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-[var(--text-3)] uppercase tracking-wider">Artikul (auto)</span>
+                <span className="text-[var(--text)] font-mono font-bold text-lg">{article || '—'}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Zichlik (kg/m³) *</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Zichlik (kg/m³) *</label>
                   <input required type="number" step="0.01" min="1" value={form.density}
                     onChange={e => setForm(f => ({...f, density: e.target.value}))} className={inp} placeholder="80"/>
                 </div>
                 <div className="flex items-end">
-                  <p className="text-xs text-zinc-400 pb-2.5">Zichlik artikulning boshi bo'ladi</p>
+                  <p className="text-xs text-[var(--text-3)] pb-2.5">Zichlik artikulning boshi bo'ladi</p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">O'lchamlar (mm) *</label>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">O'lchamlar (mm) *</label>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <input required type="number" min="1" value={form.length}
                       onChange={e => setForm(f => ({...f, length: e.target.value}))} className={inp} placeholder="Uzunlik"/>
-                    <p className="text-xs text-zinc-400 mt-1 text-center">Uzunlik</p>
+                    <p className="text-xs text-[var(--text-3)] mt-1 text-center">Uzunlik</p>
                   </div>
                   <div>
                     <input required type="number" min="1" value={form.width}
                       onChange={e => setForm(f => ({...f, width: e.target.value}))} className={inp} placeholder="Eni"/>
-                    <p className="text-xs text-zinc-400 mt-1 text-center">Eni</p>
+                    <p className="text-xs text-[var(--text-3)] mt-1 text-center">Eni</p>
                   </div>
                   <div>
                     <input required type="number" min="1" value={form.thickness}
                       onChange={e => setForm(f => ({...f, thickness: e.target.value}))} className={inp} placeholder="Qalinlik"/>
-                    <p className="text-xs text-zinc-400 mt-1 text-center">Qalinlik</p>
+                    <p className="text-xs text-[var(--text-3)] mt-1 text-center">Qalinlik</p>
                   </div>
                 </div>
               </div>
@@ -424,7 +424,7 @@ export default function Products() {
 
               <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-2">
                 <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg transition">Bekor</button>
-                <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+                <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-[var(--accent-text)] text-xs font-medium rounded-lg transition shadow-sm">
                   {saving ? 'Saqlanmoqda...' : 'Saqlash'}
                 </button>
               </div>
@@ -434,13 +434,13 @@ export default function Products() {
       )}
 
       {delId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-lg font-bold text-zinc-900 mb-2">Mahsulotni o'chirish</h3>
-            <p className="text-sm text-zinc-500 mb-6">Bu mahsulot bazadan o'chiriladi.</p>
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">Mahsulotni o'chirish</h3>
+            <p className="text-sm text-[var(--text-3)] mb-6">Bu mahsulot bazadan o'chiriladi.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
+              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">Bekor</button>
               <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
             </div>
           </div>

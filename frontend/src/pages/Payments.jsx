@@ -91,7 +91,7 @@ export default function Payments() {
 
   useModalKeys(modal, handleSave, () => setModal(false));
 
-  const inp = 'w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition';
+  const inp = 'w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition text-[var(--text)]';
 
   const debtSummary = clients
     .map(c => ({ ...c, debt: c.debt ?? (c.totalSales || 0) - (c.totalPayments || 0) }))
@@ -107,7 +107,7 @@ export default function Payments() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Tushumlar</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta to'lov</p>
           </div>
-          <button onClick={openModal} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+          <button onClick={openModal} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
             <Plus size={14}/> Yangi Tushum
           </button>
         </div>
@@ -115,13 +115,13 @@ export default function Payments() {
 
       {/* Inline Accordion Form for adding Payment */}
       {modal && (
-        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
               <Plus size={16} className="text-[var(--accent)]"/>
               Yangi Tushum Kiritish
             </h3>
-            <button onClick={() => setModal(false)} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+            <button onClick={() => setModal(false)} className="text-[var(--text-3)] hover:text-[var(--text-2)] p-1 rounded-md hover:bg-[var(--surface-2)]">
               <X size={16}/>
             </button>
           </div>
@@ -156,7 +156,7 @@ export default function Payments() {
             </div>
             <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
               <button type="button" onClick={() => setModal(false)} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
-              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-[var(--accent-text)] text-xs font-medium rounded-lg transition shadow-sm">
                 {saving ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
             </div>
@@ -220,35 +220,35 @@ export default function Payments() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-zinc-200">
-                <th className="px-6 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Sana</th>
-                <th className="px-6 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Mijoz</th>
-                <th className="px-6 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Shartnoma</th>
-                <th className="px-6 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Izoh</th>
-                <th className="px-6 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">Summa</th>
+              <tr className="border-b border-[var(--border)]">
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Sana</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Mijoz</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnoma</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Izoh</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider text-right">Summa</th>
                 <th className="px-6 py-3 w-16"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-[var(--border)]">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i}>{[...Array(6)].map((_, j) => <td key={j} className="px-6 py-4"><div className="h-4 bg-zinc-100 animate-pulse rounded"/></td>)}</tr>
+                  <tr key={i}>{[...Array(6)].map((_, j) => <td key={j} className="px-6 py-4"><div className="h-4 bg-[var(--surface-2)] animate-pulse rounded"/></td>)}</tr>
                 ))
               ) : payments.length === 0 ? (
-                <tr><td colSpan="6" className="px-6 py-12 text-center text-zinc-400 text-sm">
+                <tr><td colSpan="6" className="px-6 py-12 text-center text-[var(--text-3)] text-sm">
                   {hasFilter ? 'Topilmadi' : 'Hozircha to\'lovlar yo\'q'}
                 </td></tr>
               ) : payments.map(p => (
-                <tr key={p.id} className="hover:bg-zinc-50 transition-colors group">
-                  <td className="px-6 py-4 text-sm text-zinc-600">{fmtDate(p.date)}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-zinc-900">{p.client?.name}</td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">{p.contract ? `№${p.contract.number}` : '—'}</td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">{p.note || '—'}</td>
+                <tr key={p.id} className="hover:bg-[var(--surface-2)] transition-colors group">
+                  <td className="px-6 py-4 text-sm text-[var(--text-2)]">{fmtDate(p.date)}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-[var(--text)]">{p.client?.name}</td>
+                  <td className="px-6 py-4 text-sm text-[var(--text-3)]">{p.contract ? `№${p.contract.number}` : '—'}</td>
+                  <td className="px-6 py-4 text-sm text-[var(--text-3)]">{p.note || '—'}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{fmt(p.amount)} UZS</td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleCopy(p)} className="p-1.5 text-zinc-400 hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={14}/></button>
-                      <button onClick={() => setDelId(p.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={14}/></button>
+                      <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={14}/></button>
+                      <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={14}/></button>
                     </div>
                   </td>
                 </tr>
@@ -262,13 +262,13 @@ export default function Payments() {
 
 
       {delId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-lg font-bold text-zinc-900 mb-2">To'lovni o'chirish</h3>
-            <p className="text-sm text-zinc-500 mb-6">Bu to'lov yozuvi o'chiriladi.</p>
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">To'lovni o'chirish</h3>
+            <p className="text-sm text-[var(--text-3)] mb-6">Bu to'lov yozuvi o'chiriladi.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
+              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">Bekor</button>
               <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
             </div>
           </div>

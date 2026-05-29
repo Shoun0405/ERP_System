@@ -26,8 +26,8 @@ const fmtPhone = raw => {
 const rawPhone = v => { const d=v.replace(/\D/g,'').replace(/^998/,'').slice(0,9); return d ? '+998'+d : ''; };
 
 function SortIcon({ col, sort }) {
-  if(sort.col!==col) return <ArrowUpDown size={12} className="text-zinc-400 ml-1 inline"/>;
-  return sort.dir==='asc' ? <ArrowUp size={12} className="text-blue-500 ml-1 inline"/> : <ArrowDown size={12} className="text-blue-500 ml-1 inline"/>;
+  if(sort.col!==col) return <ArrowUpDown size={12} className="text-[var(--text-3)] ml-1 inline"/>;
+  return sort.dir==='asc' ? <ArrowUp size={12} className="text-[var(--accent)] ml-1 inline"/> : <ArrowDown size={12} className="text-[var(--accent)] ml-1 inline"/>;
 }
 
 function MultiSellerSelect({ sellers, value, onChange }) {
@@ -64,7 +64,7 @@ function MultiSellerSelect({ sellers, value, onChange }) {
             <span style={{ color: 'var(--text-3)' }}>Sotuvchilarni tanlang...</span>
           ) : (
             selectedList.map(s => (
-              <span key={s} className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid oklch(0.88 0.06 55)' }}>
+              <span key={s} className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--border)' }}>
                 {s}
               </span>
             ))
@@ -304,7 +304,7 @@ export default function Clients() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Mijozlar (CRM)</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mijoz</p>
           </div>
-          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+          <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
             <Plus size={14}/> Yangi Mijoz
           </button>
         </div>
@@ -329,7 +329,7 @@ export default function Clients() {
             className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
               debtFilter === t.key
                 ? 'border-[var(--accent)] text-[var(--accent)]'
-                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-zinc-300'
+                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-[var(--border)]'
             }`}
           >
             {t.label}
@@ -339,13 +339,13 @@ export default function Clients() {
 
       {/* Inline Accordion Form for adding Client */}
       {modal === 'add' && (
-        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
               <Plus size={16} className="text-[var(--accent)]"/>
               Yangi Mijoz Qo'shish
             </h3>
-            <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+            <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
               <X size={16}/>
             </button>
           </div>
@@ -368,7 +368,7 @@ export default function Clients() {
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Telefon</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium pointer-events-none">+998</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-xs font-medium pointer-events-none">+998</span>
                   <input type="text" value={phoneInput.replace('+998 ','')} onChange={e=>{
                     const d=e.target.value.replace(/\D/g,'').slice(0,9);
                     let s=''; if(d.length>0)s=d.slice(0,2); if(d.length>2)s+=' '+d.slice(2,5); if(d.length>5)s+=' '+d.slice(5,7); if(d.length>7)s+=' '+d.slice(7,9);
@@ -408,7 +408,7 @@ export default function Clients() {
             </div>
             <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
               <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor qilish</button>
-              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-[var(--accent-text)] text-xs font-medium rounded-lg transition shadow-sm">
                 {saving?'Saqlanmoqda...':'Saqlash'}
               </button>
             </div>
@@ -470,7 +470,7 @@ export default function Clients() {
                         <button onClick={()=>handleCopy(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Nusxa olish"><Copy size={13}/></button>
                         <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={13}/></button>
                         <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={13}/></button>
-                        <button onClick={()=>toggleExpand(c.id)} className={`p-1 rounded transition ${expanded===c.id?'text-[var(--accent)] bg-[oklch(0.96_0.03_250)]':'text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`} title="Batafsil">
+                        <button onClick={()=>toggleExpand(c.id)} className={`p-1 rounded transition ${expanded===c.id?'text-[var(--accent)] bg-[var(--accent-bg)]':'text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`} title="Batafsil">
                           {expanded===c.id?<ChevronUp size={13}/>:<ChevronDown size={13}/>}
                         </button>
                       </div>
@@ -532,35 +532,35 @@ export default function Clients() {
       </div>
 
       {modal === 'edit' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">Mijozni tahrirlash</h3>
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[var(--border)] flex justify-between items-center">
+              <h3 className="text-lg font-bold text-[var(--text)]">Mijozni tahrirlash</h3>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-zinc-400">Ctrl+Enter — saqlash · Esc — yopish</span>
-                <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>
+                <span className="text-xs text-[var(--text-3)]">Ctrl+Enter — saqlash · Esc — yopish</span>
+                <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]"><X size={20}/></button>
               </div>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Tashkilot nomi *</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Tashkilot nomi *</label>
                   <input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className={inp('name')} placeholder="MChJ, XK..."/>
                   {errors.name&&<p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">STIR (INN) <span className="text-zinc-400 font-normal">— ixtiyoriy, 9 xona</span></label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">STIR (INN) <span className="text-[var(--text-3)] font-normal">— ixtiyoriy, 9 xona</span></label>
                   <input type="text" value={form.inn} onChange={e=>setForm(f=>({...f,inn:fmtINN(e.target.value)}))} className={inp('inn')} placeholder="123 456 789"/>
                   {errors.inn&&<p className="text-xs text-red-500 mt-1">{errors.inn}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Direktor</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Direktor</label>
                   <input type="text" value={form.director} onChange={e=>setForm(f=>({...f,director:e.target.value}))} className={inp('director')} placeholder="F.I.O."/>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Telefon <span className="text-zinc-400 font-normal">— max 9 raqam</span></label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Telefon <span className="text-[var(--text-3)] font-normal">— max 9 raqam</span></label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-medium pointer-events-none">+998</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-sm font-medium pointer-events-none">+998</span>
                     <input type="text" value={phoneInput.replace('+998 ','')} onChange={e=>{
                       const d=e.target.value.replace(/\D/g,'').slice(0,9);
                       let s=''; if(d.length>0)s=d.slice(0,2); if(d.length>2)s+=' '+d.slice(2,5); if(d.length>5)s+=' '+d.slice(5,7); if(d.length>7)s+=' '+d.slice(7,9);
@@ -570,37 +570,37 @@ export default function Clients() {
                   {errors.phone&&<p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Holati</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Holati</label>
                   <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))} className={inp('status')}>
                     <option>Yangi</option><option>Faol</option><option>Kutilmoqda</option><option>Muddati o'tgan</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Kategoriya</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Kategoriya</label>
                   <input type="text" value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} className={inp('category')} placeholder="Qurilish, Savdo..."/>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Manzil</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Manzil</label>
                   <input type="text" value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} className={inp('address')} placeholder="Shahar, ko'cha, uy..."/>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Hisob raqam <span className="text-zinc-400 font-normal">— 20 xona</span></label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Hisob raqam <span className="text-[var(--text-3)] font-normal">— 20 xona</span></label>
                   <input type="text" value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value.replace(/\D/g,'').slice(0,20)}))} className={inp('account')} placeholder="20200000000000000000"/>
                   {errors.account&&<p className="text-xs text-red-500 mt-1">{errors.account}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">MFO <span className="text-zinc-400 font-normal">— 5 xona</span></label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">MFO <span className="text-[var(--text-3)] font-normal">— 5 xona</span></label>
                   <input type="text" value={form.mfo} onChange={e=>setForm(f=>({...f,mfo:e.target.value.replace(/\D/g,'').slice(0,5)}))} className={inp('mfo')} placeholder="01234"/>
                   {errors.mfo&&<p className="text-xs text-red-500 mt-1">{errors.mfo}</p>}
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Mas'ul sotuvchi</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Mas'ul sotuvchi</label>
                   <MultiSellerSelect sellers={sellers} value={form.seller} onChange={v=>setForm(f=>({...f,seller:v}))}/>
                 </div>
               </div>
-              <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition">Bekor qilish</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition shadow-sm">
+              <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-3">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md transition">Bekor qilish</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md transition shadow-sm">
                   {saving?'Saqlanmoqda...':'Saqlash'}
                 </button>
               </div>
@@ -610,13 +610,13 @@ export default function Clients() {
       )}
 
       {delId&&(
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-lg font-bold text-zinc-900 mb-2">Mijozni o'chirish</h3>
-            <p className="text-sm text-zinc-500 mb-6">Bu amalni ortga qaytarib bo'lmaydi.</p>
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">Mijozni o'chirish</h3>
+            <p className="text-sm text-[var(--text-3)] mb-6">Bu amalni ortga qaytarib bo'lmaydi.</p>
             <div className="flex gap-3">
-              <button onClick={()=>setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
+              <button onClick={()=>setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">Bekor</button>
               <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
             </div>
           </div>
@@ -624,38 +624,38 @@ export default function Clients() {
       )}
 
       {contractModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                <FileText size={18} className="text-blue-600"/>
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-md">
+            <div className="px-6 py-4 border-b border-[var(--border)] flex justify-between items-center">
+              <h3 className="text-lg font-bold text-[var(--text)] flex items-center gap-2">
+                <FileText size={18} className="text-[var(--accent)]"/>
                 {contractModal === 'edit' ? 'Shartnomani tahrirlash' : 'Yangi shartnoma'}
               </h3>
-              <button onClick={closeContractModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>
+              <button onClick={closeContractModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]"><X size={20}/></button>
             </div>
             <form onSubmit={handleContractSave} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Shartnoma raqami *</label>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Shartnoma raqami *</label>
                 <input type="text" value={contractForm.number} onChange={e => setContractForm(f => ({ ...f, number: e.target.value }))}
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition"
                   placeholder="2024/001"/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Sana *</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Sana *</label>
                   <input type="date" value={contractForm.date} onChange={e => setContractForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"/>
+                    className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition"/>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Summa (UZS) *</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Summa (UZS) *</label>
                   <input type="number" min="0" value={contractForm.totalValue} onChange={e => setContractForm(f => ({ ...f, totalValue: e.target.value }))}
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition"
                     placeholder="0"/>
                 </div>
               </div>
-              <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
-                <button type="button" onClick={closeContractModal} className="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition">Bekor</button>
-                <button type="submit" disabled={contractSaving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition shadow-sm">
+              <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-3">
+                <button type="button" onClick={closeContractModal} className="px-4 py-2 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md transition">Bekor</button>
+                <button type="submit" disabled={contractSaving} className="px-5 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md transition shadow-sm">
                   {contractSaving ? 'Saqlanmoqda...' : 'Saqlash'}
                 </button>
               </div>
@@ -665,13 +665,13 @@ export default function Clients() {
       )}
 
       {delContractId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-lg font-bold text-zinc-900 mb-2">Shartnomani o'chirish</h3>
-            <p className="text-sm text-zinc-500 mb-6">Bog'langan savdo yoki to'lov bo'lsa o'chirib bo'lmaydi.</p>
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">Shartnomani o'chirish</h3>
+            <p className="text-sm text-[var(--text-3)] mb-6">Bog'langan savdo yoki to'lov bo'lsa o'chirib bo'lmaydi.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDelContractId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
+              <button onClick={() => setDelContractId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">Bekor</button>
               <button onClick={handleContractDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
             </div>
           </div>

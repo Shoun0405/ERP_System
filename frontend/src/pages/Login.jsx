@@ -40,7 +40,7 @@ export default function Login() {
         style={{
           width: '480px', height: '480px',
           top: '-120px', left: '-120px',
-          background: 'radial-gradient(circle, oklch(0.58 0.17 45 / 0.10), transparent 70%)',
+          background: 'radial-gradient(circle, oklch(0.585 0.222 277 / 0.12), transparent 70%)',
           filter: 'blur(60px)',
         }}
       />
@@ -49,7 +49,7 @@ export default function Login() {
         style={{
           width: '380px', height: '380px',
           bottom: '-80px', right: '-80px',
-          background: 'radial-gradient(circle, oklch(0.55 0.12 55 / 0.08), transparent 70%)',
+          background: 'radial-gradient(circle, oklch(0.700 0.180 277 / 0.10), transparent 70%)',
           filter: 'blur(60px)',
         }}
       />
@@ -75,10 +75,10 @@ export default function Login() {
             className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
             style={{
               background: 'var(--accent)',
-              boxShadow: '0 4px 16px oklch(0.58 0.17 45 / 0.30)',
+              boxShadow: '0 4px 16px var(--accent-bg)',
             }}
           >
-            <span className="text-white text-xl font-bold tracking-tighter">N</span>
+            <span className="text-xl font-bold tracking-tighter" style={{ color: 'var(--accent-text)' }}>N</span>
           </div>
           <h2 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
             NexERP Tizimiga Kirish
@@ -170,10 +170,11 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-10 text-white rounded-lg text-xs font-semibold tracking-wide transition flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full h-10 rounded-lg text-xs font-semibold tracking-wide transition flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed group"
             style={{
-              background: loading ? 'var(--accent)' : 'var(--accent)',
-              boxShadow: '0 2px 8px oklch(0.58 0.17 45 / 0.30)',
+              background: 'var(--accent)',
+              color: 'var(--accent-text)',
+              boxShadow: '0 2px 8px var(--accent-bg)',
             }}
             onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--accent-hover)'; }}
             onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}

@@ -5,11 +5,12 @@ import {
   Settings, Bell, TrendingUp, TrendingDown,
   ArrowUpRight, MessageSquare, FileText,
   ChevronLeft, ChevronRight, ChevronDown, HelpCircle,
-  LogOut, Calendar, Download, Plus, Search
+  LogOut, Calendar, Download, Plus, Search, Sun, Moon
 } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import api from './lib/api';
 import { fmt } from './lib/format';
+import { useTheme } from './hooks/useTheme';
 
 import Clients          from './pages/Clients';
 import Products         from './pages/Products';
@@ -53,7 +54,7 @@ function Sidebar({ collapsed, onToggle }) {
       >
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'var(--accent)', boxShadow: '0 2px 8px oklch(0.58 0.17 45 / 0.35)' }}
+          style={{ background: 'var(--accent)', boxShadow: '0 2px 8px var(--accent-bg)' }}
         >
           <span className="text-white text-base font-bold tracking-tighter">N</span>
         </div>
@@ -118,7 +119,7 @@ function Sidebar({ collapsed, onToggle }) {
 }
 
 // ─── Top Header ────────────────────────────────────────────────────────────
-function TopHeader({ user }) {
+function TopHeader({ user, theme, onToggleTheme }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -176,6 +177,15 @@ function TopHeader({ user }) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Theme toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition"
+          title={theme === 'dark' ? "Yorug' rejim" : "Qorong'u rejim"}
+        >
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+
         {/* Help button */}
         <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition" title="Yordam">
           <HelpCircle size={17} />
@@ -284,8 +294,8 @@ function TrendSVGChart({ data }) {
       {/* Gradient Area Fill */}
       <defs>
         <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="oklch(0.58 0.17 45)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="oklch(0.58 0.17 45)" stopOpacity="0.02" />
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
         </linearGradient>
       </defs>
       <path d={areaStr} fill="url(#chartGrad)" />
@@ -301,8 +311,8 @@ function TrendSVGChart({ data }) {
           cy={ys(d.amount)}
           r="3"
           fill="var(--accent)"
-          stroke="white"
-          strokeWidth="1"
+          stroke="var(--surface)"
+          strokeWidth="1.5"
         />
       ))}
     </svg>
@@ -372,7 +382,7 @@ function Dashboard() {
       value: stats.clientsCount,
       unit: 'ta',
       sub: 'CRM ro\'yxatida',
-      color: 'text-blue-600',
+      color: 'text-[var(--accent)]',
       tone: 'info',
       icon: Users,
       delta: 8.2,
@@ -393,7 +403,7 @@ function Dashboard() {
             <button className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2">
               <Calendar size={13} /> Bugun · {new Date().toLocaleDateString('uz-UZ')}
             </button>
-            <button className="px-3 py-1.5 text-white rounded-lg text-xs font-medium transition flex items-center gap-2" style={{ background: 'var(--accent)', boxShadow: '0 1px 4px oklch(0.58 0.17 45 / 0.25)' }}
+            <button className="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2" style={{ background: 'var(--accent)', color: 'var(--accent-text)', boxShadow: '0 1px 4px var(--accent-bg)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
             >
@@ -568,6 +578,7 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     api.get('/api/auth/me')
@@ -583,9 +594,9 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center font-sans">
         <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: 'oklch(0.58 0.17 45 / 0.20)', borderTopColor: 'var(--accent)' }} />
+          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: 'var(--accent-bg)', borderTopColor: 'var(--accent)' }} />
           <p className="text-xs text-[var(--text-3)] font-semibold tracking-wider uppercase">Yuklanmoqda...</p>
         </div>
       </div>
@@ -610,7 +621,7 @@ export default function App() {
       <div className="flex h-screen bg-[var(--bg)] overflow-hidden font-sans">
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <TopHeader user={user} />
+          <TopHeader user={user} theme={theme} onToggleTheme={toggleTheme} />
           <div className="flex-1 overflow-y-auto pb-8">
             <Routes>
               <Route path="/"              element={<Dashboard />} />

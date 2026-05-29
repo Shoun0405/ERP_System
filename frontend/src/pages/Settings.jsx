@@ -133,7 +133,7 @@ export default function Settings() {
               className={`${inp} flex-1`}
               placeholder="Sotuvchi F.I.O. va Enter bosing..."
             />
-            <button type="button" onClick={addSeller} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+            <button type="button" onClick={addSeller} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
               <Plus size={13} /> Qo'shish
             </button>
           </div>
@@ -184,7 +184,7 @@ export default function Settings() {
             className={`px-4 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm ${
               saved
                 ? 'bg-emerald-600 text-white'
-                : 'bg-[var(--accent)] hover:opacity-90 text-white disabled:opacity-60'
+                : 'btn-primary disabled:opacity-60'
             }`}
           >
             <Save size={13} />

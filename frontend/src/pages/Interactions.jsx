@@ -117,7 +117,7 @@ export default function InteractionsPage() {
 
   useModalKeys(!!modal, handleSave, closeModal);
 
-  const inp = 'w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none transition';
+  const inp = 'w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition text-[var(--text)]';
   const hasFilter = filterClient || search;
 
   return (
@@ -128,7 +128,7 @@ export default function InteractionsPage() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Muloqotlar (CRM tarix)</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yozuv</p>
           </div>
-          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+          <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
             <Plus size={14}/> Yangi muloqot
           </button>
         </div>
@@ -136,13 +136,13 @@ export default function InteractionsPage() {
 
       {/* Inline Accordion Form for adding Interaction */}
       {modal === 'add' && (
-        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
               <Plus size={16} className="text-[var(--accent)]"/>
               Yangi Muloqot Qo'shish
             </h3>
-            <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+            <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
               <X size={16}/>
             </button>
           </div>
@@ -173,13 +173,13 @@ export default function InteractionsPage() {
                   className={`${inp} resize-none`} rows={3} placeholder="Muloqot haqida qisqacha..."/>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Keyingi aloqa sanasi <span className="text-zinc-400 font-normal">— ixtiyoriy</span></label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Keyingi aloqa sanasi <span className="text-[var(--text-3)] font-normal">— ixtiyoriy</span></label>
                 <input type="date" value={form.nextDate} onChange={e => setForm(f => ({ ...f, nextDate: e.target.value }))} className={inp}/>
               </div>
             </div>
             <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
               <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
-              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+              <button type="submit" disabled={saving} className="px-4 py-1.5 btn-primary disabled:opacity-60 text-xs font-medium rounded-lg transition shadow-sm">
                 {saving ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
             </div>
@@ -255,18 +255,18 @@ export default function InteractionsPage() {
       </div>
 
       {modal === 'edit' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">Muloqotni tahrirlash</h3>
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-md">
+            <div className="px-6 py-4 border-b border-[var(--border)] flex justify-between items-center">
+              <h3 className="text-lg font-bold text-[var(--text)]">Muloqotni tahrirlash</h3>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">Ctrl+Enter — saqlash</span>
-                <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>
+                <span className="text-xs text-[var(--text-3)]">Ctrl+Enter — saqlash</span>
+                <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]"><X size={20}/></button>
               </div>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Mijoz *</label>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Mijoz *</label>
                 <select required value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} className={inp}>
                   <option value="">— Mijozni tanlang —</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -274,28 +274,28 @@ export default function InteractionsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Sana *</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Sana *</label>
                   <input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp}/>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Turi *</label>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Turi *</label>
                   <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className={inp}>
                     {TYPE_LIST.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Izoh</label>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Izoh</label>
                 <textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
                   className={`${inp} resize-none`} rows={3} placeholder="Muloqot haqida qisqacha..."/>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Keyingi aloqa sanasi <span className="text-zinc-400 font-normal">— ixtiyoriy</span></label>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Keyingi aloqa sanasi <span className="text-[var(--text-3)] font-normal">— ixtiyoriy</span></label>
                 <input type="date" value={form.nextDate} onChange={e => setForm(f => ({ ...f, nextDate: e.target.value }))} className={inp}/>
               </div>
-              <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition">Bekor</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition shadow-sm">
+              <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-3">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md transition">Bekor</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md transition shadow-sm">
                   {saving ? 'Saqlanmoqda...' : 'Saqlash'}
                 </button>
               </div>
@@ -305,13 +305,13 @@ export default function InteractionsPage() {
       )}
 
       {delId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-lg font-bold text-zinc-900 mb-2">Muloqotni o'chirish</h3>
-            <p className="text-sm text-zinc-500 mb-6">Bu yozuv o'chiriladi.</p>
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">Muloqotni o'chirish</h3>
+            <p className="text-sm text-[var(--text-3)] mb-6">Bu yozuv o'chiriladi.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-zinc-300 rounded-md hover:bg-zinc-50 transition">Bekor</button>
+              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">Bekor</button>
               <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
             </div>
           </div>

@@ -40,26 +40,26 @@ function QuickAddClientModal({ onSaved, onClose }) {
   useModalKeys(true, save, onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm space-y-4">
+    <div className="modal-overlay">
+      <div className="modal-card p-6 w-full max-w-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-zinc-900">Yangi mijoz</h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600"><X size={18} /></button>
+          <h3 className="font-semibold text-[var(--text)]">Yangi mijoz</h3>
+          <button onClick={onClose} className="text-[var(--text-3)] hover:text-[var(--text-2)]"><X size={18} /></button>
         </div>
         <input
           autoFocus placeholder="Mijoz nomi *"
           value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none"
         />
         <input
           placeholder="INN"
           value={form.inn} onChange={e => setForm(f => ({ ...f, inn: e.target.value }))}
-          className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none"
         />
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-md">Bekor</button>
+          <button onClick={onClose} className="px-3 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">Bekor</button>
           <button onClick={save} disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60">
+            className="px-4 py-2 text-sm btn-primary rounded-md disabled:opacity-60">
             {saving ? 'Saqlanmoqda...' : 'Saqlash'}
           </button>
         </div>
@@ -76,12 +76,12 @@ function SpecProductRow({ row, products, onChange, onRemove }) {
   const update = (field, val) => onChange({ ...row, [field]: val });
 
   return (
-    <tr className="border-t border-zinc-100">
+    <tr className="border-t border-[var(--border)]">
       <td className="py-2 pr-2">
         <select
           value={row.productId}
           onChange={e => update('productId', e.target.value)}
-          className="w-full border border-zinc-200 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-[var(--accent)] outline-none"
         >
           <option value="">— Mahsulot —</option>
           {products.map(p => (
@@ -93,7 +93,7 @@ function SpecProductRow({ row, products, onChange, onRemove }) {
         <select
           value={row.unit}
           onChange={e => update('unit', e.target.value)}
-          className="w-full border border-zinc-200 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-[var(--accent)] outline-none"
         >
           {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
         </select>
@@ -102,18 +102,18 @@ function SpecProductRow({ row, products, onChange, onRemove }) {
         <input type="number" min="0" step="0.01"
           value={row.quantity}
           onChange={e => update('quantity', e.target.value)}
-          className="w-full border border-zinc-200 rounded px-2 py-1.5 text-xs text-right focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-xs text-right focus:ring-2 focus:ring-[var(--accent)] outline-none"
         />
       </td>
       <td className="py-2 pr-2">
         <input type="number" min="0" step="0.01"
           value={row.unitPriceVat}
           onChange={e => update('unitPriceVat', e.target.value)}
-          className="w-full border border-zinc-200 rounded px-2 py-1.5 text-xs text-right focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-xs text-right focus:ring-2 focus:ring-[var(--accent)] outline-none"
         />
       </td>
-      <td className="py-2 pr-2 text-xs text-right text-zinc-500 whitespace-nowrap">{fmt(vatAmt)}</td>
-      <td className="py-2 pr-2 text-xs text-right font-medium text-zinc-800 whitespace-nowrap">{fmt(rowTotal)}</td>
+      <td className="py-2 pr-2 text-xs text-right text-[var(--text-3)] whitespace-nowrap">{fmt(vatAmt)}</td>
+      <td className="py-2 pr-2 text-xs text-right font-medium text-[var(--text)] whitespace-nowrap">{fmt(rowTotal)}</td>
       <td className="py-2 text-center">
         <button onClick={onRemove} className="text-red-400 hover:text-red-600"><X size={14} /></button>
       </td>
@@ -172,24 +172,24 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
   };
 
   return (
-    <div className="mt-3 border border-zinc-200 rounded-lg p-4 bg-zinc-50 space-y-3">
-      <div className="flex items-center gap-3 bg-zinc-900 rounded-lg px-4 py-2 flex-wrap">
-        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Spetsifikatsiya</span>
-        <span className="text-white font-mono font-bold text-sm bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
+    <div className="mt-3 border border-[var(--border)] rounded-lg p-4 bg-[var(--surface-2)] space-y-3">
+      <div className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-2 flex-wrap">
+        <span className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Spetsifikatsiya</span>
+        <span className="text-[var(--accent)] font-mono font-bold text-sm bg-[var(--accent-bg)] px-2 py-0.5 rounded border border-[var(--border)]">
           {editing ? `№ ${spec?.number}` : `Keyingi № ${nextNumber || '—'}`}
         </span>
       </div>
 
       <div className="flex gap-3">
         <div>
-          <label className="text-xs font-medium text-zinc-500 block mb-1">Sana</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sana</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="border border-zinc-200 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+            className="border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
         </div>
         <div className="flex-1">
-          <label className="text-xs font-medium text-zinc-500 block mb-1">Izoh</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Izoh</label>
           <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ixtiyoriy..."
-            className="w-full border border-zinc-200 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+            className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
         </div>
       </div>
 
@@ -202,7 +202,7 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
             <col style={{width:'4%'}} />
           </colgroup>
           <thead>
-            <tr className="text-zinc-500">
+            <tr className="text-[var(--text-3)]">
               <th className="text-left pb-1.5 pr-2 font-medium">Mahsulot</th>
               <th className="text-left pb-1.5 pr-2 font-medium">Birlik</th>
               <th className="text-right pb-1.5 pr-2 font-medium">Soni</th>
@@ -224,28 +224,28 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
           </tbody>
         </table>
         {rows.length === 0 && (
-          <p className="text-xs text-zinc-400 py-2 text-center">Mahsulot qo'shing</p>
+          <p className="text-xs text-[var(--text-3)] py-2 text-center">Mahsulot qo'shing</p>
         )}
       </div>
 
       <div className="flex items-center justify-between">
         <button onClick={addRow}
-          className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+          className="text-xs text-[var(--accent)] hover:opacity-80 flex items-center gap-1">
           <Plus size={13} /> Mahsulot qo'shish
         </button>
         {rows.length > 0 && (
-          <span className="text-sm font-bold text-zinc-800">
+          <span className="text-sm font-bold text-[var(--text)]">
             Jami: {fmt(totalValue)} so'm
           </span>
         )}
       </div>
 
-      <div className="flex gap-2 justify-end pt-1 border-t border-zinc-200">
-        <button onClick={onCancel} className="px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-200 rounded-md">
+      <div className="flex gap-2 justify-end pt-1 border-t border-[var(--border)]">
+        <button onClick={onCancel} className="px-3 py-1.5 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
           Bekor
         </button>
         <button onClick={save} disabled={saving}
-          className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 flex items-center gap-1.5">
+          className="px-4 py-1.5 text-sm btn-primary rounded-md disabled:opacity-60 flex items-center gap-1.5">
           {saving ? <RefreshCw size={13} className="animate-spin" /> : <Check size={13} />}
           {editing ? 'Yangilash' : 'Spets saqlash'}
         </button>
@@ -329,33 +329,33 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
 
   return (
     <>
-      <tr className="hover:bg-zinc-50 transition-colors cursor-pointer" onClick={toggleExpand}>
-        <td className="px-4 py-3 text-sm text-zinc-400">{idx}</td>
+      <tr className="hover:bg-[var(--surface-2)] transition-colors cursor-pointer" onClick={toggleExpand}>
+        <td className="px-4 py-3 text-sm text-[var(--text-3)]">{idx}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className={`shrink-0 rounded p-0.5 transition-colors ${expanded ? 'bg-blue-100 text-blue-600' : 'text-zinc-300 hover:text-zinc-500'}`}>
+            <span className={`shrink-0 rounded p-0.5 transition-colors ${expanded ? 'bg-[var(--accent-bg)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}>
               {expanded
                 ? <ChevronDown size={15} />
                 : <ChevronRight size={15} />}
             </span>
-            <span className="text-sm font-semibold text-zinc-800">{c.client?.name}</span>
+            <span className="text-sm font-semibold text-[var(--text)]">{c.client?.name}</span>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-zinc-500 tracking-wide">{fmtInn(c.client?.inn)}</td>
-        <td className="px-4 py-3 text-sm font-bold text-zinc-900 font-mono">{c.number}</td>
-        <td className="px-4 py-3 text-sm text-zinc-500">{fmtDate(c.date)}</td>
-        <td className="px-4 py-3 text-sm text-right font-semibold text-zinc-800">{fmt(c.totalValue)}</td>
+        <td className="px-4 py-3 text-sm text-[var(--text-3)] tracking-wide">{fmtInn(c.client?.inn)}</td>
+        <td className="px-4 py-3 text-sm font-bold text-[var(--text)] font-mono">{c.number}</td>
+        <td className="px-4 py-3 text-sm text-[var(--text-3)]">{fmtDate(c.date)}</td>
+        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--text)]">{fmt(c.totalValue)}</td>
         <td className="px-4 py-3 text-sm text-right text-emerald-600 font-medium">{fmt(c.paidAmount)}</td>
-        <td className="px-4 py-3 text-sm text-right text-blue-600 font-medium">{fmt(c.deliveredAmount)}</td>
+        <td className="px-4 py-3 text-sm text-right text-[var(--accent)] font-medium">{fmt(c.deliveredAmount)}</td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <button onClick={toggleExpand}
             className={`text-xs font-medium px-2 py-1 rounded-full transition-colors ${
-              expanded ? 'bg-blue-100 text-blue-700' : 'bg-zinc-100 text-zinc-600 hover:bg-blue-50 hover:text-blue-600'
+              expanded ? 'bg-[var(--accent-bg)] text-[var(--accent)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--accent-bg)] hover:text-[var(--accent)]'
             }`}>
             {c.specCount} spets
           </button>
         </td>
-        <td className="px-4 py-3 text-sm text-right text-zinc-600 font-medium">{fmt(c.invoiceAmount || 0)}</td>
+        <td className="px-4 py-3 text-sm text-right text-[var(--text-2)] font-medium">{fmt(c.invoiceAmount || 0)}</td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || STATUS_COLORS.yangi}`}>
             {STATUS_LABELS[c.status] || c.status}
@@ -363,26 +363,26 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
         </td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <button onClick={openMenu}
-            className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600">
+            className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]">
             <MoreVertical size={15} />
           </button>
           {menuOpen && menuPos && (
             <div
               style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-              className="bg-white border border-zinc-200 rounded-lg shadow-xl w-44 py-1"
+              className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl w-44 py-1"
               onMouseDown={e => e.stopPropagation()}
             >
               <button onClick={() => { setMenuOpen(false); onEdit(c); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50">
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
                 <Pencil size={14} /> Tahrirlash
               </button>
               <a href={`${API}/api/export/contracts/${c.id}/pdf`} target="_blank" rel="noreferrer"
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50 text-zinc-700"
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>
                 <FileText size={14} /> PDF yuklab olish
               </a>
               <a href={`${API}/api/export/contracts/${c.id}/excel`}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50 text-zinc-700"
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>
                 <FileSpreadsheet size={14} /> Excel yuklab olish
               </a>
@@ -394,40 +394,40 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
       {/* Expand panel — spetslar */}
       {expanded && (
         <tr>
-          <td colSpan={12} className="px-6 pb-4 bg-zinc-50/60">
-            <div className="border border-zinc-200 rounded-lg bg-white">
-              <div className="flex items-center gap-4 px-4 py-2.5 border-b border-zinc-100">
+          <td colSpan={12} className="px-6 pb-4 bg-[var(--surface-2)]/60">
+            <div className="border border-[var(--border)] rounded-lg bg-[var(--surface)]">
+              <div className="flex items-center gap-4 px-4 py-2.5 border-b border-[var(--border)]">
                 <button onClick={() => { setAddingSpec(true); setEditSpec(null); setCopiedSpec(null); }}
-                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium bg-blue-50 px-2.5 py-1 rounded-md">
+                  className="flex items-center gap-1 text-xs text-[var(--accent)] hover:opacity-80 font-medium bg-[var(--accent-bg)] px-2.5 py-1 rounded-md">
                   <Plus size={13} /> Spets qo'shish
                 </button>
-                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                <span className="text-xs font-semibold text-[var(--text-3)] uppercase tracking-wide">
                   Spetsifikatsiyalar
                 </span>
               </div>
 
               {loadingSpec && (
-                <div className="py-6 text-center text-sm text-zinc-400">Yuklanmoqda...</div>
+                <div className="py-6 text-center text-sm text-[var(--text-3)]">Yuklanmoqda...</div>
               )}
 
               {!loadingSpec && specs?.length === 0 && !addingSpec && !copiedSpec && (
-                <div className="py-6 text-center text-sm text-zinc-400">
+                <div className="py-6 text-center text-sm text-[var(--text-3)]">
                   Hozircha spets yo'q
                 </div>
               )}
 
               {!loadingSpec && specs?.map(spec => (
-                <div key={spec.id} className="px-4 py-3 border-b border-zinc-50 last:border-0 hover:bg-zinc-50/30 transition-colors">
+                <div key={spec.id} className="px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]/30 transition-colors">
                   {delSpecId === spec.id ? (
                     <div className="flex items-center gap-3 py-1">
                       <AlertTriangle size={15} className="text-amber-500" />
-                      <span className="text-sm text-zinc-700">
+                      <span className="text-sm text-[var(--text-2)]">
                         Spets №{spec.number} o'chirilsinmi?
                       </span>
                       <button onClick={() => deleteSpec(spec.id)}
                         className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">Ha</button>
                       <button onClick={() => setDelSpecId(null)}
-                        className="px-3 py-1 text-xs border border-zinc-200 rounded hover:bg-zinc-100">Yo'q</button>
+                        className="px-3 py-1 text-xs border border-[var(--border)] rounded hover:bg-[var(--surface-2)]">Yo'q</button>
                     </div>
                   ) : editSpec?.id === spec.id ? (
                     <SpecForm
@@ -441,25 +441,13 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                   ) : (
                     <div className="space-y-3">
                       <div className="flex items-center gap-4">
-                        <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <div className="text-xs text-zinc-400">Spets №</div>
-                            <div className="font-semibold text-zinc-800">{spec.number}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-zinc-400">Sana</div>
-                            <div className="text-zinc-700">{fmtDate(spec.date)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-zinc-400">Summa</div>
-                            <div className="font-medium text-zinc-800">{fmt(spec.totalValue)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-zinc-400">Yetkazilgan</div>
-                            <div className="font-medium text-blue-600">{fmt(spec.deliveredAmount || 0)}</div>
-                          </div>
+                        <div className="flex-1 flex items-center gap-2 text-sm">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1.5 rounded-md bg-[var(--surface-2)] text-[var(--text)] text-xs font-bold">
+                            №{spec.number}
+                          </span>
+                          <span className="text-xs text-[var(--text-3)]">{fmtDate(spec.date)}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-white border border-zinc-200 p-1 rounded-lg shadow-sm">
+                        <div className="flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] p-1 rounded-lg shadow-sm">
                           <button
                             onClick={() => navigate('/sales', {
                               state: {
@@ -476,31 +464,31 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                           </button>
                           
                           {/* Export / Print Icons */}
-                          <a href={`${API}/api/export/specs/${spec.id}/pdf`} target="_blank" rel="noreferrer" title="PDF yuklash" className="p-1 text-zinc-400 hover:text-red-500 rounded hover:bg-zinc-100 transition">
+                          <a href={`${API}/api/export/specs/${spec.id}/pdf`} target="_blank" rel="noreferrer" title="PDF yuklash" className="p-1 text-[var(--text-3)] hover:text-red-500 rounded hover:bg-[var(--surface-2)] transition">
                             <FileText size={13} />
                           </a>
-                          <a href={`${API}/api/export/specs/${spec.id}/excel`} title="Excel yuklash" className="p-1 text-zinc-400 hover:text-emerald-600 rounded hover:bg-zinc-100 transition">
+                          <a href={`${API}/api/export/specs/${spec.id}/excel`} title="Excel yuklash" className="p-1 text-[var(--text-3)] hover:text-emerald-600 rounded hover:bg-[var(--surface-2)] transition">
                             <FileSpreadsheet size={13} />
                           </a>
-                          <button onClick={() => window.open(`${API}/api/export/specs/${spec.id}/pdf`, '_blank')} title="Chop etish" className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100 transition">
+                          <button onClick={() => window.open(`${API}/api/export/specs/${spec.id}/pdf`, '_blank')} title="Chop etish" className="p-1 text-[var(--text-3)] hover:text-[var(--text)] rounded hover:bg-[var(--surface-2)] transition">
                             <Printer size={13} />
                           </button>
-                          <button onClick={() => { setCopiedSpec(spec); setAddingSpec(true); }} title="Nusxalash" className="p-1 text-zinc-400 hover:text-blue-500 rounded hover:bg-zinc-100 transition">
+                          <button onClick={() => { setCopiedSpec(spec); setAddingSpec(true); }} title="Nusxalash" className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] rounded hover:bg-[var(--surface-2)] transition">
                             <Copy size={13} />
                           </button>
 
                           <button onClick={e => openSpecMenu(spec.id, e)}
-                            className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 ml-1">
+                            className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)] ml-1">
                             <MoreVertical size={14} />
                           </button>
                           {specMenuId === spec.id && specMenuPos && (
                             <div
                               style={{ position: 'fixed', top: specMenuPos.top, right: specMenuPos.right, zIndex: 9999 }}
-                              className="bg-white border border-zinc-200 rounded-lg shadow-xl w-36 py-1"
+                              className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl w-36 py-1"
                               onMouseDown={e => e.stopPropagation()}
                             >
                               <button onClick={() => { setEditSpec(spec); setSpecMenuId(null); setAddingSpec(false); }}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50">
+                                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
                                 <Pencil size={13} /> Tahrirlash
                               </button>
                               <button onClick={() => { setDelSpecId(spec.id); setSpecMenuId(null); }}
@@ -515,9 +503,9 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                       {/* Nested products details list */}
                       {spec.products && spec.products.length > 0 && (
                         <div className="pl-4 pr-12 pb-2">
-                          <table className="w-full text-left border border-zinc-100 rounded-lg overflow-hidden">
+                          <table className="w-full text-left border border-[var(--border)] rounded-lg overflow-hidden">
                             <thead>
-                              <tr className="bg-zinc-50 border-b border-zinc-100 text-[10px] text-zinc-400 font-semibold uppercase">
+                              <tr className="bg-[var(--surface-2)] border-b border-[var(--border)] text-[10px] text-[var(--text-3)] font-semibold uppercase">
                                 <th className="px-3 py-1.5 w-1/3">Mahsulot</th>
                                 <th className="px-3 py-1.5">O'lchov birligi</th>
                                 <th className="px-3 py-1.5 text-right">Miqdor (Soni)</th>
@@ -525,13 +513,13 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                                 <th className="px-3 py-1.5 text-right">Jami summa</th>
                               </tr>
                             </thead>
-                            <tbody className="text-xs divide-y divide-zinc-50 bg-white">
+                            <tbody className="text-xs divide-y divide-[var(--border)] bg-[var(--surface)]">
                               {spec.products.map(sp => (
-                                <tr key={sp.id} className="hover:bg-zinc-50/50">
-                                  <td className="px-3 py-1.5 font-mono font-semibold text-zinc-800">{sp.product?.article || '—'}</td>
-                                  <td className="px-3 py-1.5 text-zinc-500 font-mono">{sp.unit}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono font-semibold text-zinc-800">{fmt(sp.quantity)}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono text-zinc-500">{fmt(sp.unitPriceVat)} UZS</td>
+                                <tr key={sp.id} className="hover:bg-[var(--surface-2)]/50">
+                                  <td className="px-3 py-1.5 font-mono font-semibold text-[var(--text)]">{sp.product?.article || '—'}</td>
+                                  <td className="px-3 py-1.5 text-[var(--text-3)] font-mono">{sp.unit}</td>
+                                  <td className="px-3 py-1.5 text-right font-mono font-semibold text-[var(--text)]">{fmt(sp.quantity)}</td>
+                                  <td className="px-3 py-1.5 text-right font-mono text-[var(--text-3)]">{fmt(sp.unitPriceVat)} UZS</td>
                                   <td className="px-3 py-1.5 text-right font-mono font-bold text-emerald-600">{fmt(sp.rowTotal)} UZS</td>
                                 </tr>
                               ))}
@@ -539,6 +527,18 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                           </table>
                         </div>
                       )}
+
+                      {/* Spets jami — summa va yetkazilgan pastda */}
+                      <div className="pl-4 pr-12 flex items-center justify-end gap-8 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[var(--text-3)]">Yetkazilgan:</span>
+                          <span className="font-semibold text-[var(--accent)]">{fmt(spec.deliveredAmount || 0)} UZS</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[var(--text-3)]">Summa:</span>
+                          <span className="font-bold text-[var(--text)]">{fmt(spec.totalValue)} UZS</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -688,37 +688,37 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
       {showAddClient && (
         <QuickAddClientModal onSaved={handleClientAdded} onClose={() => setShowAddClient(false)} />
       )}
-      <div className="border border-blue-200 rounded-xl bg-blue-50/40 p-5 mb-4 space-y-4">
+      <div className="mini-card rounded-xl p-5 mb-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-zinc-800">
+          <h3 className="text-sm font-semibold text-[var(--text)]">
             {editing ? `Shartnoma №${editContract.number} tahrirlash` : 'Yangi shartnoma'}
           </h3>
-          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-600"><X size={16} /></button>
+          <button onClick={onCancel} className="text-[var(--text-3)] hover:text-[var(--text-2)]"><X size={16} /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           {/* Mijoz */}
           <div className="col-span-2 md:col-span-1" ref={clientDropRef}>
-            <label className="text-xs font-medium text-zinc-500 block mb-1">Mijoz *</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Mijoz *</label>
             <div className="relative">
               <input
                 value={clientSearch}
                 onChange={e => { setClientSearch(e.target.value); setClientDropOpen(true); setClientId(''); }}
                 onFocus={() => setClientDropOpen(true)}
                 placeholder="Mijoz qidiring..."
-                className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]"
               />
               {clientDropOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-white border border-zinc-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {clients.map(cl => (
                     <button key={cl.id} onClick={() => selectClient(cl)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 flex items-center justify-between">
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-2)] flex items-center justify-between">
                       <span>{cl.name}</span>
-                      <span className="text-xs text-zinc-400">{cl.inn}</span>
+                      <span className="text-xs text-[var(--text-3)]">{cl.inn}</span>
                     </button>
                   ))}
                   <button onClick={() => { setClientDropOpen(false); setShowAddClient(true); }}
-                    className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-1 border-t border-zinc-100">
+                    className="w-full text-left px-3 py-2 text-sm text-[var(--accent)] hover:bg-[var(--accent-bg)] flex items-center gap-1 border-t border-[var(--border)]">
                     <Plus size={13} /> Yangi mijoz qo'shish
                   </button>
                 </div>
@@ -728,22 +728,22 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
 
           {/* INN (read-only) */}
           <div>
-            <label className="text-xs font-medium text-zinc-500 block mb-1">INN</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">INN</label>
             <input readOnly
               value={clients.find(c => c.id === clientId)?.inn || ''}
-              className="w-full border border-zinc-100 rounded-md px-3 py-2 text-sm bg-zinc-50 text-zinc-500 cursor-default"
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm bg-[var(--surface-2)] text-[var(--text-3)] cursor-default"
             />
           </div>
 
           {/* Sotuvchi */}
           <div>
-            <label className="text-xs font-medium text-zinc-500 block mb-1">Sotuvchi *</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sotuvchi *</label>
             <select
               required
               value={seller}
               onChange={e => setSeller(e.target.value)}
               disabled={!clientId}
-              className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]"
             >
               <option value="">— Sotuvchini tanlang —</option>
               {(clients.find(c => c.id === clientId)?.seller || editContract?.client?.seller || '')
@@ -760,18 +760,18 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
           {/* Shartnoma raqami */}
           {!editing && (
             <div>
-              <label className="text-xs font-medium text-zinc-500 block mb-1">Shartnoma raqami</label>
+              <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Shartnoma raqami</label>
               <div className="flex gap-2 items-center">
                 <input
                   value={useAuto ? autoNumber : number}
                   onChange={e => setNumber(e.target.value)}
                   readOnly={useAuto}
                   placeholder="26-01"
-                  className={`flex-1 border border-zinc-200 rounded-md px-3 py-2 text-sm outline-none ${
-                    useAuto ? 'bg-zinc-50 text-zinc-400 cursor-default' : 'focus:ring-2 focus:ring-blue-500 bg-white'
+                  className={`flex-1 border border-[var(--border)] rounded-md px-3 py-2 text-sm outline-none ${
+                    useAuto ? 'bg-[var(--surface-2)] text-[var(--text-3)] cursor-default' : 'focus:ring-2 focus:ring-[var(--accent)] bg-[var(--surface)]'
                   }`}
                 />
-                <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer whitespace-nowrap">
+                <label className="flex items-center gap-1.5 text-xs text-[var(--text-3)] cursor-pointer whitespace-nowrap">
                   <input type="checkbox" checked={useAuto} onChange={e => setUseAuto(e.target.checked)}
                     className="rounded" />
                   Avto
@@ -782,27 +782,27 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
 
           {/* Sana */}
           <div>
-            <label className="text-xs font-medium text-zinc-500 block mb-1">Sana</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sana</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
           </div>
 
           {/* Umumiy summa */}
           <div>
-            <label className="text-xs font-medium text-zinc-500 block mb-1">Umumiy summa (so'm)</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Umumiy summa (so'm)</label>
             <input type="number" min="0" step="0.01"
               value={totalValue}
               onChange={e => setTotalValue(e.target.value)}
               placeholder="0"
-              className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-right"
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)] text-right"
             />
           </div>
 
           {/* Status */}
           <div>
-            <label className="text-xs font-medium text-zinc-500 block mb-1">Status</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Status</label>
             <select value={status} onChange={e => setStatus(e.target.value)}
-              className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]">
               <option value="yangi">Yangi</option>
               <option value="amalda">Amalda</option>
               <option value="yopilgan">Yopilgan</option>
@@ -811,48 +811,48 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
 
           {/* Izoh */}
           <div className="col-span-2">
-            <label className="text-xs font-medium text-zinc-500 block mb-1">Izoh</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Izoh</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
               rows={2} placeholder="Ixtiyoriy..."
-              className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white resize-none" />
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)] resize-none" />
           </div>
         </div>
 
         {/* ── Spetsifikatsiya bo'limi (faqat yangi shartnomada) ── */}
         {!editing && (
-          <div className="border border-zinc-200 rounded-lg overflow-hidden">
+          <div className="border border-[var(--border)] rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => { setShowSpec(s => !s); if (!showSpec && specRows.length === 0) addSpecRow(); }}
-              className="w-full flex items-center justify-between px-4 py-2.5 bg-zinc-50 hover:bg-zinc-100 transition text-sm font-medium text-zinc-700"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--surface-2)] hover:bg-[var(--surface-2)] transition text-sm font-medium text-[var(--text-2)]"
             >
               <span className="flex items-center gap-2">
                 <Plus size={15} className={`transition-transform ${showSpec ? 'rotate-45' : ''}`} />
                 Spetsifikatsiya qo'shish
                 {specRows.length > 0 && (
-                  <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                  <span className="bg-[var(--accent-bg)] text-[var(--accent)] text-xs px-2 py-0.5 rounded-full">
                     {specRows.length} mahsulot · {fmt(specTotal)} so'm
                   </span>
                 )}
               </span>
               {showSpec
-                ? <ChevronDown size={15} className="text-zinc-400" />
-                : <ChevronRight size={15} className="text-zinc-400" />}
+                ? <ChevronDown size={15} className="text-[var(--text-3)]" />
+                : <ChevronRight size={15} className="text-[var(--text-3)]" />}
             </button>
 
             {showSpec && (
               <div className="p-4 space-y-3">
                 <div className="flex gap-3">
                   <div>
-                    <label className="text-xs font-medium text-zinc-500 block mb-1">Spets sanasi</label>
+                    <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Spets sanasi</label>
                     <input type="date" value={specDate} onChange={e => setSpecDate(e.target.value)}
-                      className="border border-zinc-200 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                      className="border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs font-medium text-zinc-500 block mb-1">Spets izohi</label>
+                    <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Spets izohi</label>
                     <input value={specNotes} onChange={e => setSpecNotes(e.target.value)}
                       placeholder="Ixtiyoriy..."
-                      className="w-full border border-zinc-200 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                      className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
                   </div>
                 </div>
 
@@ -865,7 +865,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
                       <col style={{width:'4%'}} />
                     </colgroup>
                     <thead>
-                      <tr className="text-zinc-500">
+                      <tr className="text-[var(--text-3)]">
                         <th className="text-left pb-1.5 pr-2 font-medium">Mahsulot</th>
                         <th className="text-left pb-1.5 pr-2 font-medium">Birlik</th>
                         <th className="text-right pb-1.5 pr-2 font-medium">Soni</th>
@@ -887,17 +887,17 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
                     </tbody>
                   </table>
                   {specRows.length === 0 && (
-                    <p className="text-xs text-zinc-400 py-2 text-center">Mahsulot qo'shing</p>
+                    <p className="text-xs text-[var(--text-3)] py-2 text-center">Mahsulot qo'shing</p>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between">
                   <button type="button" onClick={addSpecRow}
-                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                    className="text-xs text-[var(--accent)] hover:opacity-80 flex items-center gap-1">
                     <Plus size={13} /> Mahsulot qo'shish
                   </button>
                   {specRows.length > 0 && (
-                    <span className="text-sm font-bold text-zinc-800">
+                    <span className="text-sm font-bold text-[var(--text)]">
                       Jami: {fmt(specTotal)} so'm
                     </span>
                   )}
@@ -909,11 +909,11 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
 
         <div className="flex gap-2 justify-end pt-1">
           <button onClick={onCancel}
-            className="px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-md">
+            className="px-4 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
             Bekor (Esc)
           </button>
           <button onClick={save} disabled={saving}
-            className="px-5 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 flex items-center gap-1.5">
+            className="px-5 py-2 text-sm btn-primary rounded-md disabled:opacity-60 flex items-center gap-1.5">
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
             {editing ? 'Yangilash' : 'Shartnoma yaratish'}
           </button>
@@ -1039,7 +1039,7 @@ export default function Contracts() {
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       {/* Delete confirm modal */}
       {delContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="modal-overlay">
           <div className="bg-[var(--surface)] rounded-xl shadow-2xl p-6 w-full max-w-sm border border-[var(--border)] text-center animate-in">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
             <h3 className="text-sm font-bold text-[var(--text)] mb-1">Shartnomani o'chirish</h3>
@@ -1068,7 +1068,7 @@ export default function Contracts() {
             <p className="text-xs text-[var(--text-3)] mt-0.5">Jami: {total} ta</p>
           </div>
           <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90 transition shadow-sm shadow-blue-500/10">
+            className="flex items-center gap-1.5 px-3 py-1.5 btn-primary text-xs font-medium rounded-lg transition shadow-sm">
             <Plus size={14} />
             {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
           </button>
@@ -1089,7 +1089,7 @@ export default function Contracts() {
             className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
               debtFilter === t.key
                 ? 'border-[var(--accent)] text-[var(--accent)]'
-                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-zinc-300'
+                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-[var(--border)]'
             }`}
           >
             {t.label}
@@ -1111,8 +1111,8 @@ export default function Contracts() {
 
       {/* Edit Contract Popup Modal */}
       {editContract && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in">
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-4xl overflow-hidden animate-in">
             <div className="max-h-[85vh] overflow-y-auto p-6">
               <ContractForm
                 onSaved={handleSaved}
@@ -1154,12 +1154,12 @@ export default function Contracts() {
     </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-400 w-10">#</th>
+              <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] w-10">#</th>
                 {[
                   { label: 'Mijoz',      col: 'client',      align: 'left'   },
                   { label: 'INN',        col: null,          align: 'left'   },
@@ -1174,13 +1174,13 @@ export default function Contracts() {
                 ].map(({ label, col, align }) => (
                   <th key={label}
                     className={`px-4 py-3 text-${align} text-xs font-semibold select-none
-                      ${col ? 'cursor-pointer hover:text-zinc-700 text-zinc-400' : 'text-zinc-400'}`}
+                      ${col ? 'cursor-pointer hover:text-[var(--text)] text-[var(--text-3)]' : 'text-[var(--text-3)]'}`}
                     onClick={col ? () => toggleSort(col) : undefined}
                   >
                     <span className="inline-flex items-center gap-1">
                       {label}
                       {col && (
-                        <span className={`text-[10px] ${sortBy === col ? 'text-blue-500' : 'text-zinc-300'}`}>
+                        <span className={`text-[10px] ${sortBy === col ? 'text-[var(--accent)]' : 'text-[var(--text-3)]'}`}>
                           {sortBy === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                         </span>
                       )}
@@ -1190,20 +1190,20 @@ export default function Contracts() {
                 <th className="px-4 py-3 w-10"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-50">
+            <tbody className="divide-y divide-[var(--border)]">
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
                     {[...Array(12)].map((_, j) => (
                       <td key={j} className="px-4 py-3">
-                        <div className="h-4 bg-zinc-100 animate-pulse rounded" />
+                        <div className="h-4 bg-[var(--surface-2)] animate-pulse rounded" />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : contracts.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-12 text-center text-sm text-zinc-400">
+                  <td colSpan={12} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
                     Shartnomalar topilmadi
                   </td>
                 </tr>
@@ -1226,7 +1226,7 @@ export default function Contracts() {
         </div>
 
         {total > LIMIT && (
-          <div className="border-t border-zinc-100 px-4 py-3">
+          <div className="border-t border-[var(--border)] px-4 py-3">
             <Pagination page={page} total={total} limit={LIMIT} onPage={setPage} />
           </div>
         )}
