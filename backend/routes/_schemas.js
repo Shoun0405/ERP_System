@@ -51,6 +51,7 @@ const contractSchema = z.object({
   clientId:   z.string().uuid(),
   notes:      z.string().max(2000).default(''),
   status:     z.enum(['yangi', 'amalda', 'yopilgan']).default('yangi'),
+  seller:     z.string().max(200).optional().nullable().default(null).transform(v => v || null),
 });
 
 const interactionSchema = z.object({
@@ -94,6 +95,7 @@ const saleSchema = z.object({
   contractId:   z.string().uuid().nullable().optional(),
   specId:       z.string().uuid().nullable().optional(),
   products:     z.array(saleProductSchema).min(1),
+  facturaStatus: z.enum(['yuborildi', 'yuborilmagan']).default('yuborilmagan'),
 });
 
 const specProductSchema = z.object({

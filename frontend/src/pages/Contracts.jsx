@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronDown, ChevronRight, MoreVertical, Pencil, Trash2,
   FileText, FileSpreadsheet, X, Check, AlertTriangle,
-  ShoppingCart, RefreshCw, Search
+  ShoppingCart, RefreshCw, Search, Printer, Copy, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { API } from '../lib/api';
@@ -122,12 +122,12 @@ function SpecProductRow({ row, products, onChange, onRemove }) {
 }
 
 // ─── SpecForm (inline — shartnoma ichida) ──────────────────────────────────
-function SpecForm({ contractId, spec, products, onSaved, onCancel }) {
+function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, products, onSaved, onCancel }) {
   const editing = Boolean(spec);
   const [date, setDate]   = useState(spec?.date?.slice(0, 10) || TODAY);
   const [notes, setNotes] = useState(spec?.notes || '');
   const [rows, setRows]   = useState(
-    spec?.products?.map(p => ({
+    (spec || copiedSpec)?.products?.map(p => ({
       _key: crypto.randomUUID(),
       productId:    p.productId,
       unit:         p.unit,
@@ -161,11 +161,11 @@ function SpecForm({ contractId, spec, products, onSaved, onCancel }) {
       };
       if (editing) {
         const { data } = await api.put(`/api/specs/${spec.id}`, payload);
-        toast.success('Spets yangilandi');
+        toast.success('Spetsifikatsiya yangilandi');
         onSaved(data);
       } else {
         const { data } = await api.post('/api/specs', payload);
-        toast.success('Spets qo\'shildi');
+        toast.success(`Shartnoma № ${contractNumber || ''} bo'yicha Spetsifikatsiya № ${data.number} qo'shildi`);
         onSaved(data);
       }
     } finally { setSaving(false); }
@@ -173,6 +173,13 @@ function SpecForm({ contractId, spec, products, onSaved, onCancel }) {
 
   return (
     <div className="mt-3 border border-zinc-200 rounded-lg p-4 bg-zinc-50 space-y-3">
+      <div className="flex items-center gap-3 bg-zinc-900 rounded-lg px-4 py-2 flex-wrap">
+        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Spetsifikatsiya</span>
+        <span className="text-white font-mono font-bold text-sm bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
+          {editing ? `№ ${spec?.number}` : `Keyingi № ${nextNumber || '—'}`}
+        </span>
+      </div>
+
       <div className="flex gap-3">
         <div>
           <label className="text-xs font-medium text-zinc-500 block mb-1">Sana</label>
@@ -255,6 +262,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
   const [loadingSpec, setLoading] = useState(false);
   const [addingSpec, setAddingSpec] = useState(false);
   const [editSpec, setEditSpec]  = useState(null);
+  const [copiedSpec, setCopiedSpec] = useState(null);
   const [menuOpen, setMenuOpen]  = useState(false);
   const [menuPos, setMenuPos]    = useState(null);
   const [specMenuId, setSpecMenuId] = useState(null);
@@ -305,6 +313,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
     });
     setAddingSpec(false);
     setEditSpec(null);
+    setCopiedSpec(null);
     onSpecSaved();
   };
 
@@ -377,11 +386,6 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                 onClick={() => setMenuOpen(false)}>
                 <FileSpreadsheet size={14} /> Excel yuklab olish
               </a>
-              <hr className="my-1 border-zinc-100" />
-              <button onClick={() => { setMenuOpen(false); onDelete(c); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                <Trash2 size={14} /> O'chirish
-              </button>
             </div>
           )}
         </td>
@@ -392,28 +396,28 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
         <tr>
           <td colSpan={12} className="px-6 pb-4 bg-zinc-50/60">
             <div className="border border-zinc-200 rounded-lg bg-white">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-100">
+              <div className="flex items-center gap-4 px-4 py-2.5 border-b border-zinc-100">
+                <button onClick={() => { setAddingSpec(true); setEditSpec(null); setCopiedSpec(null); }}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium bg-blue-50 px-2.5 py-1 rounded-md">
+                  <Plus size={13} /> Spets qo'shish
+                </button>
                 <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
                   Spetsifikatsiyalar
                 </span>
-                <button onClick={() => { setAddingSpec(true); setEditSpec(null); }}
-                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
-                  <Plus size={13} /> Spets qo'shish
-                </button>
               </div>
 
               {loadingSpec && (
                 <div className="py-6 text-center text-sm text-zinc-400">Yuklanmoqda...</div>
               )}
 
-              {!loadingSpec && specs?.length === 0 && !addingSpec && (
+              {!loadingSpec && specs?.length === 0 && !addingSpec && !copiedSpec && (
                 <div className="py-6 text-center text-sm text-zinc-400">
                   Hozircha spets yo'q
                 </div>
               )}
 
               {!loadingSpec && specs?.map(spec => (
-                <div key={spec.id} className="px-4 py-3 border-b border-zinc-50 last:border-0">
+                <div key={spec.id} className="px-4 py-3 border-b border-zinc-50 last:border-0 hover:bg-zinc-50/30 transition-colors">
                   {delSpecId === spec.id ? (
                     <div className="flex items-center gap-3 py-1">
                       <AlertTriangle size={15} className="text-amber-500" />
@@ -429,79 +433,128 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                     <SpecForm
                       contractId={c.id}
                       spec={spec}
+                      copiedSpec={null}
                       products={products}
                       onSaved={handleSpecSaved}
                       onCancel={() => setEditSpec(null)}
                     />
                   ) : (
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <div className="text-xs text-zinc-400">Spets №</div>
-                          <div className="font-semibold text-zinc-800">{spec.number}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-zinc-400">Sana</div>
-                          <div className="text-zinc-700">{fmtDate(spec.date)}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-zinc-400">Summa</div>
-                          <div className="font-medium text-zinc-800">{fmt(spec.totalValue)}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-zinc-400">Yetkazilgan</div>
-                          <div className="font-medium text-blue-600">{fmt(spec.deliveredAmount || 0)}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => navigate('/sales', {
-                            state: {
-                              clientId:       c.clientId,
-                              contractId:     c.id,
-                              contractNumber: c.number,
-                              specId:         spec.id,
-                              specNumber:     spec.number,
-                            },
-                          })}
-                          title="Bu spets bo'yicha savdo yaratish"
-                          className="flex items-center gap-1 px-2 py-1 text-xs text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 font-medium">
-                          <ShoppingCart size={13} /> Savdo
-                        </button>
-                        <button onClick={e => openSpecMenu(spec.id, e)}
-                          className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600">
-                          <MoreVertical size={14} />
-                        </button>
-                        {specMenuId === spec.id && specMenuPos && (
-                          <div
-                            style={{ position: 'fixed', top: specMenuPos.top, right: specMenuPos.right, zIndex: 9999 }}
-                            className="bg-white border border-zinc-200 rounded-lg shadow-xl w-36 py-1"
-                            onMouseDown={e => e.stopPropagation()}
-                          >
-                            <button onClick={() => { setEditSpec(spec); setSpecMenuId(null); setAddingSpec(false); }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50">
-                              <Pencil size={13} /> Tahrirlash
-                            </button>
-                            <button onClick={() => { setDelSpecId(spec.id); setSpecMenuId(null); }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                              <Trash2 size={13} /> O'chirish
-                            </button>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <div className="text-xs text-zinc-400">Spets №</div>
+                            <div className="font-semibold text-zinc-800">{spec.number}</div>
                           </div>
-                        )}
+                          <div>
+                            <div className="text-xs text-zinc-400">Sana</div>
+                            <div className="text-zinc-700">{fmtDate(spec.date)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-400">Summa</div>
+                            <div className="font-medium text-zinc-800">{fmt(spec.totalValue)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-400">Yetkazilgan</div>
+                            <div className="font-medium text-blue-600">{fmt(spec.deliveredAmount || 0)}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white border border-zinc-200 p-1 rounded-lg shadow-sm">
+                          <button
+                            onClick={() => navigate('/sales', {
+                              state: {
+                                clientId:       c.clientId,
+                                contractId:     c.id,
+                                contractNumber: c.number,
+                                specId:         spec.id,
+                                specNumber:     spec.number,
+                              },
+                            })}
+                            title="Bu spets bo'yicha savdo yaratish"
+                            className="flex items-center gap-1 px-2 py-1 text-xs text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 font-medium mr-2">
+                            <ShoppingCart size={13} /> Savdo
+                          </button>
+                          
+                          {/* Export / Print Icons */}
+                          <a href={`${API}/api/export/specs/${spec.id}/pdf`} target="_blank" rel="noreferrer" title="PDF yuklash" className="p-1 text-zinc-400 hover:text-red-500 rounded hover:bg-zinc-100 transition">
+                            <FileText size={13} />
+                          </a>
+                          <a href={`${API}/api/export/specs/${spec.id}/excel`} title="Excel yuklash" className="p-1 text-zinc-400 hover:text-emerald-600 rounded hover:bg-zinc-100 transition">
+                            <FileSpreadsheet size={13} />
+                          </a>
+                          <button onClick={() => window.open(`${API}/api/export/specs/${spec.id}/pdf`, '_blank')} title="Chop etish" className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100 transition">
+                            <Printer size={13} />
+                          </button>
+                          <button onClick={() => { setCopiedSpec(spec); setAddingSpec(true); }} title="Nusxalash" className="p-1 text-zinc-400 hover:text-blue-500 rounded hover:bg-zinc-100 transition">
+                            <Copy size={13} />
+                          </button>
+
+                          <button onClick={e => openSpecMenu(spec.id, e)}
+                            className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 ml-1">
+                            <MoreVertical size={14} />
+                          </button>
+                          {specMenuId === spec.id && specMenuPos && (
+                            <div
+                              style={{ position: 'fixed', top: specMenuPos.top, right: specMenuPos.right, zIndex: 9999 }}
+                              className="bg-white border border-zinc-200 rounded-lg shadow-xl w-36 py-1"
+                              onMouseDown={e => e.stopPropagation()}
+                            >
+                              <button onClick={() => { setEditSpec(spec); setSpecMenuId(null); setAddingSpec(false); }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-zinc-50">
+                                <Pencil size={13} /> Tahrirlash
+                              </button>
+                              <button onClick={() => { setDelSpecId(spec.id); setSpecMenuId(null); }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <Trash2 size={13} /> O'chirish
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      
+                      {/* Nested products details list */}
+                      {spec.products && spec.products.length > 0 && (
+                        <div className="pl-4 pr-12 pb-2">
+                          <table className="w-full text-left border border-zinc-100 rounded-lg overflow-hidden">
+                            <thead>
+                              <tr className="bg-zinc-50 border-b border-zinc-100 text-[10px] text-zinc-400 font-semibold uppercase">
+                                <th className="px-3 py-1.5 w-1/3">Mahsulot</th>
+                                <th className="px-3 py-1.5">O'lchov birligi</th>
+                                <th className="px-3 py-1.5 text-right">Miqdor (Soni)</th>
+                                <th className="px-3 py-1.5 text-right">Narxi (QQS bilan)</th>
+                                <th className="px-3 py-1.5 text-right">Jami summa</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-xs divide-y divide-zinc-50 bg-white">
+                              {spec.products.map(sp => (
+                                <tr key={sp.id} className="hover:bg-zinc-50/50">
+                                  <td className="px-3 py-1.5 font-mono font-semibold text-zinc-800">{sp.product?.article || '—'}</td>
+                                  <td className="px-3 py-1.5 text-zinc-500 font-mono">{sp.unit}</td>
+                                  <td className="px-3 py-1.5 text-right font-mono font-semibold text-zinc-800">{fmt(sp.quantity)}</td>
+                                  <td className="px-3 py-1.5 text-right font-mono text-zinc-500">{fmt(sp.unitPriceVat)} UZS</td>
+                                  <td className="px-3 py-1.5 text-right font-mono font-bold text-emerald-600">{fmt(sp.rowTotal)} UZS</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
 
-              {addingSpec && (
+              {(addingSpec || copiedSpec) && (
                 <div className="px-4 pb-4">
                   <SpecForm
                     contractId={c.id}
                     spec={null}
+                    copiedSpec={copiedSpec}
+                    nextNumber={specs ? (Math.max(0, ...specs.map(s => s.number)) + 1) : 1}
+                    contractNumber={c.number}
                     products={products}
                     onSaved={handleSpecSaved}
-                    onCancel={() => setAddingSpec(false)}
+                    onCancel={() => { setAddingSpec(false); setCopiedSpec(null); }}
                   />
                 </div>
               )}
@@ -521,6 +574,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
   const [clientId, setClientId]     = useState(editContract?.clientId || '');
   const [clientDropOpen, setClientDropOpen] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
+  const [seller, setSeller]         = useState(editContract?.seller || '');
   const [autoNumber, setAutoNumber] = useState('');
   const [number, setNumber]         = useState(editContract?.number || '');
   const [useAuto, setUseAuto]       = useState(!editing);
@@ -594,6 +648,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
       totalValue: Number(totalValue) || 0,
       notes,
       status,
+      seller: seller || null,
       ...(!editing && !useAuto && number ? { number } : {}),
     };
     setSaving(true);
@@ -678,6 +733,28 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
               value={clients.find(c => c.id === clientId)?.inn || ''}
               className="w-full border border-zinc-100 rounded-md px-3 py-2 text-sm bg-zinc-50 text-zinc-500 cursor-default"
             />
+          </div>
+
+          {/* Sotuvchi */}
+          <div>
+            <label className="text-xs font-medium text-zinc-500 block mb-1">Sotuvchi *</label>
+            <select
+              required
+              value={seller}
+              onChange={e => setSeller(e.target.value)}
+              disabled={!clientId}
+              className="w-full border border-zinc-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            >
+              <option value="">— Sotuvchini tanlang —</option>
+              {(clients.find(c => c.id === clientId)?.seller || editContract?.client?.seller || '')
+                .split(', ')
+                .filter(Boolean)
+                .map(s => <option key={s} value={s}>{s}</option>)
+              }
+            </select>
+            {clientId && !(clients.find(c => c.id === clientId)?.seller || editContract?.client?.seller) && (
+              <p className="text-[10px] text-red-500 mt-1">Bu mijozga sotuvchilar biriktirilmagan (CRM-sozlamalardan kiriting)</p>
+            )}
           </div>
 
           {/* Shartnoma raqami */}
@@ -868,7 +945,35 @@ export default function Contracts() {
   const [editContract, setEditContract] = useState(null);
   const [delContract, setDelContract]  = useState(null);
   const form = useInlineForm();
+  const [dateFrom, setDateFrom]   = useState('');
+  const [dateTo, setDateTo]       = useState('');
+  const [debtFilter, setDebtFilter] = useState('barchasi');
   const LIMIT = 20;
+
+  const prevMonth = () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    const to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+    setDateFrom(from); setDateTo(to);
+  };
+  const monthStart = () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const to = now.toISOString().split('T')[0];
+    setDateFrom(from); setDateTo(to);
+  };
+  const yearStart = () => {
+    const now = new Date();
+    const from = `${now.getFullYear()}-01-01`;
+    const to = now.toISOString().split('T')[0];
+    setDateFrom(from); setDateTo(to);
+  };
+  const prevYear = () => {
+    const now = new Date();
+    const from = `${now.getFullYear() - 1}-01-01`;
+    const to = `${now.getFullYear() - 1}-12-31`;
+    setDateFrom(from); setDateTo(to);
+  };
 
   // Debounced search
   useEffect(() => {
@@ -888,12 +993,14 @@ export default function Contracts() {
         page: p, limit: LIMIT, sortBy, sortDir,
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(status          ? { status }                   : {}),
+        ...(dateFrom        ? { from: dateFrom }           : {}),
+        ...(dateTo          ? { to: dateTo }               : {}),
       });
       const { data } = await api.get(`/api/contracts?${params}`);
       setContracts(data.data);
       setTotal(data.total);
     } finally { setLoading(false); }
-  }, [page, debouncedSearch, status, sortBy, sortDir]);
+  }, [page, debouncedSearch, status, sortBy, sortDir, dateFrom, dateTo]);
 
   const toggleSort = (col) => {
     if (sortBy === col) {
@@ -905,7 +1012,8 @@ export default function Contracts() {
     setPage(1);
   };
 
-  useEffect(() => { load(page); }, [page, debouncedSearch, status, sortBy, sortDir]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(page); }, [page, debouncedSearch, status, sortBy, sortDir, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [dateFrom, dateTo, debtFilter]);
 
   const handleSaved = (saved) => {
     if (editContract) {
@@ -953,54 +1061,97 @@ export default function Contracts() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Shartnomalar</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">Jami: {total} ta</p>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Shartnomalar</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">Jami: {total} ta</p>
+          </div>
+          <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90 transition shadow-sm shadow-blue-500/10">
+            <Plus size={14} />
+            {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
+          </button>
         </div>
-        <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90 transition shadow-sm shadow-blue-500/10">
-          <Plus size={14} />
-          {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
-        </button>
       </div>
 
-      {/* Inline form */}
-      {form.isOpen && !editContract && (
-        <ContractForm
-          onSaved={handleSaved}
-          onCancel={form.close}
-          editContract={null}
-          products={products}
-        />
-      )}
-      {editContract && (
-        <ContractForm
-          onSaved={handleSaved}
-          onCancel={() => setEditContract(null)}
-          editContract={editContract}
-          products={products}
-        />
-      )}
+      {/* Submenu Quick Filters */}
+      <div className="flex border-b border-[var(--border)] gap-2">
+        {[
+          { key: 'barchasi', label: 'Barchasi' },
+          { key: 'qarzdorlar', label: 'Qarzdorlar' },
+          { key: 'haqdorlar', label: 'Haqdorlar' },
+          { key: 'yangi', label: 'Yangi' }
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setDebtFilter(t.key)}
+            className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
+              debtFilter === t.key
+                ? 'border-[var(--accent)] text-[var(--accent)]'
+                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-zinc-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-          <input
-            value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Qidirish: mijoz, INN, raqam..."
-            className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"
+      {/* Inline creation form */}
+      {form.isOpen && !editContract && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+          <ContractForm
+            onSaved={handleSaved}
+            onCancel={form.close}
+            editContract={null}
+            products={products}
           />
         </div>
-        <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
-          className="border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
-          <option value="">Barcha status</option>
+      )}
+
+      {/* Edit Contract Popup Modal */}
+      {editContract && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in">
+            <div className="max-h-[85vh] overflow-y-auto p-6">
+              <ContractForm
+                onSaved={handleSaved}
+                onCancel={() => setEditContract(null)}
+                editContract={editContract}
+                products={products}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filters & Advanced Date Range */}
+      <div className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] space-y-3">
+        <div className="flex gap-3 flex-wrap items-center">
+          <div className="relative flex-1 min-w-48">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+            <input
+              value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Qidirish: mijoz, INN, raqam..."
+              className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--accent)] text-[var(--text)]" title="Dan" />
+            <span className="text-xs text-[var(--text-3)]">—</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--accent)] text-[var(--text)]" title="Gacha" />
+          </div>
+          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
+            className="border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
+            <option value="">Barcha status</option>
           <option value="yangi">Yangi</option>
           <option value="amalda">Amalda</option>
           <option value="yopilgan">Yopilgan</option>
         </select>
       </div>
+    </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm">

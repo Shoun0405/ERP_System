@@ -62,6 +62,7 @@ model Contract {
   sales        Sale[]
   payments     Payment[]
   specifications Specification[]
+  seller       String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
@@ -120,6 +121,7 @@ model Sale {
   contract     Contract?      @relation(fields: [contractId], references: [id])
   spec         Specification? @relation(fields: [specId], references: [id])
   products     SaleProduct[]
+  facturaStatus String        @default("yuborilmagan")
   createdAt    DateTime       @default(now())
 
   @@index([clientId, date])

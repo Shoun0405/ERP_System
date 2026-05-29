@@ -15,10 +15,18 @@ router.get('/', async (req, res, next) => {
     const sortBy  = SORT_FIELDS.has(req.query.sortBy) ? req.query.sortBy : 'date';
     const sortDir = req.query.sortDir === 'asc' ? 'asc' : 'desc';
     const skip    = (page - 1) * limit;
+    const from    = req.query.from || undefined;
+    const to      = req.query.to || undefined;
 
     const where = {
       ...(clientId ? { clientId } : {}),
       ...(status   ? { status }   : {}),
+      ...(from || to ? {
+        date: {
+          ...(from ? { gte: new Date(from) } : {}),
+          ...(to ? { lte: new Date(to) } : {}),
+        }
+      } : {}),
       ...(search   ? {
         OR: [
           { number:            { contains: search, mode: 'insensitive' } },
@@ -175,6 +183,7 @@ router.post('/', async (req, res, next) => {
         clientId:   body.clientId,
         notes:      body.notes || null,
         status:     body.status || 'yangi',
+        seller:     body.seller || null,
       },
       include: { client: { select: { id: true, name: true, inn: true } } },
     });
@@ -196,6 +205,7 @@ router.put('/:id', async (req, res, next) => {
         ...(body.totalValue !== undefined ? { totalValue: body.totalValue } : {}),
         ...(body.notes      !== undefined ? { notes: body.notes || null } : {}),
         ...(body.status     !== undefined ? { status: body.status } : {}),
+        ...(body.seller     !== undefined ? { seller: body.seller || null } : {}),
         // number o'zgartirilmaydi — audit izi
       },
       include: { client: { select: { id: true, name: true, inn: true } } },

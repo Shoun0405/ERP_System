@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
 import { fmt, fmtDate } from '../lib/format';
-import { Plus, X, Trash2, AlertCircle, Search } from 'lucide-react';
+import { Plus, X, Trash2, AlertCircle, Search, Copy } from 'lucide-react';
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
@@ -61,6 +61,11 @@ export default function Payments() {
     setForm({ date: today(), amount: '', note: '', clientId: '', contractId: '' });
     setModal(true);
   };
+  const handleCopy = p => {
+    setForm({ date: today(), amount: String(p.amount), note: p.note || '', clientId: p.clientId, contractId: p.contractId || '' });
+    setModal(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -97,14 +102,67 @@ export default function Payments() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Tushumlar</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta to'lov</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Tushumlar</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta to'lov</p>
+          </div>
+          <button onClick={openModal} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+            <Plus size={14}/> Yangi Tushum
+          </button>
         </div>
-        <button onClick={openModal} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
-          <Plus size={14}/> Yangi Tushum
-        </button>
       </div>
+
+      {/* Inline Accordion Form for adding Payment */}
+      {modal && (
+        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+            <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+              <Plus size={16} className="text-[var(--accent)]"/>
+              Yangi Tushum Kiritish
+            </h3>
+            <button onClick={() => setModal(false)} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+              <X size={16}/>
+            </button>
+          </div>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Mijoz *</label>
+                <select required value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value, contractId: '' }))} className={inp}>
+                  <option value="">— Mijozni tanlang —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Shartnoma (ixtiyoriy)</label>
+                <select value={form.contractId} onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))} className={inp} disabled={!form.clientId}>
+                  <option value="">— Shartnomani tanlang —</option>
+                  {contracts.map(c => <option key={c.id} value={c.id}>№{c.number} ({new Date(c.date).toLocaleDateString('ru-RU')})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Sana *</label>
+                <input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp}/>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Summa (UZS) *</label>
+                <input type="number" required min="1" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className={inp} placeholder="0"/>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Izoh</label>
+                <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className={inp} placeholder="To'lov turi, bank, qayd..."/>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
+              <button type="button" onClick={() => setModal(false)} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {debtSummary.length > 0 && (
         <div className="mini-card p-0">
@@ -188,8 +246,9 @@ export default function Payments() {
                   <td className="px-6 py-4 text-sm text-zinc-500">{p.note || '—'}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{fmt(p.amount)} UZS</td>
                   <td className="px-6 py-4">
-                    <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setDelId(p.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"><Trash2 size={14}/></button>
+                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleCopy(p)} className="p-1.5 text-zinc-400 hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={14}/></button>
+                      <button onClick={() => setDelId(p.id)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={14}/></button>
                     </div>
                   </td>
                 </tr>
@@ -200,52 +259,7 @@ export default function Payments() {
         <Pagination page={page} total={total} limit={LIMIT} onPage={setPage}/>
       </div>
 
-      {modal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">Yangi Tushum kiritish</h3>
-              <button onClick={() => setModal(false)} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>
-            </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Mijoz *</label>
-                <select required value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value, contractId: '' }))} className={inp}>
-                  <option value="">— Mijozni tanlang —</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Shartnoma (ixtiyoriy)</label>
-                <select value={form.contractId} onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))} className={inp} disabled={!form.clientId}>
-                  <option value="">— Shartnomani tanlang —</option>
-                  {contracts.map(c => <option key={c.id} value={c.id}>№{c.number} ({new Date(c.date).toLocaleDateString('ru-RU')})</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Sana *</label>
-                  <input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp}/>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Summa (UZS) *</label>
-                  <input type="number" required min="1" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className={inp} placeholder="0"/>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Izoh</label>
-                <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className={inp} placeholder="To'lov turi, bank, qayd..."/>
-              </div>
-              <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
-                <button type="button" onClick={() => setModal(false)} className="px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 rounded-md transition">Bekor</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition shadow-sm">
-                  {saving ? 'Saqlanmoqda...' : 'Saqlash'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
 
       {delId && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

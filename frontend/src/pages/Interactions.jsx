@@ -3,7 +3,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
-import { Plus, X, MessageSquare, Phone, Users, Mail, Calendar, Edit2, Trash2, Search } from 'lucide-react';
+import { Plus, X, MessageSquare, Phone, Users, Mail, Calendar, Edit2, Trash2, Search, Copy } from 'lucide-react';
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
@@ -74,6 +74,18 @@ export default function InteractionsPage() {
     setEditId(it.id);
     setModal('edit');
   };
+  const handleCopy = it => {
+    setForm({
+      date:     today(),
+      type:     it.type,
+      note:     it.note || '',
+      nextDate: it.nextDate ? it.nextDate.split('T')[0] : '',
+      clientId: it.clientId,
+    });
+    setEditId(null);
+    setModal('add');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const closeModal = () => { setModal(null); setEditId(null); };
 
   const handleSave = async (e) => {
@@ -111,14 +123,69 @@ export default function InteractionsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Muloqotlar (CRM tarix)</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yozuv</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Muloqotlar (CRM tarix)</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yozuv</p>
+          </div>
+          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
+            <Plus size={14}/> Yangi muloqot
+          </button>
         </div>
-        <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
-          <Plus size={14}/> Yangi muloqot
-        </button>
       </div>
+
+      {/* Inline Accordion Form for adding Interaction */}
+      {modal === 'add' && (
+        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+            <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+              <Plus size={16} className="text-[var(--accent)]"/>
+              Yangi Muloqot Qo'shish
+            </h3>
+            <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+              <X size={16}/>
+            </button>
+          </div>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Mijoz *</label>
+                <select required value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} className={inp}>
+                  <option value="">— Mijozni tanlang —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Sana *</label>
+                  <input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp}/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Turi *</label>
+                  <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className={inp}>
+                    {TYPE_LIST.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Izoh</label>
+                <textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+                  className={`${inp} resize-none`} rows={3} placeholder="Muloqot haqida qisqacha..."/>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Keyingi aloqa sanasi <span className="text-zinc-400 font-normal">— ixtiyoriy</span></label>
+                <input type="date" value={form.nextDate} onChange={e => setForm(f => ({ ...f, nextDate: e.target.value }))} className={inp}/>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
+              <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="mini-card p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3 flex-wrap">
@@ -176,8 +243,9 @@ export default function InteractionsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition"><Edit2 size={12}/></button>
-                  <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition"><Trash2 size={12}/></button>
+                  <button onClick={() => handleCopy(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={12}/></button>
+                  <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={12}/></button>
+                  <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={12}/></button>
                 </div>
               </div>
             );
@@ -186,11 +254,11 @@ export default function InteractionsPage() {
         <Pagination page={page} total={total} limit={LIMIT} onPage={setPage}/>
       </div>
 
-      {modal && (
+      {modal === 'edit' && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">{modal === 'edit' ? 'Muloqotni tahrirlash' : 'Yangi muloqot'}</h3>
+              <h3 className="text-lg font-bold text-zinc-900">Muloqotni tahrirlash</h3>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Ctrl+Enter — saqlash</span>
                 <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>

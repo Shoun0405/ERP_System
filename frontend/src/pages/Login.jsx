@@ -15,53 +15,87 @@ export default function Login() {
       toast.error('Iltimos, barcha maydonlarni to\'ldiring!');
       return;
     }
-
     setLoading(true);
     try {
       const res = await api.post('/api/auth/login', { username, password });
       if (res.data.success) {
         toast.success('Xush kelibsiz!');
-        // Redirect to dashboard
         window.location.href = '/';
       }
     } catch {
-      // Axios error interceptor will handle standard display, 
-      // but in case of manual handling we keep loading state off
+      // error interceptor handles display
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Premium background decorative blur circles */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-blue-400/10 blur-[120px] pointer-events-none animate-pulse duration-[8000ms]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-400/10 blur-[120px] pointer-events-none animate-pulse duration-[6000ms]" />
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans"
+      style={{ background: 'var(--bg)' }}
+    >
+      {/* Warm ambient orbs */}
+      <div
+        className="absolute pointer-events-none rounded-full"
+        style={{
+          width: '480px', height: '480px',
+          top: '-120px', left: '-120px',
+          background: 'radial-gradient(circle, oklch(0.58 0.17 45 / 0.10), transparent 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
+      <div
+        className="absolute pointer-events-none rounded-full"
+        style={{
+          width: '380px', height: '380px',
+          bottom: '-80px', right: '-80px',
+          background: 'radial-gradient(circle, oklch(0.55 0.12 55 / 0.08), transparent 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
 
-      {/* Main glassmorphism card */}
-      <div className="w-full max-w-[420px] bg-white border border-[var(--border)] rounded-2xl shadow-xl shadow-zinc-200/50 p-8 z-10 transition-all duration-300 hover:shadow-2xl hover:shadow-zinc-200/70 relative">
-        
-        {/* Glow overlay at the top */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[180px] h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-b-full shadow-sm" />
+      {/* Card */}
+      <div
+        className="w-full max-w-[400px] z-10 rounded-2xl p-8"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 4px 24px oklch(0.16 0.012 55 / 0.08), 0 1px 4px oklch(0.16 0.012 55 / 0.06)',
+        }}
+      >
+        {/* Top accent line */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[140px] h-[2px] rounded-b-full"
+          style={{ background: 'linear-gradient(90deg, transparent, var(--accent), transparent)' }}
+        />
 
-        {/* Brand header */}
+        {/* Brand */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-md shadow-blue-500/20 mb-4 transform hover:scale-105 transition-transform duration-200">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: 'var(--accent)',
+              boxShadow: '0 4px 16px oklch(0.58 0.17 45 / 0.30)',
+            }}
+          >
             <span className="text-white text-xl font-bold tracking-tighter">N</span>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-[var(--text)]">NexERP Tizimiga Kirish</h2>
-          <p className="text-xs text-[var(--text-3)] mt-1.5">Davom etish uchun hisob ma'lumotlaringizni kiriting</p>
+          <h2 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+            NexERP Tizimiga Kirish
+          </h2>
+          <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
+            Davom etish uchun hisob ma&#8217;lumotlaringizni kiriting
+          </p>
         </div>
 
-        {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Username block */}
+          {/* Username */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase tracking-wider block">
+            <label className="text-[11px] font-semibold uppercase tracking-wider block" style={{ color: 'var(--text-2)' }}>
               Foydalanuvchi nomi
             </label>
             <div className="relative flex items-center">
-              <span className="absolute left-3 text-[var(--text-3)]">
+              <span className="absolute left-3" style={{ color: 'var(--text-3)' }}>
                 <User size={15} />
               </span>
               <input
@@ -69,20 +103,25 @@ export default function Login() {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="Masalan: admin"
-                className="w-full h-10 pl-10 pr-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--text-3)] outline-none focus:border-blue-500 focus:bg-white transition-all duration-200"
+                className="w-full h-10 pl-10 pr-4 rounded-lg text-xs"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)',
+                }}
                 required
                 disabled={loading}
               />
             </div>
           </div>
 
-          {/* Password block */}
+          {/* Password */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase tracking-wider block">
+            <label className="text-[11px] font-semibold uppercase tracking-wider block" style={{ color: 'var(--text-2)' }}>
               Parol
             </label>
             <div className="relative flex items-center">
-              <span className="absolute left-3 text-[var(--text-3)]">
+              <span className="absolute left-3" style={{ color: 'var(--text-3)' }}>
                 <Lock size={15} />
               </span>
               <input
@@ -90,60 +129,74 @@ export default function Login() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-10 pl-10 pr-10 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs text-[var(--text)] placeholder-[var(--text-3)] outline-none focus:border-blue-500 focus:bg-white transition-all duration-200"
+                className="w-full h-10 pl-10 pr-10 rounded-lg text-xs"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)',
+                }}
                 required
                 disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-[var(--text-3)] hover:text-[var(--text)] transition cursor-pointer flex items-center justify-center"
+                className="absolute right-3 transition cursor-pointer"
+                style={{ color: 'var(--text-3)' }}
                 disabled={loading}
-                title={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
               >
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
           </div>
 
-          {/* Remember me / forgot password option (Mocked for premium feel) */}
+          {/* Remember me */}
           <div className="flex items-center justify-between pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input 
-                type="checkbox" 
-                className="rounded border-[var(--border)] text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+              <input
+                type="checkbox"
+                className="rounded w-3.5 h-3.5"
+                style={{ accentColor: 'var(--accent)' }}
                 defaultChecked
               />
-              <span className="text-[11px] text-[var(--text-2)]">Eslab qolish</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>Eslab qolish</span>
             </label>
-            <span className="text-[11px] text-[var(--text-3)] hover:text-[var(--text)] cursor-pointer transition">
+            <span className="text-[11px] cursor-pointer transition" style={{ color: 'var(--text-3)' }}>
               Parolni unutdingizmi?
             </span>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white rounded-lg text-xs font-semibold tracking-wide transition flex items-center justify-center gap-2 shadow-md shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group mt-2"
+            className="w-full h-10 text-white rounded-lg text-xs font-semibold tracking-wide transition flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+            style={{
+              background: loading ? 'var(--accent)' : 'var(--accent)',
+              boxShadow: '0 2px 8px oklch(0.58 0.17 45 / 0.30)',
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--accent-hover)'; }}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
           >
             {loading ? (
               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                Tizimga Kirish 
-                <ArrowRight size={14} className="transform group-hover:translate-x-0.5 transition-transform duration-200" />
+                Tizimga Kirish
+                <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </>
             )}
           </button>
         </form>
 
-        {/* Footer info badge */}
-        <div className="mt-8 pt-5 border-t border-[var(--border)] flex items-center justify-center gap-2 text-[10px] text-[var(--text-3)] select-none">
+        {/* Footer */}
+        <div
+          className="mt-8 pt-5 flex items-center justify-center gap-2 text-[10px] select-none"
+          style={{ borderTop: '1px solid var(--border)', color: 'var(--text-3)' }}
+        >
           <ShieldCheck size={12} className="text-emerald-500" />
-          <span>SSL Himoyalangan & Shifrlangan Aloqa</span>
+          <span>SSL Himoyalangan &amp; Shifrlangan Aloqa</span>
         </div>
-
       </div>
     </div>
   );

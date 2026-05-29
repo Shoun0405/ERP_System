@@ -4,13 +4,13 @@ const { Prisma } = require('@prisma/client');
 const { clientSchema } = require('./_schemas');
 
 const SORT_COLS = {
-  name:      'c.name',
-  inn:       'c.inn',
-  phone:     'c.phone',
-  seller:    'c.seller',
-  status:    'c.status',
+  name:      'name',
+  inn:       'inn',
+  phone:     'phone',
+  seller:    'seller',
+  status:    'status',
   debt:      'debt',
-  createdAt: 'c."createdAt"',
+  createdAt: '"createdAt"',
 };
 
 router.get('/', async (req, res, next) => {
@@ -21,7 +21,7 @@ router.get('/', async (req, res, next) => {
     const sortBy   = req.query.sortBy   || 'createdAt';
     const sortDir  = req.query.sortDir === 'asc' ? 'ASC' : 'DESC';
     const offset   = (page - 1) * limit;
-    const orderCol = SORT_COLS[sortBy] || 'c."createdAt"';
+    const orderCol = SORT_COLS[sortBy] || '"createdAt"';
 
     const where = search
       ? Prisma.sql`WHERE (
@@ -32,37 +32,58 @@ router.get('/', async (req, res, next) => {
         )`
       : Prisma.empty;
 
+    const debtFilter = req.query.debtFilter || 'barchasi';
+    let debtCondition = Prisma.empty;
+    if (debtFilter === 'qarzdorlar') {
+      debtCondition = Prisma.sql`WHERE debt > 0`;
+    } else if (debtFilter === 'haqdorlar') {
+      debtCondition = Prisma.sql`WHERE debt < 0`;
+    } else if (debtFilter === 'yangi') {
+      debtCondition = Prisma.sql`WHERE debt = 0`;
+    }
+
     const [rows, countResult] = await Promise.all([
       // Pre-aggregate in subqueries to avoid Cartesian product between Sale and Payment
       prisma.$queryRaw(Prisma.sql`
-        SELECT
-          c.id, c.name, c.inn, c.phone, c.director, c.address,
-          c.category, c.status, c.account, c.mfo, c.seller,
-          c."createdAt",
-          COALESCE(s_agg.total, 0)::float                               AS "totalSales",
-          COALESCE(p_agg.total, 0)::float                               AS "totalPayments",
-          (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0))::float  AS debt
-        FROM "Client" c
-        LEFT JOIN (
-          SELECT "clientId", SUM("totalAmount") AS total FROM "Sale" GROUP BY "clientId"
-        ) s_agg ON s_agg."clientId" = c.id
-        LEFT JOIN (
-          SELECT "clientId", SUM(amount) AS total FROM "Payment" GROUP BY "clientId"
-        ) p_agg ON p_agg."clientId" = c.id
-        ${where}
+        WITH client_debts AS (
+          SELECT
+            c.id, c.name, c.inn, c.phone, c.director, c.address,
+            c.category, c.status, c.account, c.mfo, c.seller,
+            c."createdAt",
+            COALESCE(s_agg.total, 0)::float                               AS "totalSales",
+            COALESCE(p_agg.total, 0)::float                               AS "totalPayments",
+            (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0))::float  AS debt
+          FROM "Client" c
+          LEFT JOIN (
+            SELECT "clientId", SUM("totalAmount") AS total FROM "Sale" GROUP BY "clientId"
+          ) s_agg ON s_agg."clientId" = c.id
+          LEFT JOIN (
+            SELECT "clientId", SUM(amount) AS total FROM "Payment" GROUP BY "clientId"
+          ) p_agg ON p_agg."clientId" = c.id
+          ${where}
+        )
+        SELECT * FROM client_debts
+        ${debtCondition}
         ORDER BY ${Prisma.raw(orderCol)} ${Prisma.raw(sortDir)}
         LIMIT ${limit} OFFSET ${offset}
       `),
-      prisma.client.count({
-        where: search ? {
-          OR: [
-            { name:   { contains: search, mode: 'insensitive' } },
-            { inn:    { contains: search, mode: 'insensitive' } },
-            { phone:  { contains: search, mode: 'insensitive' } },
-            { seller: { contains: search, mode: 'insensitive' } },
-          ],
-        } : undefined,
-      }),
+      prisma.$queryRaw(Prisma.sql`
+        WITH client_debts AS (
+          SELECT
+            c.id,
+            (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0))::float  AS debt
+          FROM "Client" c
+          LEFT JOIN (
+            SELECT "clientId", SUM("totalAmount") AS total FROM "Sale" GROUP BY "clientId"
+          ) s_agg ON s_agg."clientId" = c.id
+          LEFT JOIN (
+            SELECT "clientId", SUM(amount) AS total FROM "Payment" GROUP BY "clientId"
+          ) p_agg ON p_agg."clientId" = c.id
+          ${where}
+        )
+        SELECT COUNT(*)::int AS count FROM client_debts
+        ${debtCondition}
+      `),
     ]);
 
     const data = rows.map(r => ({
@@ -72,7 +93,9 @@ router.get('/', async (req, res, next) => {
       debt:          Number(r.debt),
     }));
 
-    res.json({ data, total: countResult, page, limit });
+    const total = Number(countResult[0]?.count || 0);
+
+    res.json({ data, total, page, limit });
   } catch (e) {
     next(e);
   }

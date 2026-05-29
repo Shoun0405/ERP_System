@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 import * as XLSX from 'xlsx';
 import { fmt } from '../lib/format';
-import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
 
 const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', seller:'' };
 const SC = {
@@ -30,25 +30,80 @@ function SortIcon({ col, sort }) {
   return sort.dir==='asc' ? <ArrowUp size={12} className="text-blue-500 ml-1 inline"/> : <ArrowDown size={12} className="text-blue-500 ml-1 inline"/>;
 }
 
-function SellerSearch({ sellers, value, onChange }) {
-  const [q, setQ] = useState(value||'');
+function MultiSellerSelect({ sellers, value, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
-  const list = sellers.filter(s=>s.toLowerCase().includes(q.toLowerCase()));
-  useEffect(()=>{ const h=e=>{ if(ref.current&&!ref.current.contains(e.target))setOpen(false); }; document.addEventListener('mousedown',h); return()=>document.removeEventListener('mousedown',h); },[]);
+  
+  const selectedList = value ? value.split(', ').filter(Boolean) : [];
+  
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const toggleSeller = (s) => {
+    let newList;
+    if (selectedList.includes(s)) {
+      newList = selectedList.filter(x => x !== s);
+    } else {
+      newList = [...selectedList, s];
+    }
+    onChange(newList.join(', '));
+  };
+
   return (
-    <div ref={ref} className="relative">
-      <input value={q} onChange={e=>{setQ(e.target.value);setOpen(true);onChange('');}} onFocus={()=>setOpen(true)}
-        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Sotuvchini qidiring..."/>
-      {open&&list.length>0&&(
-        <div className="absolute z-50 mt-1 w-full bg-white border border-zinc-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-          {list.map(s=>(
-            <div key={s} onMouseDown={()=>{onChange(s);setQ(s);setOpen(false);}}
-              className={`px-3 py-2 text-sm cursor-pointer hover:bg-zinc-50 ${value===s?'bg-blue-50 text-blue-700':''}`}>{s}</div>
-          ))}
+    <div ref={ref} className="relative text-left">
+      <div
+        onClick={() => setOpen(!open)}
+        className="w-full px-3 py-2 rounded-md text-sm cursor-pointer min-h-[38px] flex flex-wrap gap-1 items-center justify-between"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+      >
+        <div className="flex flex-wrap gap-1">
+          {selectedList.length === 0 ? (
+            <span style={{ color: 'var(--text-3)' }}>Sotuvchilarni tanlang...</span>
+          ) : (
+            selectedList.map(s => (
+              <span key={s} className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid oklch(0.88 0.06 55)' }}>
+                {s}
+              </span>
+            ))
+          )}
+        </div>
+        <ChevronDown size={14} style={{ color: 'var(--text-3)' }} />
+      </div>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md shadow-lg max-h-48 overflow-y-auto" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          {sellers.map(s => {
+            const isSelected = selectedList.includes(s);
+            return (
+              <div
+                key={s}
+                onClick={() => toggleSeller(s)}
+                className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 transition-colors"
+                style={{ color: 'var(--text)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  readOnly
+                  className="rounded"
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                <span>{s}</span>
+              </div>
+            );
+          })}
+          {sellers.length === 0 && (
+            <div className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-3)' }}>
+              Sotuvchilar topilmadi (sozlamalardan qo&#8217;shing)
+            </div>
+          )}
         </div>
       )}
-      {q&&!sellers.includes(q)&&<p className="text-xs text-amber-600 mt-1">Sozlamalarda yo'q — baribir saqlanadi</p>}
     </div>
   );
 }
@@ -64,6 +119,7 @@ export default function Clients() {
   const [search,   setSearch]   = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sort,     setSort]     = useState({ col:'createdAt', dir:'desc' });
+  const [debtFilter, setDebtFilter] = useState('barchasi');
   const [expanded, setExpanded] = useState(null);
   const [expandContracts, setExpandContracts] = useState({});
   const [modal,    setModal]    = useState(null);
@@ -89,16 +145,20 @@ export default function Clients() {
     return () => clearTimeout(t);
   }, [search]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [debtFilter]);
+
   const fetchClients = useCallback(() => {
     setLoading(true);
     api.get('/api/clients', {
-      params: { page, limit: LIMIT, search: debouncedSearch, sortBy: sort.col, sortDir: sort.dir },
+      params: { page, limit: LIMIT, search: debouncedSearch, sortBy: sort.col, sortDir: sort.dir, debtFilter },
     }).then(r => {
       setClients(r.data.data);
       setTotal(r.data.total);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [page, debouncedSearch, sort]);
+  }, [page, debouncedSearch, sort, debtFilter]);
 
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
@@ -123,6 +183,12 @@ export default function Clients() {
     setForm({ name:c.name||'', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', seller:c.seller||'' });
     setPhoneInput(fmtPhone(c.phone||''));
     setEditId(c.id); setErrors({}); setModal('edit');
+  };
+  const handleCopy = c => {
+    setForm({ name:(c.name||'') + ' - KOPYA', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', seller:c.seller||'' });
+    setPhoneInput(fmtPhone(c.phone||''));
+    setEditId(null); setErrors({}); setModal('add');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const closeModal = () => { setModal(null); setEditId(null); };
 
@@ -233,19 +299,122 @@ export default function Clients() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Mijozlar (CRM)</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mijoz</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Mijozlar (CRM)</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mijoz</p>
+          </div>
+          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+            <Plus size={14}/> Yangi Mijoz
+          </button>
         </div>
         <div className="flex gap-2">
           <button onClick={handleExport} className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
             <Download size={14}/> Excel
           </button>
-          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
-            <Plus size={14}/> Yangi Mijoz
-          </button>
         </div>
       </div>
+
+      {/* Submenu Quick Filters */}
+      <div className="flex border-b border-[var(--border)] gap-2">
+        {[
+          { key: 'barchasi', label: 'Barchasi' },
+          { key: 'qarzdorlar', label: 'Qarzdorlar' },
+          { key: 'haqdorlar', label: 'Haqdorlar' },
+          { key: 'yangi', label: 'Yangi' }
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setDebtFilter(t.key)}
+            className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
+              debtFilter === t.key
+                ? 'border-[var(--accent)] text-[var(--accent)]'
+                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-zinc-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Inline Accordion Form for adding Client */}
+      {modal === 'add' && (
+        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+            <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+              <Plus size={16} className="text-[var(--accent)]"/>
+              Yangi Mijoz Qo'shish
+            </h3>
+            <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+              <X size={16}/>
+            </button>
+          </div>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Tashkilot nomi *</label>
+                <input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className={inp('name')} placeholder="MChJ, XK..."/>
+                {errors.name&&<p className="text-[10px] text-red-500 mt-0.5">{errors.name}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">STIR (INN)</label>
+                <input type="text" value={form.inn} onChange={e=>setForm(f=>({...f,inn:fmtINN(e.target.value)}))} className={inp('inn')} placeholder="123 456 789"/>
+                {errors.inn&&<p className="text-[10px] text-red-500 mt-0.5">{errors.inn}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Direktor</label>
+                <input type="text" value={form.director} onChange={e=>setForm(f=>({...f,director:e.target.value}))} className={inp('director')} placeholder="F.I.O."/>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Telefon</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium pointer-events-none">+998</span>
+                  <input type="text" value={phoneInput.replace('+998 ','')} onChange={e=>{
+                    const d=e.target.value.replace(/\D/g,'').slice(0,9);
+                    let s=''; if(d.length>0)s=d.slice(0,2); if(d.length>2)s+=' '+d.slice(2,5); if(d.length>5)s+=' '+d.slice(5,7); if(d.length>7)s+=' '+d.slice(7,9);
+                    setPhoneInput(s?'+998 '+s:'');
+                  }} className={`${inp('phone')} pl-12`} placeholder="90 123 45 67"/>
+                </div>
+                {errors.phone&&<p className="text-[10px] text-red-500 mt-0.5">{errors.phone}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Holati</label>
+                <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))} className={inp('status')}>
+                  <option>Yangi</option><option>Faol</option><option>Kutilmoqda</option><option>Muddati o'tgan</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Kategoriya</label>
+                <input type="text" value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} className={inp('category')} placeholder="Qurilish, Savdo..."/>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Manzil</label>
+                <input type="text" value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} className={inp('address')} placeholder="Shahar, ko'cha, uy..."/>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Hisob raqam</label>
+                <input type="text" value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value.replace(/\D/g,'').slice(0,20)}))} className={inp('account')} placeholder="20200000000000000000"/>
+                {errors.account&&<p className="text-[10px] text-red-500 mt-0.5">{errors.account}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">MFO</label>
+                <input type="text" value={form.mfo} onChange={e=>setForm(f=>({...f,mfo:e.target.value.replace(/\D/g,'').slice(0,5)}))} className={inp('mfo')} placeholder="01234"/>
+                {errors.mfo&&<p className="text-[10px] text-red-500 mt-0.5">{errors.mfo}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Mas'ul sotuvchi</label>
+                <MultiSellerSelect sellers={sellers} value={form.seller} onChange={v=>setForm(f=>({...f,seller:v}))}/>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
+              <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor qilish</button>
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+                {saving?'Saqlanmoqda...':'Saqlash'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="mini-card p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
@@ -298,6 +467,7 @@ export default function Clients() {
                     </td>
                     <td className="px-5 py-2.5">
                       <div className="flex items-center justify-end gap-1">
+                        <button onClick={()=>handleCopy(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Nusxa olish"><Copy size={13}/></button>
                         <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={13}/></button>
                         <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={13}/></button>
                         <button onClick={()=>toggleExpand(c.id)} className={`p-1 rounded transition ${expanded===c.id?'text-[var(--accent)] bg-[oklch(0.96_0.03_250)]':'text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`} title="Batafsil">
@@ -322,12 +492,12 @@ export default function Clients() {
                             </div>
                           </div>
                           <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnomalar</p>
+                            <div className="flex items-center gap-2 mb-2">
                               <button onClick={() => openContractAdd(c.id)}
                                 className="flex items-center gap-0.5 text-xs text-[var(--accent)] hover:underline font-medium">
-                                <Plus size={11}/> Yangi
+                                <Plus size={11}/> Yangi shartnoma qo'shish
                               </button>
+                              <span className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnomalar</span>
                             </div>
                             {!expandContracts[c.id] ? (
                               <p className="text-xs text-[var(--text-3)]">Yuklanmoqda...</p>
@@ -361,11 +531,11 @@ export default function Clients() {
         <Pagination page={page} total={total} limit={LIMIT} onPage={p => { setPage(p); setExpanded(null); }} />
       </div>
 
-      {modal&&(
+      {modal === 'edit' && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">{modal==='add'?'Yangi Mijoz':'Mijozni tahrirlash'}</h3>
+              <h3 className="text-lg font-bold text-zinc-900">Mijozni tahrirlash</h3>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-zinc-400">Ctrl+Enter — saqlash · Esc — yopish</span>
                 <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"><X size={20}/></button>
@@ -425,7 +595,7 @@ export default function Clients() {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-zinc-700 mb-1">Mas'ul sotuvchi</label>
-                  <SellerSearch sellers={sellers} value={form.seller} onChange={v=>setForm(f=>({...f,seller:v}))}/>
+                  <MultiSellerSelect sellers={sellers} value={form.seller} onChange={v=>setForm(f=>({...f,seller:v}))}/>
                 </div>
               </div>
               <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">

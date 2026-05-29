@@ -1,15 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --bg: oklch(0.985 0.003 250);
-  --surface: oklch(1 0 0);
-  --surface-2: oklch(0.965 0.005 250);
-  --text: oklch(0.20 0.015 250);
-  --text-2: oklch(0.45 0.012 250);
-  --text-3: oklch(0.62 0.010 250);
-  --border: oklch(0.92 0.005 250);
-  --border-strong: oklch(0.86 0.008 250);
-  --accent: oklch(0.55 0.13 250);
+  /* ── Content area: warm cream (Claude-inspired) ── */
+  --bg:           oklch(0.972 0.010 78);
+  --surface:      oklch(1.000 0.000  0);
+  --surface-2:    oklch(0.952 0.012 78);
+  --text:         oklch(0.160 0.012 55);
+  --text-2:       oklch(0.420 0.012 60);
+  --text-3:       oklch(0.640 0.010 65);
+  --border:       oklch(0.900 0.010 78);
+  --border-strong:oklch(0.855 0.012 78);
+  --accent:       oklch(0.580 0.170 45);   /* Claude orange */
+  --accent-hover: oklch(0.530 0.175 45);
+  --accent-bg:    oklch(0.960 0.045 55);   /* light orange tint for focus rings */
+
+  /* ── Sidebar: warm dark panel ── */
+  --sb-bg:      oklch(0.152 0.010 55);
+  --sb-surface: oklch(0.190 0.010 55);
+  --sb-hover:   oklch(0.215 0.010 55);
+  --sb-active:  oklch(0.250 0.015 55);
+  --sb-border:  oklch(0.220 0.010 55);
+  --sb-text:    oklch(0.900 0.008 72);
+  --sb-text-2:  oklch(0.620 0.008 65);
+  --sb-accent:  oklch(0.700 0.140 50);     /* sidebar orange — slightly lighter */
 
   --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -74,7 +87,7 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px oklch(0.93 0.05 250) !important;
+  box-shadow: 0 0 0 3px var(--accent-bg) !important;
   outline: none;
 }
 

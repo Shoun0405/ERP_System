@@ -3,7 +3,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
-import { Plus, X, Trash2, Edit2, RefreshCw, Calculator, Search } from 'lucide-react';
+import { Plus, X, Trash2, Edit2, RefreshCw, Calculator, Search, Copy } from 'lucide-react';
 import { fmtOrDash as fmtN } from '../lib/format';
 
 const fmtD = (n, d = 6) => (!n && n !== 0) ? '—' : parseFloat(n).toFixed(d).replace(/\.?0+$/, '');
@@ -108,6 +108,12 @@ export default function Products() {
     setEditId(p.id);
     setModal('edit');
   };
+  const handleCopy = p => {
+    setForm({ density: String(p.density), length: String(p.length), width: String(p.width), thickness: String(p.thickness) });
+    setEditId(null);
+    setModal('add');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const closeModal = () => { setModal(null); setEditId(null); };
 
   const handleSave = async e => {
@@ -158,14 +164,97 @@ export default function Products() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Mahsulotlar bazasi</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Mahsulotlar bazasi</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
+          </div>
+          <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+            <Plus size={14}/> Yangi Mahsulot
+          </button>
         </div>
-        <button onClick={openAdd} className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
-          <Plus size={14}/> Yangi Mahsulot
-        </button>
       </div>
+
+      {/* Inline Accordion Form for adding Product */}
+      {modal === 'add' && (
+        <div className="mini-card p-6 border border-blue-100 bg-blue-50/5 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+            <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+              <Plus size={16} className="text-[var(--accent)]"/>
+              Yangi Mahsulot Qo'shish
+            </h3>
+            <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100">
+              <X size={16}/>
+            </button>
+          </div>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="bg-zinc-900 rounded-lg px-4 py-3 flex items-center justify-between">
+              <span className="text-xs text-zinc-500 uppercase tracking-wider">Artikul (auto)</span>
+              <span className="text-white font-mono font-bold text-lg">{article || '—'}</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Zichlik (kg/m³) *</label>
+                <input required type="number" step="0.01" min="1" value={form.density}
+                  onChange={e => setForm(f => ({...f, density: e.target.value}))} className={inp} placeholder="80"/>
+              </div>
+              <div className="flex items-end">
+                <p className="text-xs text-zinc-400 pb-2">Zichlik artikulning boshi bo'ladi</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">O'lchamlar (mm) *</label>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <input required type="number" min="1" value={form.length}
+                    onChange={e => setForm(f => ({...f, length: e.target.value}))} className={inp} placeholder="Uzunlik"/>
+                  <p className="text-[10px] text-zinc-400 mt-1 text-center">Uzunlik</p>
+                </div>
+                <div>
+                  <input required type="number" min="1" value={form.width}
+                    onChange={e => setForm(f => ({...f, width: e.target.value}))} className={inp} placeholder="Eni"/>
+                  <p className="text-[10px] text-zinc-400 mt-1 text-center">Eni</p>
+                </div>
+                <div>
+                  <input required type="number" min="1" value={form.thickness}
+                    onChange={e => setForm(f => ({...f, thickness: e.target.value}))} className={inp} placeholder="Qalinlik"/>
+                  <p className="text-[10px] text-zinc-400 mt-1 text-center">Qalinlik</p>
+                </div>
+              </div>
+            </div>
+
+            {article && (
+              <div className="grid grid-cols-3 gap-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                <div className="text-center">
+                  <p className="text-[10px] text-[var(--text-3)] mb-1">1 dona m²</p>
+                  <p className="text-xs font-bold text-[var(--text)] font-mono">{fmtD(units.sqmPerPce, 4)}</p>
+                </div>
+                <div className="text-center border-x border-[var(--border)]">
+                  <p className="text-[10px] text-[var(--text-3)] mb-1">1 dona m³</p>
+                  <p className="text-xs font-bold text-[var(--text)] font-mono">{fmtD(units.cbmPerPce, 6)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-[var(--text-3)] mb-1">1 dona kg</p>
+                  <p className="text-xs font-bold text-[var(--text)] font-mono">{fmtD(units.kgPerPce, 3)}</p>
+                </div>
+              </div>
+            )}
+
+            <p className="text-[10px] text-[var(--text-3)] flex items-center gap-1.5 justify-center">
+              <Calculator size={11}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
+            </p>
+
+            <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
+              <button type="button" onClick={closeModal} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
+              <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition shadow-sm">
+                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Global Narx Paneli */}
       <div className="mini-card border-[oklch(0.88_0.05_250)] bg-[oklch(0.96_0.03_250)]/30">
@@ -254,6 +343,7 @@ export default function Products() {
                   <td className="px-3 py-2 text-right font-semibold text-blue-700 bg-[oklch(0.96_0.03_250)]/20 font-mono text-[11px]">{p.priceSqm > 0 ? fmtN(p.priceSqm) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleCopy(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={12}/></button>
                       <button onClick={() => openEdit(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={12}/></button>
                       <button onClick={() => setDelId(p.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={12}/></button>
                     </div>
@@ -266,11 +356,11 @@ export default function Products() {
         <Pagination page={page} total={total} limit={LIMIT} onPage={setPage} />
       </div>
 
-      {modal && (
+      {modal === 'edit' && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-zinc-900">{modal === 'add' ? 'Yangi Mahsulot' : 'Mahsulotni tahrirlash'}</h3>
+              <h3 className="text-lg font-bold text-zinc-900">Mahsulotni tahrirlash</h3>
               <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 p-1 rounded hover:bg-zinc-100"><X size={20}/></button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-5">

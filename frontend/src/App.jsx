@@ -36,26 +36,41 @@ function Sidebar({ collapsed, onToggle }) {
 
   return (
     <aside
-      className="bg-[var(--surface)] border-r border-[var(--border)] flex flex-col z-20 shrink-0 sidebar-container"
-      style={{ width: collapsed ? 64 : 224 }}
+      className="flex flex-col z-20 shrink-0 sidebar-container"
+      style={{
+        width: collapsed ? 64 : 224,
+        background: 'var(--sb-bg)',
+        borderRight: '1px solid var(--sb-border)',
+      }}
     >
       {/* Brand logo section */}
-      <div className="h-14 flex items-center px-4 border-b border-[var(--border)] shrink-0 gap-3"
-           style={{ justifyContent: collapsed ? 'center' : 'flex-start' }}>
-        <div className="w-8 h-8 bg-[var(--accent)] rounded-lg flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+      <div
+        className="h-14 flex items-center px-4 shrink-0 gap-3"
+        style={{
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          borderBottom: '1px solid var(--sb-border)',
+        }}
+      >
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: 'var(--accent)', boxShadow: '0 2px 8px oklch(0.58 0.17 45 / 0.35)' }}
+        >
           <span className="text-white text-base font-bold tracking-tighter">N</span>
         </div>
         {!collapsed && (
-          <h2 className="text-sm font-semibold tracking-tight text-[var(--text)] animate-in">
+          <h2 className="text-sm font-semibold tracking-tight animate-in" style={{ color: 'var(--sb-text)' }}>
             NexERP
           </h2>
         )}
       </div>
 
       {/* Navigation menu list */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
         {!collapsed && (
-          <div className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider px-3 py-1 mb-1">
+          <div
+            className="text-[10px] font-semibold uppercase tracking-wider px-3 py-1 mb-1"
+            style={{ color: 'var(--sb-text-2)' }}
+          >
             Asosiy Bo'limlar
           </div>
         )}
@@ -67,28 +82,32 @@ function Sidebar({ collapsed, onToggle }) {
               key={item.path}
               to={item.path}
               title={collapsed ? item.name : ''}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative ${
-                isActive
-                  ? 'bg-[oklch(0.96_0.03_250)] text-[var(--accent)]'
-                  : 'text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
-              }`}
+              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative"
+              style={{
+                color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)',
+                background: isActive ? 'var(--sb-active)' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sb-hover)'; e.currentTarget.style.color = 'var(--sb-text)'; }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sb-text-2)'; } }}
             >
-              <Icon size={17} className={isActive ? 'text-[var(--accent)]' : 'text-[var(--text-3)]'} />
+              <Icon size={17} style={{ color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)', flexShrink: 0 }} />
               {!collapsed && <span className="truncate">{item.name}</span>}
-              {isActive && (
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[var(--accent)] rounded-l" />
-              )}
             </Link>
           );
         })}
       </nav>
 
       {/* Sidebar toggle footer */}
-      <div className="p-2 border-t border-[var(--border)]">
+      <div className="p-2" style={{ borderTop: '1px solid var(--sb-border)' }}>
         <button
           onClick={onToggle}
-          className="w-full h-8 flex items-center gap-3 px-3 rounded-md text-[var(--text-3)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] text-xs font-medium transition-colors"
-          style={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+          className="w-full h-8 flex items-center gap-3 px-3 rounded-md text-xs font-medium transition-colors"
+          style={{
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            color: 'var(--sb-text-2)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--sb-hover)'; e.currentTarget.style.color = 'var(--sb-text)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sb-text-2)'; }}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           {!collapsed && <span>Yopish</span>}
@@ -176,7 +195,7 @@ function TopHeader({ user }) {
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[var(--surface-2)] transition"
           >
-            <div className="w-7 h-7 rounded-full bg-blue-600/10 flex items-center justify-center text-[var(--accent)] text-xs font-semibold border border-[var(--border)] shrink-0">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--border)' }}>
               {initials}
             </div>
             <div className="text-left hidden sm:block">
@@ -263,10 +282,16 @@ function TrendSVGChart({ data }) {
       ))}
 
       {/* Gradient Area Fill */}
-      <path d={areaStr} fill="oklch(0.93 0.05 250)" opacity="0.45" />
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="oklch(0.58 0.17 45)" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="oklch(0.58 0.17 45)" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaStr} fill="url(#chartGrad)" />
 
       {/* Bold accent Line */}
-      <path d={pathStr} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+      <path d={pathStr} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
       {/* Node Points */}
       {data.map((d, i) => (
@@ -368,7 +393,10 @@ function Dashboard() {
             <button className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2">
               <Calendar size={13} /> Bugun · {new Date().toLocaleDateString('uz-UZ')}
             </button>
-            <button className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm shadow-blue-500/10">
+            <button className="px-3 py-1.5 text-white rounded-lg text-xs font-medium transition flex items-center gap-2" style={{ background: 'var(--accent)', boxShadow: '0 1px 4px oklch(0.58 0.17 45 / 0.25)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+            >
               <Plus size={13} /> Yangi Mijoz
             </button>
           </div>
@@ -557,7 +585,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center font-sans">
         <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: 'oklch(0.58 0.17 45 / 0.20)', borderTopColor: 'var(--accent)' }} />
           <p className="text-xs text-[var(--text-3)] font-semibold tracking-wider uppercase">Yuklanmoqda...</p>
         </div>
       </div>
