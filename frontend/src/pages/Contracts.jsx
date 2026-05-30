@@ -376,6 +376,10 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
                 <Pencil size={14} /> Tahrirlash
               </button>
+              <button onClick={() => { setMenuOpen(false); onDelete(c); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                <Trash2 size={14} /> O'chirish
+              </button>
               <a href={`${API}/api/export/contracts/${c.id}/pdf`} target="_blank" rel="noreferrer"
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>

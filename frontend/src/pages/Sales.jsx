@@ -11,7 +11,7 @@ import {
   Plus, X, Trash2, Package, Eye, Printer,
   FileText, Truck, User, Calendar, Hash, Search,
   Check, RefreshCw, ChevronDown, CheckCircle2, XCircle,
-  FileSpreadsheet, Download
+  FileSpreadsheet, Download, Pencil
 } from 'lucide-react';
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -243,58 +243,98 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
 }
 
 // ─── SaleForm (inline accordion) ────────────────────────────────────────────
-function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }) {
-  const [form, setForm] = useState({
-    date: TODAY, nakladnoy: '', sellerName: '', transportNum: '',
-    clientId:   initialValues?.clientId   || '',
-    contractId: initialValues?.contractId || '',
-    specId:     initialValues?.specId     || '',
-    rows: [{ ...EMPTY_ROW }],
+function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initialValues = null }) {
+  const editing = Boolean(editSale);
+
+  const [form, setForm] = useState(() => {
+    if (editing) {
+      return {
+        date: editSale.date.slice(0, 10),
+        nakladnoy: editSale.nakladnoy,
+        sellerName: editSale.sellerName,
+        transportNum: editSale.transportNum || '',
+        clientId: editSale.clientId,
+        contractId: editSale.contractId || '',
+        specId: editSale.specId || '',
+        rows: editSale.products?.map(p => ({
+          productId: p.productId,
+          unit: 'dona',
+          amount: p.totalPieces,
+          price: p.totalPieces > 0 ? Math.round(p.rowAmount / p.totalPieces) : 0,
+          packType: p.packType || 1,
+          totalPieces: p.totalPieces,
+          totalCbm: p.totalCbm,
+          totalKg: p.totalKg,
+          totalSqm: p.totalSqm,
+          priceCbm: p.priceCbm,
+          rowAmount: p.rowAmount
+        })) || [{ ...EMPTY_ROW }]
+      };
+    }
+    return {
+      date: TODAY,
+      nakladnoy: '',
+      sellerName: '',
+      transportNum: '',
+      clientId:   initialValues?.clientId   || '',
+      contractId: initialValues?.contractId || '',
+      specId:     initialValues?.specId     || '',
+      rows:       initialValues?.rows       || [{ ...EMPTY_ROW }],
+    };
   });
+
   const [contracts, setContracts] = useState([]);
   const [specs, setSpecs]         = useState([]);
   const [saving, setSaving]       = useState(false);
   const initRef = useRef(false);
 
-  // Load contracts and specifications if initial values are provided
+  // Load contracts and specifications if initial values or editSale are provided
   useEffect(() => {
-    if (!initialValues?.clientId || initRef.current) return;
+    const cid = editing ? editSale.clientId : initialValues?.clientId;
+    if (!cid || initRef.current) return;
     initRef.current = true;
 
-    api.get(`/api/contracts?clientId=${initialValues.clientId}&limit=100`)
+    api.get(`/api/contracts?clientId=${cid}&limit=100`)
       .then(r => setContracts(r.data.data || []))
       .catch(() => {});
 
-    if (!initialValues.contractId) return;
-    api.get(`/api/specs?contractId=${initialValues.contractId}`)
+    const contractId = editing ? editSale.contractId : initialValues?.contractId;
+    if (!contractId) return;
+
+    api.get(`/api/specs?contractId=${contractId}`)
       .then(r => {
         const specsData = r.data.data || [];
         setSpecs(specsData);
-        if (!initialValues.specId) return;
+        if (editing) return; // If editing, we keep the sale rows, do not override
+        if (!initialValues?.specId) return;
         const spec = specsData.find(s => s.id === initialValues.specId);
         if (!spec?.products?.length) return;
-        setForm(f => ({
-          ...f,
-          rows: spec.products.map(sp => {
-            const row = {
-              productId: sp.productId,
-              unit: sp.unit || 'dona',
-              amount: sp.quantity || 0,
-              price: sp.unitPriceVat || 0,
-              packType: 1,
-              totalPieces: 0,
-              totalCbm: 0,
-              totalKg: 0,
-              totalSqm: 0,
-              priceCbm: 0,
-              rowAmount: 0
-            };
-            return calculateRowValues(row, products);
-          }),
-        }));
+        if (initialValues.rows) {
+          setForm(f => ({ ...f, rows: initialValues.rows }));
+        } else {
+          setForm(f => ({
+            ...f,
+            rows: spec.products.map(sp => {
+              const row = {
+                productId: sp.productId,
+                unit: sp.unit || 'dona',
+                amount: sp.quantity || 0,
+                price: sp.unitPriceVat || 0,
+                packType: 1,
+                totalPieces: 0,
+                totalCbm: 0,
+                totalKg: 0,
+                totalSqm: 0,
+                priceCbm: 0,
+                rowAmount: 0
+              };
+              return calculateRowValues(row, products);
+            }),
+          }));
+        }
       })
       .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editing, editSale, initialValues, products]);
 
   const totalAmount = form.rows.reduce((s, r) => s + (parseFloat(r.rowAmount) || 0), 0);
 
@@ -302,7 +342,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
   const selectedClient = clients.find(c => c.id === form.clientId);
   const clientSellers = selectedClient?.seller ? selectedClient.seller.split(',').map(s => s.trim()) : [];
 
-  const prevClientId = useRef(initialValues?.clientId || '');
+  const prevClientId = useRef(editing ? editSale.clientId : (initialValues?.clientId || ''));
   useEffect(() => {
     if (prevClientId.current === form.clientId) return;
     prevClientId.current = form.clientId;
@@ -315,7 +355,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
       .catch(() => {});
   }, [form.clientId]);
 
-  const prevContractId = useRef(initialValues?.contractId || '');
+  const prevContractId = useRef(editing ? editSale.contractId : (initialValues?.contractId || ''));
   useEffect(() => {
     if (prevContractId.current === form.contractId) return;
     prevContractId.current = form.contractId;
@@ -329,6 +369,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
 
   // Pre-fill products from spec
   useEffect(() => {
+    if (editing) return; // Never override rows with spec if editing existing sale
     if (!form.specId) return;
     const spec = specs.find(s => s.id === form.specId);
     if (!spec?.products?.length) return;
@@ -349,7 +390,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
       return calculateRowValues(row, products);
     });
     setForm(f => ({ ...f, rows }));
-  }, [form.specId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.specId]);
 
   const updateRow = (idx, updated) => {
     setForm(f => { const rows = [...f.rows]; rows[idx] = updated; return { ...f, rows }; });
@@ -369,7 +410,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
     }
     setSaving(true);
     try {
-      const { data } = await api.post('/api/sales', {
+      const payload = {
         date:         form.date,
         nakladnoy:    form.nakladnoy,
         sellerName:   form.sellerName,
@@ -387,10 +428,18 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
           priceCbm: r.priceCbm,
           rowAmount: r.rowAmount
         })),
-        facturaStatus: 'yuborilmagan'
-      });
-      toast.success('Yuk xati saqlandi');
-      onSaved(data);
+        facturaStatus: editing ? editSale.facturaStatus : 'yuborilmagan'
+      };
+
+      let res;
+      if (editing) {
+        res = await api.put(`/api/sales/${editSale.id}`, payload);
+        toast.success('Yuk xati yangilandi');
+      } else {
+        res = await api.post('/api/sales', payload);
+        toast.success('Yuk xati saqlandi');
+      }
+      onSaved(res.data);
     } finally { setSaving(false); }
   };
 
@@ -402,7 +451,7 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
     <div className="mini-card rounded-xl p-5 mb-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
-          <FileText size={15} className="text-[var(--accent)]" /> Yangi Yuk Xati
+          <FileText size={15} className="text-[var(--accent)]" /> {editing ? "Yuk Xatini Tahrirlash" : "Yangi Yuk Xati"}
         </h3>
         <button onClick={onCancel} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
       </div>
@@ -525,13 +574,21 @@ function SaleForm({ onSaved, onCancel, clients, products, initialValues = null }
           <button onClick={save} disabled={saving}
             className="px-6 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md flex items-center gap-2">
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            Yuk xatini saqlash
+            {editing ? "Yangilash" : "Yuk xatini saqlash"}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+// Helper to format Date object into local YYYY-MM-DD string without timezone shifting
+const formatDateLocal = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function Sales() {
@@ -562,6 +619,7 @@ export default function Sales() {
   const [detail,        setDetail]        = useState(null);
   const [delId,         setDelId]         = useState(null);
   const [initialValues, setInitialValues] = useState(null);
+  const [editSale,      setEditSale]      = useState(null);
 
   const [selectedSales, setSelectedSales] = useState([]);
   const [activeStatusDropdown, setActiveStatusDropdown] = useState(null);
@@ -600,27 +658,29 @@ export default function Sales() {
   // Quick range date setups
   const prevMonth = () => {
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-    const to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
-    setDateFrom(from); setDateTo(to);
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const to = new Date(now.getFullYear(), now.getMonth(), 0);
+    setDateFrom(formatDateLocal(from));
+    setDateTo(formatDateLocal(to));
   };
   const monthStart = () => {
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const to = now.toISOString().split('T')[0];
-    setDateFrom(from); setDateTo(to);
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    setDateFrom(formatDateLocal(from));
+    setDateTo(formatDateLocal(now));
   };
   const yearStart = () => {
     const now = new Date();
     const from = `${now.getFullYear()}-01-01`;
-    const to = now.toISOString().split('T')[0];
-    setDateFrom(from); setDateTo(to);
+    setDateFrom(from);
+    setDateTo(formatDateLocal(now));
   };
   const prevYear = () => {
     const now = new Date();
     const from = `${now.getFullYear() - 1}-01-01`;
     const to = `${now.getFullYear() - 1}-12-31`;
-    setDateFrom(from); setDateTo(to);
+    setDateFrom(from);
+    setDateTo(to);
   };
 
   // Cascading drop-down loading for filters
@@ -698,8 +758,13 @@ export default function Sales() {
   const handleSaved = (saved) => {
     inlineForm.close();
     setInitialValues(null);
-    setSales(prev => [saved, ...prev]);
-    setTotal(t => t + 1);
+    if (editSale) {
+      setSales(prev => prev.map(s => s.id === saved.id ? saved : s));
+      setEditSale(null);
+    } else {
+      setSales(prev => [saved, ...prev]);
+      setTotal(t => t + 1);
+    }
   };
 
   const handleDelete = async () => {
@@ -729,10 +794,18 @@ export default function Sales() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedSales.length === sales.length) {
-      setSelectedSales([]);
+    const currentPageIds = sales.map(s => s.id);
+    const allSelectedOnCurrentPage = currentPageIds.every(id => selectedSales.includes(id));
+    if (allSelectedOnCurrentPage) {
+      setSelectedSales(prev => prev.filter(id => !currentPageIds.includes(id)));
     } else {
-      setSelectedSales(sales.map(s => s.id));
+      setSelectedSales(prev => {
+        const next = [...prev];
+        currentPageIds.forEach(id => {
+          if (!next.includes(id)) next.push(id);
+        });
+        return next;
+      });
     }
   };
 
@@ -756,10 +829,19 @@ export default function Sales() {
     } catch {}
   };
 
-  const handleBulkPrint = () => {
-    const listToPrint = sales.filter(s => selectedSales.includes(s.id));
-    if (listToPrint.length === 0) return;
-    setBulkPrintSales(listToPrint);
+  const handleBulkPrint = async () => {
+    if (selectedSales.length === 0) return;
+    setLoading(true);
+    try {
+      const detailedSales = await Promise.all(
+        selectedSales.map(id => api.get(`/api/sales/${id}`).then(r => r.data))
+      );
+      setBulkPrintSales(detailedSales);
+    } catch {
+      toast.error("Ommaviy yuk xatlarini chop etish uchun yuklashda xatolik yuz berdi");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBulkExport = (type) => {
@@ -773,40 +855,35 @@ export default function Sales() {
   };
 
   // Nusxa olib qo'shish (Copy & Add) handler
-  const handleCopyAndAdd = (sale) => {
-    setInitialValues({
-      clientId: sale.clientId,
-      contractId: sale.contractId || '',
-      specId: sale.specId || '',
-    });
-    // Hydrate form rows with values
-    setTimeout(() => {
-      setFormRowsFromSale(sale);
-    }, 100);
-    inlineForm.open();
-  };
-
-  const setFormRowsFromSale = (sale) => {
-    // Locate the DOM elements or wait for state hydration
-    // For react state, let's keep a state that sets form fields in SaleForm when it mounts
-    setInitialValues({
-      clientId: sale.clientId,
-      contractId: sale.contractId || '',
-      specId: sale.specId || '',
-      rows: sale.products?.map(p => ({
-        productId: p.productId,
-        unit: 'dona',
-        amount: p.totalPieces,
-        price: p.rowAmount / (p.totalPieces || 1),
-        packType: p.packType || 1,
-        totalPieces: p.totalPieces,
-        totalCbm: p.totalCbm,
-        totalKg: p.totalKg,
-        totalSqm: p.totalSqm,
-        priceCbm: p.priceCbm,
-        rowAmount: p.rowAmount
-      }))
-    });
+  const handleCopyAndAdd = async (sale) => {
+    setLoading(true);
+    try {
+      // Securely fetch full product line details on-demand
+      const fullSale = await api.get(`/api/sales/${sale.id}`).then(r => r.data);
+      setInitialValues({
+        clientId: fullSale.clientId,
+        contractId: fullSale.contractId || '',
+        specId: fullSale.specId || '',
+        rows: fullSale.products?.map(p => ({
+          productId: p.productId,
+          unit: 'dona',
+          amount: p.totalPieces,
+          price: p.totalPieces > 0 ? Math.round(p.rowAmount / p.totalPieces) : 0,
+          packType: p.packType || 1,
+          totalPieces: p.totalPieces,
+          totalCbm: p.totalCbm,
+          totalKg: p.totalKg,
+          totalSqm: p.totalSqm,
+          priceCbm: p.priceCbm,
+          rowAmount: p.rowAmount
+        })) || [{ ...EMPTY_ROW }]
+      });
+      inlineForm.open();
+    } catch {
+      toast.error("Yuk xatini nusxalashda xatolik yuz berdi");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openDetail = async (s) => {
@@ -842,18 +919,106 @@ export default function Sales() {
         </div>
       </div>
 
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
+      {/* Combined Header & Sleek Filters Control Center */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all duration-300">
+        
+        {/* Left Side: Title & Action Button */}
+        <div className="flex items-center gap-4 shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text)]">Savdolar (Yuk xatlari)</h2>
-            <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yuk xati</p>
+            <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">Savdolar</h2>
+            <p className="text-[11px] font-semibold text-[var(--text-3)]">{total} ta yuk xati</p>
           </div>
           <button onClick={inlineForm.toggle}
-            className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-sm">
+            className="px-3.5 py-2 btn-primary rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
             <Plus size={14} />
             {inlineForm.isOpen ? 'Yopish' : 'Yangi Yuk Xati'}
           </button>
+        </div>
+
+        {/* Right Side: Ultra-compact, Artistic Filters Toolbar */}
+        <div className="flex flex-wrap items-center gap-3 xl:justify-end flex-1 min-w-0">
+          
+          {/* Search bar */}
+          <div className="relative w-full sm:w-48 shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-3.5 h-3.5" />
+            <input type="text" placeholder="Qidirish..." value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]" />
+          </div>
+
+          {/* Start Date */}
+          <div className="relative flex items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-2.5 py-1.5 shrink-0 transition focus-within:border-[var(--accent)] hover:border-[var(--text-3)]">
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              className="bg-transparent border-0 p-0 text-xs outline-none focus:ring-0 text-[var(--text-2)] font-semibold cursor-pointer w-24" />
+            {dateFrom && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setDateFrom(''); }}
+                className="ml-1 p-0.5 text-[var(--text-3)] hover:text-red-500 rounded-md transition cursor-pointer flex items-center justify-center hover:bg-[var(--surface)]"
+                title="Boshlanish sanasini tozalash"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+
+          {/* End Date */}
+          <div className="relative flex items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-2.5 py-1.5 shrink-0 transition focus-within:border-[var(--accent)] hover:border-[var(--text-3)]">
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="bg-transparent border-0 p-0 text-xs outline-none focus:ring-0 text-[var(--text-2)] font-semibold cursor-pointer w-24" />
+            {dateTo && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setDateTo(''); }}
+                className="ml-1 p-0.5 text-[var(--text-3)] hover:text-red-500 rounded-md transition cursor-pointer flex items-center justify-center hover:bg-[var(--surface)]"
+                title="Tugash sanasini tozalash"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Date range buttons */}
+          <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)] shrink-0">
+            {[
+              { label: 'Oy', onClick: prevMonth, title: "O'tgan oy" },
+              { label: 'Oy boshi', onClick: monthStart, title: 'Oy boshidan' },
+              { label: 'Yil', onClick: yearStart, title: 'Yil boshidan' }
+            ].map(b => (
+              <button key={b.label} onClick={b.onClick} title={b.title}
+                className="px-2 py-0.5 hover:bg-[var(--surface)] rounded-lg text-[10px] font-bold text-[var(--text-2)] hover:text-[var(--text)] transition cursor-pointer">
+                {b.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Cascading Dropdowns */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+              className="px-2.5 py-1.5 border border-[var(--border)] rounded-xl text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text-2)] max-w-[130px] font-semibold cursor-pointer">
+              <option value="">Mijozlar</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+
+            <select value={filterContract} onChange={e => setFilterContract(e.target.value)} disabled={!filterClient}
+              className="px-2.5 py-1.5 border border-[var(--border)] rounded-xl text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text-2)] disabled:opacity-50 max-w-[130px] font-semibold cursor-pointer">
+              <option value="">Shartnomalar</option>
+              {filterContracts.map(c => <option key={c.id} value={c.id}>№{c.number}</option>)}
+            </select>
+
+            <select value={filterSpec} onChange={e => setFilterSpec(e.target.value)} disabled={!filterContract}
+              className="px-2.5 py-1.5 border border-[var(--border)] rounded-xl text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text-2)] disabled:opacity-50 max-w-[130px] font-semibold cursor-pointer">
+              <option value="">Spetsifikatsiyalar</option>
+              {filterSpecs.map(s => (
+                <option key={s.id} value={s.id}>Spets №{s.number}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Clear button */}
+          {hasFilter && (
+            <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-0.5 transition shrink-0 cursor-pointer">
+              <X size={13} /> Tozalash
+            </button>
+          )}
         </div>
       </div>
 
@@ -889,61 +1054,76 @@ export default function Sales() {
         />
       )}
 
-      {/* Filters Card */}
-      <div className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] space-y-3 shadow-sm">
-        <div className="flex gap-3 flex-wrap items-center">
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4" />
-            <input type="text" placeholder="Yuk xati №, mijoz, sotuvchi..." value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]" />
+
+
+      {/* Aggregates Summary Cards */}
+      {(() => {
+        let totalAmount = 0;
+        let totalCbm = 0;
+        let totalKg = 0;
+        let totalSqm = 0;
+
+        sales.forEach(s => {
+          totalAmount += s.totalAmount || 0;
+          s.products?.forEach(p => {
+            totalCbm += p.totalCbm || 0;
+            totalKg += p.totalKg || 0;
+            totalSqm += p.totalSqm || 0;
+          });
+        });
+
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            {/* Jami Summa */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:scale-[1.01]">
+              <span className="p-2.5 rounded-lg bg-[var(--accent-bg)] text-[var(--accent)] shrink-0 flex items-center justify-center">
+                <FileSpreadsheet size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Summa</p>
+                <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">{fmt(totalAmount)} UZS</p>
+              </div>
+            </div>
+
+            {/* Jami Kub */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:scale-[1.01]">
+              <span className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 shrink-0 flex items-center justify-center">
+                <Package size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Hajm (Kub.m)</p>
+                <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">{totalCbm.toFixed(2)} m³</p>
+              </div>
+            </div>
+
+            {/* Jami Og'irlik */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:scale-[1.01]">
+              <span className="p-2.5 rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 shrink-0 flex items-center justify-center">
+                <Truck size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Og'irlik (Kg)</p>
+                <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">
+                  {Math.round(totalKg).toLocaleString('ru-RU')} kg
+                </p>
+              </div>
+            </div>
+
+            {/* Jami Kvadrat */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:scale-[1.01]">
+              <span className="p-2.5 rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 shrink-0 flex items-center justify-center">
+                <FileText size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Yuza (Kv.m)</p>
+                <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">
+                  {Math.round(totalSqm).toLocaleString('ru-RU')} m²
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--accent)] text-[var(--text)]" title="Dan" />
-            <span className="text-xs text-[var(--text-3)]">—</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--accent)] text-[var(--text)]" title="Gacha" />
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button onClick={prevMonth} className="px-2.5 py-1.5 bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text-2)] transition">O'tgan oy</button>
-            <button onClick={monthStart} className="px-2.5 py-1.5 bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text-2)] transition">Oy boshidan</button>
-            <button onClick={yearStart} className="px-2.5 py-1.5 bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text-2)] transition">Yil boshidan</button>
-            <button onClick={prevYear} className="px-2.5 py-1.5 bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text-2)] transition">O'tgan yil</button>
-          </div>
-        </div>
-
-        <div className="flex gap-3 flex-wrap items-center">
-          <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)] min-w-40">
-            <option value="">Barcha mijozlar</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-
-          <select value={filterContract} onChange={e => setFilterContract(e.target.value)} disabled={!filterClient}
-            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)] disabled:opacity-50 min-w-40">
-            <option value="">Barcha shartnomalar</option>
-            {filterContracts.map(c => <option key={c.id} value={c.id}>№{c.number}</option>)}
-          </select>
-
-          <select value={filterSpec} onChange={e => setFilterSpec(e.target.value)} disabled={!filterContract}
-            className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)] disabled:opacity-50 min-w-40">
-            <option value="">Barcha spetsifikatsiyalar</option>
-            {filterSpecs.map(s => (
-              <option key={s.id} value={s.id}>Spets №{s.number} — {fmt(s.totalValue)} so'm</option>
-            ))}
-          </select>
-
-          {hasFilter && (
-            <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1 transition">
-              <X size={12} /> Filtrlarni tozalash
-            </button>
-          )}
-          <span className="ml-auto text-xs text-[var(--text-3)]">{total} ta yuk xati topildi</span>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Table Card */}
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm">
@@ -954,21 +1134,22 @@ export default function Sales() {
                 <th className="px-4 py-3 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={sales.length > 0 && selectedSales.length === sales.length}
+                    checked={sales.length > 0 && sales.every(s => selectedSales.includes(s.id))}
                     onChange={toggleSelectAll}
                     className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
                   />
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold text-[var(--text-3)] w-12 text-center">#</th>
                 {[
-                  { label: 'Sana', col: 'date', align: 'left' },
-                  { label: 'Yuk xati №', col: 'nakladnoy', align: 'left font-mono' },
-                  { label: 'Mijoz', col: 'client', align: 'left' },
-                  { label: 'Shartnoma', col: 'contract', align: 'left' },
-                  { label: 'Spets', col: 'spec', align: 'left' },
-                  { label: 'Sotuvchi', col: 'sellerName', align: 'left' },
-                  { label: 'Faktura', col: 'facturaStatus', align: 'left' },
-                  { label: 'Jami Summa', col: 'totalAmount', align: 'right' }
+                  { label: 'Sana', col: 'date', align: 'left w-24' },
+                  { label: 'Yuk xati №', col: 'nakladnoy', align: 'left font-mono w-28' },
+                  { label: 'Mijoz', col: 'client', align: 'left w-44' },
+                  { label: 'Mahsulotlar', col: null, align: 'left' },
+                  { label: 'Shartnoma', col: 'contract', align: 'left text-xs' },
+                  { label: 'Spets', col: 'spec', align: 'left text-xs' },
+                  { label: 'Sotuvchi', col: 'sellerName', align: 'left text-xs text-[var(--text-3)]' },
+                  { label: 'Faktura', col: 'facturaStatus', align: 'left text-xs' },
+                  { label: 'Jami Summa', col: 'totalAmount', align: 'right font-bold' }
                 ].map(({ label, col, align }) => (
                   <th key={label}
                     className={`px-4 py-3 text-${align.split(' ')[0]} text-xs font-semibold select-none uppercase tracking-wider
@@ -992,7 +1173,7 @@ export default function Sales() {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(11)].map((_, j) => (
+                    {[...Array(12)].map((_, j) => (
                       <td key={j} className="px-4 py-4">
                         <div className="h-4 bg-[var(--surface-2)] animate-pulse rounded" />
                       </td>
@@ -1001,7 +1182,7 @@ export default function Sales() {
                 ))
               ) : sales.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
+                  <td colSpan={12} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
                     {hasFilter ? 'Topilmadi' : 'Hozircha yuk xatlari yo\'q'}
                   </td>
                 </tr>
@@ -1021,6 +1202,20 @@ export default function Sales() {
                   <td className="px-4 py-3.5 text-sm text-[var(--text-2)]">{fmtDate(s.date)}</td>
                   <td className="px-4 py-3.5 text-sm font-semibold text-[var(--text)] font-mono">{s.nakladnoy}</td>
                   <td className="px-4 py-3.5 text-sm text-[var(--text-2)]">{s.client?.name}</td>
+                  
+                  {/* Mahsulotlar Column with Badges */}
+                  <td className="px-4 py-3.5 text-sm">
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {s.products?.map((p, pIdx) => (
+                        <span key={pIdx} className="inline-flex items-center gap-1 text-[10px] bg-[var(--surface-2)] border border-[var(--border)] px-1.5 py-0.5 rounded font-mono text-[var(--text)] whitespace-nowrap shadow-sm">
+                          <Package size={10} className="text-[var(--accent)] shrink-0" />
+                          <span>{p.product?.article || p.productId?.slice(0, 8)}</span>
+                          <span className="text-[var(--text-3)] font-semibold">({p.totalPieces} dona)</span>
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+
                   <td className="px-4 py-3.5 text-sm">
                     {s.contract ? (
                       <span className="font-mono text-xs bg-[var(--surface-2)] text-[var(--text-2)] px-1.5 py-0.5 rounded">
@@ -1106,12 +1301,31 @@ export default function Sales() {
                     </div>
                   </td>
 
-                  <td className="px-4 py-3.5 text-sm text-right font-bold text-[var(--text)]">{fmt(s.totalAmount)} UZS</td>
+                  <td className="px-4 py-3.5 text-sm text-right">
+                    <div className="font-bold text-[var(--text)]">{fmt(s.totalAmount)} UZS</div>
+                    {(() => {
+                      const totalCbm = s.products?.reduce((sum, p) => sum + (p.totalCbm || 0), 0) || 0;
+                      const totalKg  = s.products?.reduce((sum, p) => sum + (p.totalKg  || 0), 0) || 0;
+                      const totalSqm = s.products?.reduce((sum, p) => sum + (p.totalSqm || 0), 0) || 0;
+                      if (totalCbm === 0 && totalKg === 0 && totalSqm === 0) return null;
+                      return (
+                        <div className="text-[10px] text-[var(--text-3)] font-normal mt-0.5 whitespace-nowrap">
+                          {totalCbm > 0 && `${totalCbm.toFixed(2)} m³`}
+                          {totalKg > 0 && `${totalCbm > 0 ? ' | ' : ''}${Math.round(totalKg).toLocaleString('ru-RU')} kg`}
+                          {totalSqm > 0 && `${(totalCbm > 0 || totalKg > 0) ? ' | ' : ''}${Math.round(totalSqm).toLocaleString('ru-RU')} m²`}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openDetail(s)}
                         className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Ko'rish">
                         <Eye size={14} />
+                      </button>
+                      <button onClick={() => setEditSale(s)}
+                        className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Tahrirlash">
+                        <Pencil size={14} />
                       </button>
                       <button onClick={() => handleCopyAndAdd(s)}
                         className="p-1.5 text-[var(--text-3)] hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition" title="Nusxa olib qo'shish">
@@ -1253,6 +1467,23 @@ export default function Sales() {
               <div className="flex justify-end">
                 <p className="text-lg font-bold text-[var(--text)]">Jami: {fmt(detail.totalAmount)} UZS</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Sale Popup Modal */}
+      {editSale && (
+        <div className="modal-overlay">
+          <div className="modal-card w-full max-w-5xl overflow-hidden animate-in">
+            <div className="max-h-[85vh] overflow-y-auto p-6">
+              <SaleForm
+                onSaved={handleSaved}
+                onCancel={() => setEditSale(null)}
+                clients={clients}
+                products={products}
+                editSale={editSale}
+              />
             </div>
           </div>
         </div>

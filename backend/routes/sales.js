@@ -57,7 +57,11 @@ router.get('/', async (req, res, next) => {
           client:   { select: { id: true, name: true } },
           contract: { select: { id: true, number: true } },
           spec:     { select: { id: true, number: true } },
-          products: true,
+          products: {
+            include: {
+              product: { select: { id: true, article: true } }
+            }
+          },
         },
         orderBy,
         skip: offset,
@@ -102,16 +106,42 @@ router.post('/', async (req, res, next) => {
     const totalAmount = products.reduce((sum, p) => sum + p.rowAmount, 0);
 
     const sale = await prisma.$transaction(async (tx) => {
+      // 🔒 Data integrity: check contract-client matching
+      if (contractId) {
+        const contract = await tx.contract.findUnique({
+          where: { id: contractId },
+          select: { clientId: true }
+        });
+        if (!contract) {
+          const err = new Error('Shartnoma topilmadi');
+          err.status = 400;
+          err.publicMessage = 'Shartnoma topilmadi';
+          throw err;
+        }
+        if (contract.clientId !== clientId) {
+          const err = new Error('Kiritilgan shartnoma ushbu mijozga tegishli emas');
+          err.status = 400;
+          err.publicMessage = 'Kiritilgan shartnoma ushbu mijozga tegishli emas';
+          throw err;
+        }
+      }
+
       // specId lookup inside transaction to avoid TOCTOU race
       if (specId) {
         const spec = await tx.specification.findUnique({
           where: { id: specId },
-          select: { contractId: true },
+          select: { contractId: true, contract: { select: { clientId: true } } },
         });
         if (!spec) {
           const err = new Error('Spetsifikatsiya topilmadi');
           err.status = 400;
           err.publicMessage = 'Spetsifikatsiya topilmadi';
+          throw err;
+        }
+        if (spec.contract.clientId !== clientId) {
+          const err = new Error('Kiritilgan spetsifikatsiya ushbu mijozga tegishli emas');
+          err.status = 400;
+          err.publicMessage = 'Kiritilgan spetsifikatsiya ushbu mijozga tegishli emas';
           throw err;
         }
         contractId = spec.contractId;
@@ -139,13 +169,15 @@ router.post('/', async (req, res, next) => {
           client:   { select: { id: true, name: true } },
           contract: { select: { id: true, number: true } },
           spec:     { select: { id: true, number: true } },
-          products: true,
+          products: { include: { product: true } },
         },
       });
     });
 
     res.json(sale);
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.publicMessage || e.message });
+    if (e.message && e.message.includes('emas')) return res.status(400).json({ error: e.message });
     next(e);
   }
 });
@@ -153,27 +185,100 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const data = saleSchema.partial().parse(req.body);
-    const sale = await prisma.sale.update({
-      where: { id: req.params.id },
-      data: {
-        ...(data.date !== undefined ? { date: new Date(data.date) } : {}),
-        ...(data.nakladnoy !== undefined ? { nakladnoy: data.nakladnoy } : {}),
-        ...(data.sellerName !== undefined ? { sellerName: data.sellerName } : {}),
-        ...(data.transportNum !== undefined ? { transportNum: data.transportNum || null } : {}),
-        ...(data.clientId !== undefined ? { clientId: data.clientId } : {}),
-        ...(data.contractId !== undefined ? { contractId: data.contractId || null } : {}),
-        ...(data.specId !== undefined ? { specId: data.specId || null } : {}),
-        ...(data.facturaStatus !== undefined ? { facturaStatus: data.facturaStatus } : {}),
-      },
-      include: {
-        client:   { select: { id: true, name: true } },
-        contract: { select: { id: true, number: true } },
-        spec:     { select: { id: true, number: true } },
-        products: true,
-      },
+    const saleId = req.params.id;
+
+    const updatedSale = await prisma.$transaction(async (tx) => {
+      // Validate that sale exists
+      const existingSale = await tx.sale.findUnique({ where: { id: saleId } });
+      if (!existingSale) {
+        const err = new Error('Yuk xati topilmadi');
+        err.status = 404;
+        err.publicMessage = 'Yuk xati topilmadi';
+        throw err;
+      }
+
+      // If products are provided, rewrite and recalculate
+      let totalAmount = existingSale.totalAmount;
+      if (data.products !== undefined) {
+        totalAmount = data.products.reduce((sum, p) => sum + p.rowAmount, 0);
+        
+        // Remove old sale products
+        await tx.saleProduct.deleteMany({ where: { saleId } });
+        
+        // Insert new sale products
+        await tx.saleProduct.createMany({
+          data: data.products.map(p => ({ ...p, saleId }))
+        });
+      }
+
+      // Check client-contract-spec matching if clientId or contractId or specId are changing
+      const finalClientId = data.clientId !== undefined ? data.clientId : existingSale.clientId;
+      let finalContractId = data.contractId !== undefined ? data.contractId : existingSale.contractId;
+      const finalSpecId = data.specId !== undefined ? data.specId : existingSale.specId;
+
+      if (finalSpecId) {
+        const spec = await tx.specification.findUnique({
+          where: { id: finalSpecId },
+          include: { contract: true }
+        });
+        if (!spec) {
+          const err = new Error('Spetsifikatsiya topilmadi');
+          err.status = 400;
+          err.publicMessage = 'Spetsifikatsiya topilmadi';
+          throw err;
+        }
+        if (spec.contract.clientId !== finalClientId) {
+          const err = new Error('Kiritilgan spetsifikatsiya ushbu mijozga tegishli emas');
+          err.status = 400;
+          err.publicMessage = 'Kiritilgan spetsifikatsiya ushbu mijozga tegishli emas';
+          throw err;
+        }
+        finalContractId = spec.contractId;
+      } else if (finalContractId) {
+        const contract = await tx.contract.findUnique({
+          where: { id: finalContractId },
+          select: { clientId: true }
+        });
+        if (!contract) {
+          const err = new Error('Shartnoma topilmadi');
+          err.status = 400;
+          err.publicMessage = 'Shartnoma topilmadi';
+          throw err;
+        }
+        if (contract.clientId !== finalClientId) {
+          const err = new Error('Kiritilgan shartnoma ushbu mijozga tegishli emas');
+          err.status = 400;
+          err.publicMessage = 'Kiritilgan shartnoma ushbu mijozga tegishli emas';
+          throw err;
+        }
+      }
+
+      return tx.sale.update({
+        where: { id: saleId },
+        data: {
+          ...(data.date !== undefined ? { date: new Date(data.date) } : {}),
+          ...(data.nakladnoy !== undefined ? { nakladnoy: data.nakladnoy } : {}),
+          ...(data.sellerName !== undefined ? { sellerName: data.sellerName } : {}),
+          ...(data.transportNum !== undefined ? { transportNum: data.transportNum || null } : {}),
+          ...(data.clientId !== undefined ? { clientId: data.clientId } : {}),
+          ...(finalContractId !== undefined ? { contractId: finalContractId || null } : {}),
+          ...(data.specId !== undefined ? { specId: data.specId || null } : {}),
+          ...(data.facturaStatus !== undefined ? { facturaStatus: data.facturaStatus } : {}),
+          totalAmount
+        },
+        include: {
+          client:   { select: { id: true, name: true } },
+          contract: { select: { id: true, number: true } },
+          spec:     { select: { id: true, number: true } },
+          products: { include: { product: true } },
+        },
+      });
     });
-    res.json(sale);
+
+    res.json(updatedSale);
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.publicMessage || e.message });
+    if (e.message && e.message.includes('emas')) return res.status(400).json({ error: e.message });
     next(e);
   }
 });

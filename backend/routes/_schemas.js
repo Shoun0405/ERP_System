@@ -78,16 +78,16 @@ const settingSchema = z.object({
 const saleProductSchema = z.object({
   productId:   z.string().uuid(),
   packType:    z.number().int().nonnegative(),
-  totalPieces: z.number().int().positive(),
+  totalPieces: z.number().int().nonnegative(),
   totalCbm:    z.number().nonnegative(),
   totalKg:     z.number().nonnegative(),
   totalSqm:    z.number().nonnegative(),
-  priceCbm:    z.number().positive(),
+  priceCbm:    z.number().nonnegative(),
   rowAmount:   z.number().nonnegative(),
 });
 
 const saleSchema = z.object({
-  date:         z.string().min(1),
+  date:         z.string().refine(val => !isNaN(Date.parse(val)), { message: "Noto'g'ri sana formati" }),
   nakladnoy:    z.string().min(1),
   sellerName:   z.string().min(1),
   transportNum: z.string().nullable().default(''),

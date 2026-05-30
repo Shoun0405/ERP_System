@@ -51,6 +51,20 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const { date, amount, note, clientId, contractId } = paymentSchema.parse(req.body);
+
+    if (contractId) {
+      const contract = await prisma.contract.findUnique({
+        where: { id: contractId },
+        select: { clientId: true },
+      });
+      if (!contract) {
+        return res.status(400).json({ error: 'Shartnoma topilmadi' });
+      }
+      if (contract.clientId !== clientId) {
+        return res.status(400).json({ error: 'Kiritilgan shartnoma ushbu mijozga tegishli emas' });
+      }
+    }
+
     const payment = await prisma.payment.create({
       data: { date: new Date(date), amount, note, clientId, contractId: contractId || null },
       include: {

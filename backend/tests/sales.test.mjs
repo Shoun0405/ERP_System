@@ -66,15 +66,61 @@ describe('Sales API', () => {
     expect(res.body.total).toBeGreaterThan(0);
   });
 
-  it('POST / — priceCbm=0 → 400', async () => {
+  it('POST / — priceCbm=-10 → 400', async () => {
     const res = await request(app).post('/api/sales').send({
       date: new Date().toISOString().split('T')[0],
       nakladnoy: 'T-002', sellerName: 'Test',
       clientId: client.id, contractId: contract.id,
       products: [{ productId: product.id, packType: 1, totalPieces: 1,
-        totalCbm: 0.03, totalKg: 2.76, totalSqm: 2.88, priceCbm: 0, rowAmount: 0 }],
+        totalCbm: 0.03, totalKg: 2.76, totalSqm: 2.88, priceCbm: -10, rowAmount: 0 }],
     });
     expect(res.status).toBe(400);
+  });
+
+  it('PUT /:id — savdoni tahrirlash (mahsulotlar va jami summani yangilash)', async () => {
+    // 1. Create a sale
+    const createRes = await request(app).post('/api/sales').send({
+      date:         new Date().toISOString().split('T')[0],
+      nakladnoy:    'T-EDIT-TEST',
+      sellerName:   'Test Seller',
+      clientId:     client.id,
+      contractId:   contract.id,
+      products:     [{
+        productId:   product.id,
+        packType:    1,
+        totalPieces: 10,
+        totalCbm:    0.3,
+        totalKg:     10,
+        totalSqm:    10,
+        priceCbm:    1000,
+        rowAmount:   10000,
+      }],
+    });
+    expect(createRes.status).toBe(200);
+    const tempSaleId = createRes.body.id;
+
+    // 2. Edit the sale with new products and new totalAmount
+    const editRes = await request(app).put(`/api/sales/${tempSaleId}`).send({
+      nakladnoy:    'T-EDITED',
+      products:     [{
+        productId:   product.id,
+        packType:    2,
+        totalPieces: 20,
+        totalCbm:    0.6,
+        totalKg:     20,
+        totalSqm:    20,
+        priceCbm:    2000,
+        rowAmount:   40000, // Total is now 40,000
+      }],
+    });
+    expect(editRes.status).toBe(200);
+    expect(editRes.body.nakladnoy).toBe('T-EDITED');
+    expect(editRes.body.totalAmount).toBe(40000);
+    expect(editRes.body.products.length).toBe(1);
+    expect(editRes.body.products[0].packType).toBe(2);
+
+    // 3. Cleanup
+    await request(app).delete(`/api/sales/${tempSaleId}`);
   });
 
   it('DELETE /:id', async () => {

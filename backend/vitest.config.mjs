@@ -8,7 +8,8 @@ export default defineConfig({
     setupFiles:    ['./tests/env-setup.mjs'],
     testTimeout:   20000,
     pool:          'forks',
-    poolOptions:   { forks: { singleFork: true } },
+    fileParallelism: false,
+    forks:         { singleFork: true },
     include:       ['tests/**/*.test.mjs'],
   },
 });
