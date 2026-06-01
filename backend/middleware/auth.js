@@ -1,9 +1,9 @@
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_jwt_erp_system_123';
+const { verifyToken } = require('../lib/jwt');
 
 module.exports = (req, res, next) => {
-  if (process.env.NODE_ENV === 'test' && req.headers['x-bypass-auth'] !== 'false') {
+  // M-1: Bypass faqat NODE_ENV=test VA TEST_AUTH_BYPASS=1 birga bo'lganda ishlaydi.
+  // Shunday qilib prod da xato bilan NODE_ENV=test qo'yilsa ham auth chetlab o'tilmaydi.
+  if (process.env.NODE_ENV === 'test' && process.env.TEST_AUTH_BYPASS === '1' && req.headers['x-bypass-auth'] !== 'false') {
     req.user = { id: 'test-admin-id', username: 'test-admin', role: 'admin' };
     return next();
   }
@@ -22,7 +22,7 @@ module.exports = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyToken(token);
     req.user = decoded;
     next();
   } catch (err) {

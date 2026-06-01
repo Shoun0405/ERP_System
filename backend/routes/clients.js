@@ -15,7 +15,7 @@ const SORT_COLS = {
   createdAt: '"createdAt"',
 };
 
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('clients', 'read'), async (req, res, next) => {
   try {
     const page     = Math.max(1, parseInt(req.query.page)  || 1);
     const limit    = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));

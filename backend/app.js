@@ -36,9 +36,21 @@ app.use(express.json());
 
 app.use('/api', rateLimit({ windowMs: 60_000, max: 200, standardHeaders: true, legacyHeaders: false }));
 
+// H-3: Login uchun qattiqroq limit — brute-force parol urinishlariga qarshi.
+// Muvaffaqiyatli kirishlar hisobga olinmaydi; faqat noto'g'ri urinishlar limitlanadi.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Juda ko'p kirish urinishi. 15 daqiqadan so'ng qayta urinib ko'ring." },
+});
+
 const auth = require('./middleware/auth');
 
 app.use('/api/health',       require('./routes/health'));
+app.use('/api/auth/login',   loginLimiter);
 app.use('/api/auth',         require('./routes/auth'));
 
 app.use('/api/clients',      auth, require('./routes/clients'));

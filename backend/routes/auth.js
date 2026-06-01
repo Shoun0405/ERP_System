@@ -1,11 +1,9 @@
 const router = require('express').Router();
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../prisma');
 const { loginSchema } = require('./_schemas');
 const authMiddleware = require('../middleware/auth');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_jwt_erp_system_123';
+const { signToken } = require('../lib/jwt');
 
 // POST /api/auth/login
 router.post('/login', async (req, res, next) => {
@@ -34,11 +32,13 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Foydalanuvchi nomi yoki parol noto\'g\'ri' });
     }
 
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, fullName: user.fullName, permissions: user.permissions },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = signToken({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      fullName: user.fullName,
+      permissions: user.permissions,
+    });
 
     res.cookie('token', token, {
       httpOnly: true,

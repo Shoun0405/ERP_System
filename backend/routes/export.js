@@ -3,6 +3,7 @@ const prisma   = require('../prisma');
 const PDFDocument = require('pdfkit');
 const ExcelJS  = require('exceljs');
 const fs       = require('fs');
+const { requirePermission } = require('../middleware/rbac');
 
 // Windows sistemasida Arial (Cyrillic qo'llab-quvvatlaydi), yo'q bo'lsa Helvetica
 const WIN_ARIAL      = 'C:/Windows/Fonts/arial.ttf';
@@ -37,7 +38,7 @@ async function loadContract(id) {
 }
 
 // GET /api/export/contracts/:id/pdf
-router.get('/contracts/:id/pdf', async (req, res, next) => {
+router.get('/contracts/:id/pdf', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const contract = await loadContract(req.params.id);
     if (!contract) return res.status(404).json({ error: 'Topilmadi' });
@@ -154,7 +155,7 @@ router.get('/contracts/:id/pdf', async (req, res, next) => {
 });
 
 // GET /api/export/contracts/:id/excel
-router.get('/contracts/:id/excel', async (req, res, next) => {
+router.get('/contracts/:id/excel', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const contract = await loadContract(req.params.id);
     if (!contract) return res.status(404).json({ error: 'Topilmadi' });
@@ -216,7 +217,7 @@ router.get('/contracts/:id/excel', async (req, res, next) => {
 });
 
 // GET /api/export/specs/:id/pdf
-router.get('/specs/:id/pdf', async (req, res, next) => {
+router.get('/specs/:id/pdf', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const spec = await prisma.specification.findUnique({
       where: { id: req.params.id },
@@ -313,7 +314,7 @@ router.get('/specs/:id/pdf', async (req, res, next) => {
 });
 
 // GET /api/export/specs/:id/excel
-router.get('/specs/:id/excel', async (req, res, next) => {
+router.get('/specs/:id/excel', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const spec = await prisma.specification.findUnique({
       where: { id: req.params.id },
@@ -359,7 +360,7 @@ router.get('/specs/:id/excel', async (req, res, next) => {
 });
 
 // GET /api/export/sales/pdf?ids=...
-router.get('/sales/pdf', async (req, res, next) => {
+router.get('/sales/pdf', requirePermission('sales', 'read'), async (req, res, next) => {
   try {
     const ids = (req.query.ids || '').split(',').filter(Boolean);
     if (ids.length === 0) return res.status(400).json({ error: 'ids param majburiy' });
@@ -425,7 +426,7 @@ router.get('/sales/pdf', async (req, res, next) => {
 });
 
 // GET /api/export/sales/excel?ids=...
-router.get('/sales/excel', async (req, res, next) => {
+router.get('/sales/excel', requirePermission('sales', 'read'), async (req, res, next) => {
   try {
     const ids = (req.query.ids || '').split(',').filter(Boolean);
     if (ids.length === 0) return res.status(400).json({ error: 'ids param majburiy' });

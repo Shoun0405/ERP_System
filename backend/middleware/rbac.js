@@ -4,8 +4,8 @@ function requireRole(...roles) {
       return res.status(401).json({ error: 'Avtorizatsiyadan o\'tilmagan' });
     }
 
-    // Bypass in test environment if configured
-    if (process.env.NODE_ENV === 'test' && req.headers['x-bypass-auth'] !== 'false') {
+    // Bypass in test environment if configured (M-1: TEST_AUTH_BYPASS majburiy)
+    if (process.env.NODE_ENV === 'test' && process.env.TEST_AUTH_BYPASS === '1' && req.headers['x-bypass-auth'] !== 'false') {
       return next();
     }
 
@@ -23,8 +23,8 @@ function requirePermission(module, action) {
       return res.status(401).json({ error: 'Avtorizatsiyadan o\'tilmagan' });
     }
 
-    // Bypass in test environment if configured
-    if (process.env.NODE_ENV === 'test' && req.headers['x-bypass-auth'] !== 'false') {
+    // Bypass in test environment if configured (M-1: TEST_AUTH_BYPASS majburiy)
+    if (process.env.NODE_ENV === 'test' && process.env.TEST_AUTH_BYPASS === '1' && req.headers['x-bypass-auth'] !== 'false') {
       return next();
     }
 

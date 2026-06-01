@@ -6,7 +6,7 @@ const { requireRole, requirePermission } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 
 // GET /api/specs?contractId=
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const { contractId } = req.query;
     if (!contractId) return res.status(400).json({ error: 'contractId majburiy' });

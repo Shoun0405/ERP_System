@@ -8,7 +8,7 @@ const { logAudit } = require('../lib/audit');
 const SORT_FIELDS = new Set(['date', 'number', 'totalValue', 'status', 'createdAt', 'client']);
 
 // GET /api/contracts — pagination + aggregate
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const page    = Math.max(1, parseInt(req.query.page)  || 1);
     const limit   = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
@@ -122,7 +122,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // GET /api/contracts/next-number — auto-numbering
-router.get('/next-number', async (req, res, next) => {
+router.get('/next-number', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const year   = new Date().getFullYear() % 100;
     const maxRow = await prisma.contract.aggregate({
@@ -136,7 +136,7 @@ router.get('/next-number', async (req, res, next) => {
 });
 
 // GET /api/contracts/:id — bitta shartnoma + spetslar + delivered aggregate
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const contract = await prisma.contract.findUnique({
       where: { id: req.params.id },

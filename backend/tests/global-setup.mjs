@@ -17,7 +17,10 @@ export async function setup() {
     // Vaqtinchalik .env fayliga test bazasini yozamiz
     fs.writeFileSync(envPath, `DATABASE_URL="${TEST_DB_URL}"\n`);
 
-    execSync('npx prisma db push --force-reset', {
+    // H-7: `--force-reset` butun bazani tashlaydi va Prisma 6 ning destruktiv-amal
+    // himoyasini ishga tushiradi (AI agent konsenti) → worker crash. Test fayllari
+    // o'zlari `cleanAll()` bilan tozalanadi, shuning uchun faqat sxemani sinxronlaymiz.
+    execSync('npx prisma db push --skip-generate', {
       cwd:   process.cwd(),
       stdio: 'pipe',
     });

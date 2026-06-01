@@ -1,9 +1,10 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { interactionSchema } = require('./_schemas');
+const { requirePermission } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('interactions', 'read'), async (req, res, next) => {
   try {
     const page     = Math.max(1, parseInt(req.query.page)  || 1);
     const limit    = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
@@ -38,8 +39,6 @@ router.get('/', async (req, res, next) => {
     next(e);
   }
 });
-
-const { requirePermission } = require('../middleware/rbac');
 
 router.post('/', requirePermission('interactions', 'create'), async (req, res, next) => {
   try {
