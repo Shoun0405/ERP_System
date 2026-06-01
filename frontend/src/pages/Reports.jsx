@@ -1,379 +1,966 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
-import { fmt } from '../lib/format';
+import { fmt, fmtDate } from '../lib/format';
 import TrendChart from '../components/TrendChart';
 import { useDateFilter } from '../context/DateFilterContext';
 import {
-  TrendingUp, ShoppingBag,
-  BarChart3, FileSpreadsheet
+  LayoutDashboard, TrendingUp, Wallet, Settings2,
+  ChevronDown, ChevronRight, Users, Package,
+  FileText, BarChart3, ShoppingBag, AlertTriangle, CreditCard
 } from 'lucide-react';
 
-export default function Reports() {
-  const { from: fromDate, to: toDate } = useDateFilter();
+// ── Widget config (localStorage) ─────────────────────────────────────────────
+const WIDGET_DEFAULTS = {
+  kpi_cards: true,
+  sales_trend: true,
+  top_products: true,
+  debtors: true,
+  client_ledger: false,
+};
+const WIDGET_META = [
+  { key: 'kpi_cards',     label: "KPI kartalar (savdo, hujjatlar, top mahsulot)" },
+  { key: 'sales_trend',   label: "Savdo aylanmasi trendc grafigi" },
+  { key: 'top_products',  label: "Top 5 mahsulot (dona bo'yicha)" },
+  { key: 'debtors',       label: "Eng yirik qarzdorlar" },
+  { key: 'client_ledger', label: "Mijoz analitik kartasi (Ledger)" },
+];
 
-  // Analytics data states
-  const [salesSummary, setSalesSummary] = useState(null);
-  const [topProducts, setTopProducts] = useState([]);
-  const [debtors, setDebtors] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [selectedClientId, setSelectedClientId] = useState('');
+function loadWidgets() {
+  try {
+    return { ...WIDGET_DEFAULTS, ...JSON.parse(localStorage.getItem('reports_widgets') || '{}') };
+  } catch { return { ...WIDGET_DEFAULTS }; }
+}
+
+// ── Menu ─────────────────────────────────────────────────────────────────────
+const MENU = [
+  { id: 'home',           label: 'Bosh sahifa',              Icon: LayoutDashboard },
+  {
+    group: 'Savdo hisobotlari', Icon: TrendingUp,
+    children: [
+      { id: 'sales_period',     label: 'Davriy savdo',          Icon: BarChart3 },
+      { id: 'sales_by_client',  label: "Mijozlar bo'yicha",      Icon: Users },
+      { id: 'sales_by_product', label: "Mahsulotlar bo'yicha",   Icon: Package },
+    ]
+  },
+  {
+    group: 'Moliyaviy hisobotlar', Icon: Wallet,
+    children: [
+      { id: 'debtors',          label: 'Qarzdorlar',             Icon: AlertTriangle },
+      { id: 'client_statement', label: 'Mijoz kartasi',          Icon: FileText },
+      { id: 'payments',         label: "To'lovlar hisoboti",     Icon: CreditCard },
+    ]
+  },
+  { id: 'widget_settings', label: 'Bosh sahifa sozlamalari', Icon: Settings2 },
+];
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+function SectionHeader({ title, subtitle }) {
+  return (
+    <div className="mb-5">
+      <h2 className="text-base font-semibold text-[var(--text)]">{title}</h2>
+      {subtitle && <p className="text-xs text-[var(--text-3)] mt-0.5">{subtitle}</p>}
+    </div>
+  );
+}
+
+function SkeletonRows({ n = 4 }) {
+  return [...Array(n)].map((_, i) => (
+    <div key={i} className="space-y-1">
+      <div className="h-3 bg-[var(--surface-2)] animate-pulse rounded w-1/3" />
+      <div className="h-2 bg-[var(--surface-2)] animate-pulse rounded" />
+    </div>
+  ));
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function HomeSection({ fromDate, toDate, widgets }) {
+  const [salesSummary, setSalesSummary]     = useState(null);
+  const [topProducts, setTopProducts]       = useState([]);
+  const [debtors, setDebtors]               = useState([]);
+  const [clients, setClients]               = useState([]);
+  const [selClientId, setSelClientId]       = useState('');
   const [clientStatement, setClientStatement] = useState(null);
+  const [loadS, setLoadS] = useState(true);
+  const [loadP, setLoadP] = useState(true);
+  const [loadD, setLoadD] = useState(true);
+  const [loadLS, setLoadLS] = useState(false);
 
-  // Loading states
-  const [loadingSales, setLoadingSales] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [loadingDebtors, setLoadingDebtors] = useState(true);
-  const [loadingStatement, setLoadingStatement] = useState(false);
-
-  // Fetch Sales period aggregation
-  const fetchSalesSummary = useCallback(async () => {
-    setLoadingSales(true);
+  const fetchSales = useCallback(async () => {
+    setLoadS(true);
     try {
-      const res = await api.get('/api/reports/sales-by-period', {
-        params: { from: fromDate, to: toDate }
-      });
-      setSalesSummary(res.data);
-    } catch {
-      // handled
-    } finally {
-      setLoadingSales(false);
-    }
+      const r = await api.get('/api/reports/sales-by-period', { params: { from: fromDate, to: toDate } });
+      setSalesSummary(r.data);
+    } catch {} finally { setLoadS(false); }
   }, [fromDate, toDate]);
 
-  // Fetch Top Products
-  const fetchTopProducts = useCallback(async () => {
-    setLoadingProducts(true);
+  const fetchProducts = useCallback(async () => {
+    setLoadP(true);
     try {
-      const res = await api.get('/api/reports/products-top', { params: { limit: 5 } });
-      setTopProducts(res.data);
-    } catch {
-      // handled
-    } finally {
-      setLoadingProducts(false);
-    }
+      const r = await api.get('/api/reports/products-top', { params: { limit: 5 } });
+      setTopProducts(r.data);
+    } catch {} finally { setLoadP(false); }
   }, []);
 
-  // Fetch Debtors list
   const fetchDebtors = useCallback(async () => {
-    setLoadingDebtors(true);
+    setLoadD(true);
     try {
-      const res = await api.get('/api/reports/debtors');
-      setDebtors(res.data);
-    } catch {
-      // handled
-    } finally {
-      setLoadingDebtors(false);
-    }
+      const r = await api.get('/api/reports/debtors');
+      setDebtors(r.data);
+    } catch {} finally { setLoadD(false); }
   }, []);
 
-  // Fetch client list for dropdown selection
-  const fetchClientsList = useCallback(async () => {
+  const fetchClients = useCallback(async () => {
     try {
-      const res = await api.get('/api/clients', { params: { limit: 1000 } });
-      setClients(res.data.data || []);
-      if (res.data.data?.length > 0) {
-        setSelectedClientId(res.data.data[0].id);
-      }
-    } catch {
-      // handled
-    }
+      const r = await api.get('/api/clients', { params: { limit: 1000 } });
+      const list = r.data.data || [];
+      setClients(list);
+      if (list.length) setSelClientId(list[0].id);
+    } catch {}
   }, []);
 
-  // Fetch Chronological Client Ledger Statement
-  const fetchClientStatement = useCallback(async () => {
-    if (!selectedClientId) return;
-    setLoadingStatement(true);
+  const fetchStatement = useCallback(async () => {
+    if (!selClientId) return;
+    setLoadLS(true);
     try {
-      const res = await api.get(`/api/reports/client-statement/${selectedClientId}`);
-      setClientStatement(res.data);
-    } catch {
-      // handled
-    } finally {
-      setLoadingStatement(false);
-    }
-  }, [selectedClientId]);
+      const r = await api.get(`/api/reports/client-statement/${selClientId}`);
+      setClientStatement(r.data);
+    } catch {} finally { setLoadLS(false); }
+  }, [selClientId]);
 
-  // Run initial fetches
   useEffect(() => {
-    fetchSalesSummary();
-    fetchTopProducts();
-    fetchDebtors();
-    fetchClientsList();
-  }, [fetchSalesSummary, fetchTopProducts, fetchDebtors, fetchClientsList]);
+    fetchSales(); fetchProducts(); fetchDebtors(); fetchClients();
+  }, [fetchSales, fetchProducts, fetchDebtors, fetchClients]);
 
-  // Refetch statement when selected client changes
-  useEffect(() => {
-    fetchClientStatement();
-  }, [fetchClientStatement]);
+  useEffect(() => { fetchStatement(); }, [fetchStatement]);
 
-  // SVG Line Chart for sales trend
-  const renderTrendChart = () => {
-    if (!salesSummary?.salesByDay || salesSummary.salesByDay.length === 0) {
-      return (
-        <div className="h-48 flex items-center justify-center text-xs text-[var(--text-3)]">
-          Tanlangan davrda savdolar mavjud emas
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Bosh sahifa" subtitle="Konfiguratsiyalanadigan asosiy ko'rsatkichlar" />
+
+      {/* KPI Cards */}
+      {widgets.kpi_cards && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
+            <div className="space-y-1">
+              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Tanlangan Davr Savdosi</h4>
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg font-extrabold text-[var(--text)] font-mono">{loadS ? '...' : fmt(salesSummary?.totalAmount || 0)}</span>
+                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">UZS</span>
+              </div>
+              <p className="text-[10px] text-[var(--text-3)]">Jami yuk xatlari aylanmasi</p>
+            </div>
+            <div className="icon-badge icon-badge-success p-3 rounded-xl"><TrendingUp size={20} strokeWidth={2.2} /></div>
+          </div>
+          <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
+            <div className="space-y-1">
+              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Hujjatlar Soni</h4>
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg font-extrabold text-[var(--text)] font-mono">{loadS ? '...' : salesSummary?.salesCount || 0}</span>
+                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">ta</span>
+              </div>
+              <p className="text-[10px] text-[var(--text-3)]">Davrdagi rasmiylashtirilgan yuk xatlari</p>
+            </div>
+            <div className="icon-badge icon-badge-info p-3 rounded-xl"><ShoppingBag size={20} strokeWidth={2.2} /></div>
+          </div>
+          <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
+            <div className="space-y-1">
+              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Top Mahsulot</h4>
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg font-extrabold text-[var(--text)] font-mono">{loadP ? '...' : topProducts[0] ? fmt(topProducts[0].totalPieces) : '0'}</span>
+                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">dona</span>
+              </div>
+              <p className="text-[10px] text-[var(--text-3)]">{topProducts[0]?.article || '—'}</p>
+            </div>
+            <div className="icon-badge icon-badge-warn p-3 rounded-xl"><BarChart3 size={20} strokeWidth={2.2} /></div>
+          </div>
         </div>
-      );
-    }
+      )}
 
-    return (
-      <TrendChart
-        data={salesSummary.salesByDay.map(d => ({
-          amount: d.amount,
-          title: `${new Date(d.day).toLocaleDateString('uz-UZ')}: ${fmt(d.amount)} UZS`,
-        }))}
-        ticks={3}
-        yUnit="UZS"
-        showXLabels={false}
-        nodeMax={29}
-        gradientId="reportsTrendGrad"
-      />
-    );
+      {/* Trend + Top products */}
+      {(widgets.sales_trend || widgets.top_products) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {widgets.sales_trend && (
+            <div className="card lg:col-span-2 flex flex-col border border-[var(--border)]">
+              <div className="mb-4">
+                <h3 className="text-xs font-semibold text-[var(--text)]">Savdo aylanmasi dinamikasi</h3>
+                <p className="text-[10px] text-[var(--text-3)] mt-0.5">Kunlik yoki davriy savdo o'zgarishi</p>
+              </div>
+              <div className="flex-1 bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] flex items-center justify-center min-h-[160px]">
+                {loadS ? (
+                  <div className="text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+                ) : !salesSummary?.salesByDay?.length ? (
+                  <div className="text-xs text-[var(--text-3)]">Tanlangan davrda savdolar mavjud emas</div>
+                ) : (
+                  <TrendChart
+                    data={salesSummary.salesByDay.map(d => ({ amount: d.amount, title: `${fmtDate(d.day)}: ${fmt(d.amount)} UZS` }))}
+                    ticks={3} yUnit="UZS" showXLabels={false} nodeMax={29} gradientId="homeTrendGrad"
+                  />
+                )}
+              </div>
+            </div>
+          )}
+          {widgets.top_products && (
+            <div className="card border border-[var(--border)] flex flex-col">
+              <div className="mb-4">
+                <h3 className="text-xs font-semibold text-[var(--text)]">Top 5 Mahsulot</h3>
+                <p className="text-[10px] text-[var(--text-3)] mt-0.5">Dona bo'yicha eng ko'p sotilganlar</p>
+              </div>
+              <div className="space-y-4 flex-1">
+                {loadP ? <SkeletonRows n={4} /> : topProducts.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-[var(--text-3)]">Sotilgan mahsulotlar yo'q</div>
+                ) : topProducts.map(p => {
+                  const ratio = p.totalPieces / (topProducts[0]?.totalPieces || 1);
+                  return (
+                    <div key={p.id} className="space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-xs font-medium text-[var(--text)] truncate max-w-[160px]">{p.article}</span>
+                        <span className="text-[10.5px] font-bold font-mono text-[var(--text-2)]">{fmt(p.totalPieces)} dona</span>
+                      </div>
+                      <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
+                        <div className="h-full bg-indigo-500 opacity-90 transition-all duration-500" style={{ width: `${ratio * 100}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Debtors + Ledger */}
+      {(widgets.debtors || widgets.client_ledger) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {widgets.debtors && (
+            <div className="card border border-[var(--border)] flex flex-col">
+              <div className="mb-4">
+                <h3 className="text-xs font-semibold text-[var(--text)]">Eng yirik qarzdorlar</h3>
+                <p className="text-[10px] text-[var(--text-3)] mt-0.5">Faol debitor qarzdorliklar</p>
+              </div>
+              <div className="space-y-3.5 flex-1">
+                {loadD ? [...Array(4)].map((_, i) => (
+                  <div key={i} className="h-8 bg-[var(--surface-2)] animate-pulse rounded" />
+                )) : debtors.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-[var(--text-3)]">Faol qarzdorliklar yo'q</div>
+                ) : debtors.slice(0, 5).map(d => {
+                  const ratio = d.debt / (debtors[0]?.debt || 1);
+                  return (
+                    <div key={d.id} className="space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-xs font-medium text-[var(--text)] truncate max-w-[160px]">{d.name}</span>
+                        <span className="text-xs font-bold font-mono text-red-500">{fmt(d.debt)} UZS</span>
+                      </div>
+                      <div className="h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
+                        <div className="h-full bg-red-400 opacity-80" style={{ width: `${ratio * 100}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {widgets.client_ledger && (
+            <div className={`card border border-[var(--border)] flex flex-col p-0 ${widgets.debtors ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+              <div className="px-5 py-3 border-b border-[var(--border)] flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[var(--surface-2)] rounded-t-xl gap-2">
+                <div>
+                  <h3 className="text-xs font-semibold text-[var(--text)]">Mijozning analitik aylanma kartasi</h3>
+                  <p className="text-[10px] text-[var(--text-3)] mt-0.5">Xronologik savdolar, to'lovlar va balans</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] font-bold text-[var(--text-2)] uppercase">Mijoz:</span>
+                  <select
+                    value={selClientId}
+                    onChange={e => setSelClientId(e.target.value)}
+                    className="px-2.5 py-1 border border-[var(--border)] rounded bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)] max-w-[180px]"
+                  >
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex-1 overflow-x-auto min-h-[200px]">
+                {loadLS ? (
+                  <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+                ) : !clientStatement?.statement?.length ? (
+                  <div className="p-8 text-center text-xs text-[var(--text-3)]">Aylanmalar topilmadi</div>
+                ) : (
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                        <th className="px-4 py-2">Sana</th>
+                        <th className="px-4 py-2">Tavsif</th>
+                        <th className="px-4 py-2 text-right">Debet</th>
+                        <th className="px-4 py-2 text-right">Kredit</th>
+                        <th className="px-4 py-2 text-right">Balans</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border)]">
+                      {clientStatement.statement.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-[var(--surface-2)]">
+                          <td className="px-4 py-2 text-[11px] font-mono text-[var(--text-2)]">{fmtDate(item.date)}</td>
+                          <td className="px-4 py-2 text-xs text-[var(--text)]">{item.desc}</td>
+                          <td className="px-4 py-2 text-[11px] text-right font-mono text-slate-700 dark:text-slate-300">{item.debit > 0 ? `${fmt(item.debit)} UZS` : '—'}</td>
+                          <td className="px-4 py-2 text-[11px] text-right font-mono text-emerald-600">{item.credit > 0 ? `${fmt(item.credit)} UZS` : '—'}</td>
+                          <td className={`px-4 py-2 text-[11px] text-right font-mono font-bold ${item.balance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>{fmt(item.balance)} UZS</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DAVRIY SAVDO ──────────────────────────────────────────────────────────────
+function SalesPeriodSection({ fromDate, toDate }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/sales-by-period', { params: { from: fromDate, to: toDate } });
+        setData(r.data);
+      } catch {} finally { setLoading(false); }
+    })();
+  }, [fromDate, toDate]);
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Davriy savdo" subtitle="Tanlangan davr bo'yicha savdo tahlili va kunlik dinamika" />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami savdo summasi</p>
+          <p className="text-xl font-extrabold font-mono text-[var(--text)]">
+            {loading ? '...' : fmt(data?.totalAmount || 0)} <span className="text-xs font-semibold text-[var(--text-3)]">UZS</span>
+          </p>
+        </div>
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Hujjatlar soni</p>
+          <p className="text-xl font-extrabold font-mono text-[var(--text)]">
+            {loading ? '...' : data?.salesCount || 0} <span className="text-xs font-semibold text-[var(--text-3)]">ta</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="card border border-[var(--border)]">
+        <h3 className="text-xs font-semibold text-[var(--text)] mb-3">Kunlik savdo trendc</h3>
+        <div className="bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] min-h-[200px] flex items-center justify-center">
+          {loading ? (
+            <div className="text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          ) : !data?.salesByDay?.length ? (
+            <div className="text-xs text-[var(--text-3)]">Tanlangan davrda savdolar mavjud emas</div>
+          ) : (
+            <TrendChart
+              data={data.salesByDay.map(d => ({ amount: d.amount, title: `${fmtDate(d.day)}: ${fmt(d.amount)} UZS` }))}
+              ticks={5} yUnit="UZS" showXLabels={false} nodeMax={40} gradientId="salesPeriodGrad"
+            />
+          )}
+        </div>
+      </div>
+
+      {!loading && !!data?.salesByDay?.length && (
+        <div className="card border border-[var(--border)] p-0">
+          <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
+            <h3 className="text-xs font-semibold text-[var(--text)]">Kunlik jadval</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2">Sana</th>
+                  <th className="px-5 py-2 text-right">Hujjatlar</th>
+                  <th className="px-5 py-2 text-right">Savdo summasi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.salesByDay.map((row, i) => (
+                  <tr key={i} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-xs font-mono text-[var(--text-2)]">{fmtDate(row.day)}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{row.count} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.amount)} UZS</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── MIJOZLAR BO'YICHA ─────────────────────────────────────────────────────────
+function SalesByClientSection({ fromDate, toDate }) {
+  const [data, setData]     = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/sales-by-client', { params: { from: fromDate, to: toDate } });
+        setData(r.data);
+      } catch {} finally { setLoading(false); }
+    })();
+  }, [fromDate, toDate]);
+
+  const maxAmount = data[0]?.totalAmount || 1;
+  const total = data.reduce((s, d) => s + d.totalAmount, 0);
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Mijozlar bo'yicha savdo" subtitle="Tanlangan davrda har bir mijozning savdo ulushi va summasi" />
+
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center">
+          <h3 className="text-xs font-semibold text-[var(--text)]">Mijozlar reytingi</h3>
+          <div className="flex items-center gap-4">
+            {!loading && total > 0 && (
+              <span className="text-[11px] font-bold font-mono text-[var(--text-2)]">Jami: {fmt(total)} UZS</span>
+            )}
+            <span className="text-[11px] text-[var(--text-3)]">{data.length} ta mijoz</span>
+          </div>
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+        ) : data.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda savdolar topilmadi</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2 w-8">#</th>
+                  <th className="px-5 py-2">Mijoz</th>
+                  <th className="px-5 py-2 text-right">Hujjatlar</th>
+                  <th className="px-5 py-2 text-right">Jami summa</th>
+                  <th className="px-5 py-2 w-32">Ulush</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.map((row, i) => (
+                  <tr key={row.id} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-3)]">{i + 1}</td>
+                    <td className="px-5 py-2.5">
+                      <div className="text-xs font-medium text-[var(--text)]">{row.name}</div>
+                      {row.phone && <div className="text-[10px] text-[var(--text-3)] mt-0.5">{row.phone}</div>}
+                    </td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.salesCount} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
+                    <td className="px-5 py-2.5">
+                      <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
+                        <div className="h-full bg-indigo-500 opacity-80" style={{ width: `${(row.totalAmount / maxAmount) * 100}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {total > 0 && (
+                <tfoot>
+                  <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
+                    <td colSpan="3" className="px-5 py-2.5 text-[var(--text)]">Jami:</td>
+                    <td className="px-5 py-2.5 text-right font-mono font-extrabold text-[var(--text)]">{fmt(total)} UZS</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── MAHSULOTLAR BO'YICHA ──────────────────────────────────────────────────────
+function SalesByProductSection({ fromDate, toDate }) {
+  const [data, setData]     = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/products-top', { params: { limit: 50, from: fromDate, to: toDate } });
+        setData(r.data);
+      } catch {} finally { setLoading(false); }
+    })();
+  }, [fromDate, toDate]);
+
+  const maxPieces = data[0]?.totalPieces || 1;
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Mahsulotlar bo'yicha savdo" subtitle="Tanlangan davrda eng ko'p sotilgan mahsulotlar ro'yxati" />
+
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center">
+          <h3 className="text-xs font-semibold text-[var(--text)]">Mahsulotlar reytingi</h3>
+          <span className="text-[11px] text-[var(--text-3)]">{data.length} ta mahsulot</span>
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+        ) : data.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda mahsulotlar topilmadi</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2 w-8">#</th>
+                  <th className="px-5 py-2">Artikul</th>
+                  <th className="px-5 py-2 text-right">Dona</th>
+                  <th className="px-5 py-2 text-right">M³ (CBM)</th>
+                  <th className="px-5 py-2 text-right">Jami summa</th>
+                  <th className="px-5 py-2 w-28">Dona ulushi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.map((row, i) => (
+                  <tr key={row.id} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-3)]">{i + 1}</td>
+                    <td className="px-5 py-2.5 text-xs font-medium text-[var(--text)]">{row.article}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{fmt(row.totalPieces)}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.totalCbm?.toFixed(2) || '—'}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
+                    <td className="px-5 py-2.5">
+                      <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
+                        <div className="h-full bg-emerald-500 opacity-80" style={{ width: `${(row.totalPieces / maxPieces) * 100}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── QARZDORLAR ────────────────────────────────────────────────────────────────
+function DebtorsSection() {
+  const [data, setData]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/debtors');
+        setData(r.data);
+      } catch {} finally { setLoading(false); }
+    })();
+  }, []);
+
+  const filtered = data.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()));
+  const totalDebt = data.reduce((s, d) => s + d.debt, 0);
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Qarzdorlar hisoboti" subtitle="Barcha faol debitor qarzdorliklar — savdo minus to'lov" />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami debitor qarz</p>
+          <p className="text-xl font-extrabold font-mono text-red-500">
+            {loading ? '...' : fmt(totalDebt)} <span className="text-xs font-semibold text-[var(--text-3)]">UZS</span>
+          </p>
+        </div>
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Qarzdorlar soni</p>
+          <p className="text-xl font-extrabold font-mono text-[var(--text)]">
+            {loading ? '...' : data.length} <span className="text-xs font-semibold text-[var(--text-3)]">ta</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center gap-4">
+          <h3 className="text-xs font-semibold text-[var(--text)]">Barcha qarzdorlar</h3>
+          <input
+            type="text"
+            placeholder="Mijoz nomi bo'yicha..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="px-3 py-1.5 border border-[var(--border)] rounded text-xs bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] w-52"
+          />
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">
+            {search ? 'Qidiruv bo\'yicha topilmadi' : 'Faol qarzdorliklar mavjud emas'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2 w-8">#</th>
+                  <th className="px-5 py-2">Mijoz</th>
+                  <th className="px-5 py-2 text-right">Jami savdo</th>
+                  <th className="px-5 py-2 text-right">To'langan</th>
+                  <th className="px-5 py-2 text-right">Qarz (Balans)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {filtered.map((row, i) => (
+                  <tr key={row.id} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-3)]">{i + 1}</td>
+                    <td className="px-5 py-2.5">
+                      <div className="text-xs font-medium text-[var(--text)]">{row.name}</div>
+                      {row.phone && <div className="text-[10px] text-[var(--text-3)] mt-0.5">{row.phone}</div>}
+                    </td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{fmt(row.totalSales)} UZS</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-emerald-600">{fmt(row.totalPayments)} UZS</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-red-500">{fmt(row.debt)} UZS</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
+                  <td colSpan="4" className="px-5 py-2.5 text-[var(--text)]">Jami debitor qarz:</td>
+                  <td className="px-5 py-2.5 text-right font-mono font-extrabold text-red-500">{fmt(totalDebt)} UZS</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── MIJOZ KARTASI ─────────────────────────────────────────────────────────────
+function ClientStatementSection() {
+  const [clients, setClients]   = useState([]);
+  const [selId, setSelId]       = useState('');
+  const [stmt, setStmt]         = useState(null);
+  const [loading, setLoading]   = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await api.get('/api/clients', { params: { limit: 1000 } });
+        const list = r.data.data || [];
+        setClients(list);
+        if (list.length) setSelId(list[0].id);
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!selId) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get(`/api/reports/client-statement/${selId}`);
+        setStmt(r.data);
+      } catch {} finally { setLoading(false); }
+    })();
+  }, [selId]);
+
+  const totalDebit  = stmt?.statement.reduce((s, i) => s + i.debit, 0) || 0;
+  const totalCredit = stmt?.statement.reduce((s, i) => s + i.credit, 0) || 0;
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Mijoz analitik kartasi" subtitle="Xronologik tartibda savdolar, to'lovlar va joriy balans" />
+
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+          <div>
+            <h3 className="text-xs font-semibold text-[var(--text)]">Mijozni tanlang</h3>
+            {stmt && (
+              <p className="text-[10px] text-[var(--text-3)] mt-0.5">
+                Savdo: {fmt(totalDebit)} UZS &nbsp;|&nbsp; To'lov: {fmt(totalCredit)} UZS &nbsp;|&nbsp; Joriy qarz:{' '}
+                <span className={`font-bold ${stmt.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                  {fmt(stmt.finalBalance)} UZS
+                </span>
+              </p>
+            )}
+          </div>
+          <select
+            value={selId}
+            onChange={e => setSelId(e.target.value)}
+            className="px-3 py-1.5 border border-[var(--border)] rounded bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)] max-w-xs"
+          >
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+
+        <div className="overflow-x-auto min-h-[250px]">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          ) : !stmt?.statement?.length ? (
+            <div className="p-8 text-center text-xs text-[var(--text-3)]">Ushbu mijoz bo'yicha aylanmalar topilmadi</div>
+          ) : (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2">Sana</th>
+                  <th className="px-5 py-2">Tavsif (Hujjat)</th>
+                  <th className="px-5 py-2 text-right">Savdo (Debet)</th>
+                  <th className="px-5 py-2 text-right">To'lov (Kredit)</th>
+                  <th className="px-5 py-2 text-right">Balans (Qarz)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {stmt.statement.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-2)]">{fmtDate(item.date)}</td>
+                    <td className="px-5 py-2.5 text-xs text-[var(--text)]">{item.desc}</td>
+                    <td className="px-5 py-2.5 text-[11px] text-right font-mono text-slate-700 dark:text-slate-300">{item.debit > 0 ? `${fmt(item.debit)} UZS` : '—'}</td>
+                    <td className="px-5 py-2.5 text-[11px] text-right font-mono text-emerald-600">{item.credit > 0 ? `${fmt(item.credit)} UZS` : '—'}</td>
+                    <td className={`px-5 py-2.5 text-[11px] text-right font-mono font-extrabold ${item.balance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                      {fmt(item.balance)} UZS
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
+                  <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">Jami aylanma yakuni:</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-slate-700 dark:text-slate-300">{fmt(totalDebit)} UZS</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-emerald-600">{fmt(totalCredit)} UZS</td>
+                  <td className={`px-5 py-2.5 text-right font-mono font-extrabold ${stmt.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {fmt(stmt.finalBalance)} UZS
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── TO'LOVLAR HISOBOTI ────────────────────────────────────────────────────────
+function PaymentsSummarySection({ fromDate, toDate }) {
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/payments-by-period', { params: { from: fromDate, to: toDate } });
+        setData(r.data);
+      } catch {} finally { setLoading(false); }
+    })();
+  }, [fromDate, toDate]);
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="To'lovlar hisoboti" subtitle="Tanlangan davrda qabul qilingan to'lovlar dinamikasi" />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami to'lovlar</p>
+          <p className="text-xl font-extrabold font-mono text-emerald-600">
+            {loading ? '...' : fmt(data?.totalAmount || 0)} <span className="text-xs font-semibold text-[var(--text-3)]">UZS</span>
+          </p>
+        </div>
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">To'lovlar soni</p>
+          <p className="text-xl font-extrabold font-mono text-[var(--text)]">
+            {loading ? '...' : data?.paymentsCount || 0} <span className="text-xs font-semibold text-[var(--text-3)]">ta</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="card border border-[var(--border)]">
+        <h3 className="text-xs font-semibold text-[var(--text)] mb-3">Kunlik to'lovlar trendc</h3>
+        <div className="bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] min-h-[180px] flex items-center justify-center">
+          {loading ? (
+            <div className="text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          ) : !data?.paymentsByDay?.length ? (
+            <div className="text-xs text-[var(--text-3)]">Tanlangan davrda to'lovlar mavjud emas</div>
+          ) : (
+            <TrendChart
+              data={data.paymentsByDay.map(d => ({ amount: d.amount, title: `${fmtDate(d.day)}: ${fmt(d.amount)} UZS` }))}
+              ticks={4} yUnit="UZS" showXLabels={false} nodeMax={35} gradientId="paymentsGrad"
+            />
+          )}
+        </div>
+      </div>
+
+      {!loading && !!data?.paymentsByDay?.length && (
+        <div className="card border border-[var(--border)] p-0">
+          <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
+            <h3 className="text-xs font-semibold text-[var(--text)]">Kunlik jadval</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2">Sana</th>
+                  <th className="px-5 py-2 text-right">To'lovlar</th>
+                  <th className="px-5 py-2 text-right">Jami summa</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.paymentsByDay.map((row, i) => (
+                  <tr key={i} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-xs font-mono text-[var(--text-2)]">{fmtDate(row.day)}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{row.count} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-emerald-600">{fmt(row.amount)} UZS</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SOZLAMALAR ────────────────────────────────────────────────────────────────
+function WidgetSettingsSection({ widgets, onToggle }) {
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Bosh sahifa sozlamalari" subtitle="Bosh sahifada ko'rsatiladigan widgetlarni yoqing yoki o'chiring" />
+
+      <div className="card border border-[var(--border)] max-w-lg">
+        <h3 className="text-xs font-semibold text-[var(--text)] mb-5">Widgetlar</h3>
+        <div className="space-y-4">
+          {WIDGET_META.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between gap-4">
+              <span className="text-sm text-[var(--text)]">{label}</span>
+              <button
+                onClick={() => onToggle(key)}
+                className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
+                  widgets[key] ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
+                }`}
+                aria-checked={widgets[key]}
+                role="switch"
+              >
+                <span
+                  className={`inline-block w-4 h-4 bg-white rounded-full shadow absolute top-0.5 transition-transform ${
+                    widgets[key] ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-[var(--text-3)] mt-5">
+          Sozlamalar brauzer xotirasida (localStorage) saqlanadi
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN ──────────────────────────────────────────────────────────────────────
+export default function Reports() {
+  const { from: fromDate, to: toDate } = useDateFilter();
+  const [active, setActive] = useState('home');
+  const [openGroups, setOpenGroups] = useState({
+    'Savdo hisobotlari': true,
+    'Moliyaviy hisobotlar': false,
+  });
+  const [widgets, setWidgets] = useState(loadWidgets);
+
+  const toggleGroup = (group) => setOpenGroups(prev => ({ ...prev, [group]: !prev[group] }));
+
+  const toggleWidget = (key) => {
+    setWidgets(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('reports_widgets', JSON.stringify(next));
+      return next;
+    });
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Tizim Hisobotlari</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">Savdo tahlili, mijozlar balansi va qarzdorlik hisobotlari</p>
+    <div className="flex min-h-full">
+      {/* ── Sidebar ── */}
+      <aside className="w-52 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] sticky top-0 self-start max-h-screen overflow-y-auto">
+        <div className="px-3 pt-4 pb-2 text-[9px] font-bold text-[var(--text-3)] uppercase tracking-widest">
+          Hisobotlar bo'limlari
         </div>
-
-        {/* Davr yuqori paneldagi global "Davr" tugmasidan boshqariladi */}
-      </div>
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card 1: Davriy Savdo */}
-        <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
-          <div className="space-y-1">
-            <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Tanlangan Davr Savdosi</h4>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-extrabold text-[var(--text)] font-mono">
-                {loadingSales ? '...' : fmt(salesSummary?.totalAmount || 0)}
-              </span>
-              <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">UZS</span>
-            </div>
-            <p className="text-[10px] text-[var(--text-3)]">Jami yuk xatlari aylanmasi</p>
-          </div>
-          <div className="icon-badge icon-badge-success p-3 rounded-xl">
-            <TrendingUp size={20} strokeWidth={2.2} />
-          </div>
-        </div>
-
-        {/* Card 2: Hujjatlar soni */}
-        <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
-          <div className="space-y-1">
-            <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Hujjatlar Soni</h4>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-extrabold text-[var(--text)] font-mono">
-                {loadingSales ? '...' : salesSummary?.salesCount || 0}
-              </span>
-              <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">ta</span>
-            </div>
-            <p className="text-[10px] text-[var(--text-3)]">Davrdagi jami rasmiylashtirilgan yuk xatlari</p>
-          </div>
-          <div className="icon-badge icon-badge-info p-3 rounded-xl">
-            <ShoppingBag size={20} strokeWidth={2.2} />
-          </div>
-        </div>
-
-        {/* Card 3: Top mahsulot aylanmasi */}
-        <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
-          <div className="space-y-1">
-            <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Top Mahsulot Sotilishi</h4>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-extrabold text-[var(--text)] font-mono">
-                {loadingProducts ? '...' : topProducts[0] ? fmt(topProducts[0].totalPieces) : '0'}
-              </span>
-              <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">dona</span>
-            </div>
-            <p className="text-[10px] text-[var(--text-3)]">Eng ko'p sotilgan mahsulot donasi ({topProducts[0]?.article || 'mavjud emas'})</p>
-          </div>
-          <div className="icon-badge icon-badge-warn p-3 rounded-xl">
-            <BarChart3 size={20} strokeWidth={2.2} />
-          </div>
-        </div>
-      </div>
-
-      {/* Main dashboard reports section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sales trend chart container */}
-        <div className="card lg:col-span-2 flex flex-col justify-between border border-[var(--border)]">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="text-xs font-semibold text-[var(--text)]">Savdo aylanmasi dinamikasi</h3>
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5">Kunlik yoki davriy savdo aylanmasi o'zgarishi</p>
-            </div>
-          </div>
-          <div className="flex-1 bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] flex items-center justify-center">
-            {loadingSales ? (
-              <div className="h-48 flex items-center justify-center text-xs text-[var(--text-3)]">Grafik yuklanmoqda...</div>
-            ) : (
-              renderTrendChart()
-            )}
-          </div>
-        </div>
-
-        {/* Top 5 Products bar comparison list */}
-        <div className="card border border-[var(--border)] flex flex-col justify-between">
-          <div className="mb-4">
-            <h3 className="text-xs font-semibold text-[var(--text)]">Top 5 Mahsulot (Dona bo'yicha)</h3>
-            <p className="text-[10px] text-[var(--text-3)] mt-0.5">Eng ko'p sotilgan top mahsulot artikullari</p>
-          </div>
-          <div className="space-y-4 flex-1 overflow-y-auto pr-1">
-            {loadingProducts ? (
-              [...Array(4)].map((_, i) => (
-                <div key={i} className="space-y-1">
-                  <div className="h-3 bg-[var(--surface-2)] animate-pulse rounded w-1/3" />
-                  <div className="h-2 bg-[var(--surface-2)] animate-pulse rounded w-full" />
-                </div>
-              ))
-            ) : topProducts.length === 0 ? (
-              <div className="text-center py-12 text-xs text-[var(--text-3)] font-medium">Sotilgan mahsulotlar mavjud emas</div>
-            ) : (
-              topProducts.map((p) => {
-                const maxVal = topProducts[0]?.totalPieces || 1;
-                const ratio = p.totalPieces / maxVal;
-                return (
-                  <div key={p.id} className="space-y-1 select-none">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-xs font-medium text-[var(--text)] truncate max-w-[180px]">{p.article}</span>
-                      <span className="text-[10.5px] font-bold font-mono text-[var(--text-2)]">{fmt(p.totalPieces)} dona</span>
-                    </div>
-                    <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
-                      <div 
-                        className="h-full bg-indigo-500 opacity-90 transition-all duration-500" 
-                        style={{ width: `${ratio * 100}%` }}
-                      />
-                    </div>
+        <nav className="px-2 pb-4 space-y-0.5">
+          {MENU.map((item) => {
+            if (item.id) {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActive(item.id)}
+                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-colors ${
+                    active === item.id
+                      ? 'bg-[var(--accent)] text-white font-semibold'
+                      : 'text-[var(--text)] hover:bg-[var(--surface-2)]'
+                  }`}
+                >
+                  <item.Icon size={14} className="shrink-0" />
+                  <span className="truncate text-xs">{item.label}</span>
+                </button>
+              );
+            }
+            // group with children
+            return (
+              <div key={item.group} className="pt-1">
+                <button
+                  onClick={() => toggleGroup(item.group)}
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold text-[var(--text-2)] hover:bg-[var(--surface-2)] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <item.Icon size={13} className="shrink-0" />
+                    <span className="truncate">{item.group}</span>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top 5 Debtors list */}
-        <div className="card border border-[var(--border)] flex flex-col justify-between">
-          <div className="px-1 mb-4 flex justify-between items-center">
-            <div>
-              <h3 className="text-xs font-semibold text-[var(--text)]">Eng yirik qarzdorlar</h3>
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5">Top faol balansdagi debitor qarzdorliklar</p>
-            </div>
-            <FileSpreadsheet size={16} className="text-[var(--text-3)]" />
-          </div>
-          <div className="space-y-3.5 flex-1 overflow-y-auto pr-1">
-            {loadingDebtors ? (
-              [...Array(4)].map((_, i) => (
-                <div key={i} className="h-8 bg-[var(--surface-2)] animate-pulse rounded" />
-              ))
-            ) : debtors.length === 0 ? (
-              <div className="text-center py-12 text-xs text-[var(--text-3)] font-medium">Faol qarzdorliklar mavjud emas</div>
-            ) : (
-              debtors.slice(0, 5).map((d) => {
-                const maxDebt = debtors[0]?.debt || 1;
-                const ratio = d.debt / maxDebt;
-                return (
-                  <div key={d.id} className="space-y-1 select-none">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-xs font-medium text-[var(--text)] truncate max-w-[180px]">{d.name}</span>
-                      <span className="text-xs font-bold font-mono text-red-500">{fmt(d.debt)} UZS</span>
-                    </div>
-                    <div className="h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-red-400 opacity-80" 
-                        style={{ width: `${ratio * 100}%` }}
-                      />
-                    </div>
+                  {openGroups[item.group]
+                    ? <ChevronDown size={11} />
+                    : <ChevronRight size={11} />
+                  }
+                </button>
+                {openGroups[item.group] && (
+                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[var(--border)] pl-2">
+                    {item.children.map(child => (
+                      <button
+                        key={child.id}
+                        onClick={() => setActive(child.id)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors ${
+                          active === child.id
+                            ? 'bg-[var(--accent)] text-white font-semibold'
+                            : 'text-[var(--text-2)] hover:bg-[var(--surface-2)]'
+                        }`}
+                      >
+                        <child.Icon size={12} className="shrink-0" />
+                        <span className="truncate text-xs">{child.label}</span>
+                      </button>
+                    ))}
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
 
-        {/* Client chronological Ledger Statement (Analitik aylanma vedomosti) */}
-        <div className="card lg:col-span-2 border border-[var(--border)] flex flex-col justify-between p-0">
-          <div className="px-5 py-3 border-b border-[var(--border)] flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[var(--surface-2)] rounded-t-xl gap-2">
-            <div>
-              <h3 className="text-xs font-semibold text-[var(--text)]">Mijozning analitik aylanma kartasi (Ledger)</h3>
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5">Xronologik savdolar, to'lovlar va balans o'zgarishi</p>
-            </div>
-
-            {/* Client selector dropdown */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] font-bold text-[var(--text-2)] uppercase">Mijoz:</span>
-              <select
-                value={selectedClientId}
-                onChange={e => setSelectedClientId(e.target.value)}
-                className="px-2.5 py-1 border border-[var(--border)] rounded bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)] font-semibold max-w-[200px]"
-              >
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-x-auto min-h-[220px]">
-            {loadingStatement ? (
-              <div className="p-8 text-center text-xs text-[var(--text-3)]">Aylanma karta yuklanmoqda...</div>
-            ) : !clientStatement || clientStatement.statement?.length === 0 ? (
-              <div className="p-12 text-center text-xs text-[var(--text-3)] font-medium">Ushbu mijoz bo'yicha tarixiy aylanmalar topilmadi</div>
-            ) : (
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                    <th className="px-4 py-2">Sana</th>
-                    <th className="px-4 py-2">Tavsif (Hujjat)</th>
-                    <th className="px-4 py-2 text-right">Savdo (Debet)</th>
-                    <th className="px-4 py-2 text-right">To'lov (Kredit)</th>
-                    <th className="px-4 py-2 text-right">Balans (Qarz)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)]">
-                  {clientStatement.statement.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-[var(--surface-2)] transition-colors">
-                      <td className="px-4 py-2 text-[11px] text-[var(--text-2)] font-mono">{new Date(item.date).toLocaleDateString('uz-UZ')}</td>
-                      <td className="px-4 py-2 text-xs text-[var(--text)] font-semibold">{item.desc}</td>
-                      <td className="px-4 py-2 text-[11px] text-right font-mono font-bold text-slate-700 dark:text-slate-300">
-                        {item.debit > 0 ? `${fmt(item.debit)} UZS` : '—'}
-                      </td>
-                      <td className="px-4 py-2 text-[11px] text-right font-mono font-bold text-emerald-600">
-                        {item.credit > 0 ? `${fmt(item.credit)} UZS` : '—'}
-                      </td>
-                      <td className={`px-4 py-2 text-[11px] text-right font-mono font-extrabold ${
-                        item.balance > 0 ? 'text-red-500' : 'text-emerald-600'
-                      }`}>
-                        {fmt(item.balance)} UZS
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                    <td colSpan="2" className="px-4 py-2.5 text-[var(--text)]">Jami aylanma yakuni:</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-slate-700 dark:text-slate-300">
-                      {fmt(clientStatement.statement.reduce((s, i) => s + i.debit, 0))} UZS
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-emerald-600">
-                      {fmt(clientStatement.statement.reduce((s, i) => s + i.credit, 0))} UZS
-                    </td>
-                    <td className={`px-4 py-2.5 text-right font-mono font-extrabold ${
-                      clientStatement.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'
-                    }`}>
-                      {fmt(clientStatement.finalBalance)} UZS
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* ── Content ── */}
+      <main className="flex-1 p-6 min-w-0">
+        {active === 'home'             && <HomeSection fromDate={fromDate} toDate={toDate} widgets={widgets} />}
+        {active === 'sales_period'     && <SalesPeriodSection fromDate={fromDate} toDate={toDate} />}
+        {active === 'sales_by_client'  && <SalesByClientSection fromDate={fromDate} toDate={toDate} />}
+        {active === 'sales_by_product' && <SalesByProductSection fromDate={fromDate} toDate={toDate} />}
+        {active === 'debtors'          && <DebtorsSection />}
+        {active === 'client_statement' && <ClientStatementSection />}
+        {active === 'payments'         && <PaymentsSummarySection fromDate={fromDate} toDate={toDate} />}
+        {active === 'widget_settings'  && <WidgetSettingsSection widgets={widgets} onToggle={toggleWidget} />}
+      </main>
     </div>
   );
 }

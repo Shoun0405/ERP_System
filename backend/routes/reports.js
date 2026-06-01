@@ -180,23 +180,44 @@ router.get('/debtors', async (req, res, next) => {
   }
 });
 
-// GET /api/reports/products-top?limit=10
+// GET /api/reports/products-top?limit=10&from=&to=
 router.get('/products-top', async (req, res, next) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-    const topProducts = await prisma.$queryRaw`
-      SELECT 
-        p.id, 
-        p.article, 
-        SUM(sp."totalPieces")::float as "totalPieces",
-        SUM(sp."totalCbm")::float as "totalCbm",
-        SUM(sp."rowAmount")::float as "totalAmount"
-      FROM "SaleProduct" sp
-      JOIN "Product" p ON p.id = sp."productId"
-      GROUP BY p.id, p.article
-      ORDER BY "totalPieces" DESC
-      LIMIT ${limit}
-    `;
+    const fromDate = req.query.from ? new Date(req.query.from) : null;
+    const toDate = req.query.to ? new Date(req.query.to) : null;
+    if (toDate) toDate.setHours(23, 59, 59, 999);
+
+    let topProducts;
+    if (fromDate && toDate) {
+      topProducts = await prisma.$queryRaw`
+        SELECT
+          p.id, p.article,
+          SUM(sp."totalPieces")::float as "totalPieces",
+          SUM(sp."totalCbm")::float   as "totalCbm",
+          SUM(sp."rowAmount")::float  as "totalAmount"
+        FROM "SaleProduct" sp
+        JOIN "Product" p ON p.id = sp."productId"
+        JOIN "Sale" s    ON s.id = sp."saleId"
+        WHERE s.date >= ${fromDate} AND s.date <= ${toDate}
+        GROUP BY p.id, p.article
+        ORDER BY "totalPieces" DESC
+        LIMIT ${limit}
+      `;
+    } else {
+      topProducts = await prisma.$queryRaw`
+        SELECT
+          p.id, p.article,
+          SUM(sp."totalPieces")::float as "totalPieces",
+          SUM(sp."totalCbm")::float   as "totalCbm",
+          SUM(sp."rowAmount")::float  as "totalAmount"
+        FROM "SaleProduct" sp
+        JOIN "Product" p ON p.id = sp."productId"
+        GROUP BY p.id, p.article
+        ORDER BY "totalPieces" DESC
+        LIMIT ${limit}
+      `;
+    }
 
     res.json(topProducts.map(row => ({
       id: row.id,
@@ -205,6 +226,80 @@ router.get('/products-top', async (req, res, next) => {
       totalCbm: parseFloat(row.totalCbm || 0),
       totalAmount: parseFloat(row.totalAmount || 0)
     })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/sales-by-client?from=&to=
+router.get('/sales-by-client', async (req, res, next) => {
+  try {
+    const fromDate = req.query.from
+      ? new Date(req.query.from)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const toDate = req.query.to ? new Date(req.query.to) : new Date();
+    toDate.setHours(23, 59, 59, 999);
+
+    const rows = await prisma.$queryRaw`
+      SELECT
+        c.id, c.name, c.phone,
+        COUNT(s.id)::int         as sales_count,
+        SUM(s."totalAmount")::float as total_amount
+      FROM "Client" c
+      JOIN "Sale" s ON s."clientId" = c.id
+      WHERE s.date >= ${fromDate} AND s.date <= ${toDate}
+      GROUP BY c.id, c.name, c.phone
+      ORDER BY total_amount DESC
+    `;
+
+    res.json(rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      phone: r.phone,
+      salesCount: parseInt(r.sales_count || 0),
+      totalAmount: parseFloat(r.total_amount || 0)
+    })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/payments-by-period?from=&to=
+router.get('/payments-by-period', async (req, res, next) => {
+  try {
+    const fromDate = req.query.from
+      ? new Date(req.query.from)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const toDate = req.query.to ? new Date(req.query.to) : new Date();
+    toDate.setHours(23, 59, 59, 999);
+
+    const [aggregate, paymentsByDay] = await Promise.all([
+      prisma.payment.aggregate({
+        where: { date: { gte: fromDate, lte: toDate } },
+        _sum: { amount: true },
+        _count: { id: true }
+      }),
+      prisma.$queryRaw`
+        SELECT
+          DATE_TRUNC('day', date) as day,
+          SUM(amount)::float      as amount,
+          COUNT(id)::int          as count
+        FROM "Payment"
+        WHERE date >= ${fromDate} AND date <= ${toDate}
+        GROUP BY day
+        ORDER BY day ASC
+      `
+    ]);
+
+    res.json({
+      totalAmount: aggregate._sum.amount || 0,
+      paymentsCount: aggregate._count.id || 0,
+      paymentsByDay: paymentsByDay.map(r => ({
+        day: r.day,
+        amount: parseFloat(r.amount || 0),
+        count: parseInt(r.count || 0)
+      }))
+    });
   } catch (err) {
     next(err);
   }
