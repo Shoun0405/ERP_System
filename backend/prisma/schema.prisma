@@ -184,9 +184,30 @@ model Setting {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String   // hashed password
-  role      String   @default("user") // admin, user
-  createdAt DateTime @default(now())
+  id        String     @id @default(uuid())
+  username  String     @unique
+  password  String     // hashed password
+  fullName  String     @default("Sotuvchi")
+  role      String     @default("user") // admin, user
+  isActive  Boolean    @default(true)
+  permissions Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action     String   // "create" | "update" | "delete"
+  entityType String   // "client" | "product" | "sale" | "payment" | "contract" | "specification" | "interaction" | "setting"
+  entityId   String?
+  payload    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

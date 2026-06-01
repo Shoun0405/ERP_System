@@ -1,16 +1,24 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Box, ShoppingCart, CreditCard,
-  Settings, Bell, TrendingUp, TrendingDown,
+  Settings, TrendingUp, TrendingDown,
   ArrowUpRight, MessageSquare, FileText,
-  ChevronLeft, ChevronRight, ChevronDown, HelpCircle,
-  LogOut, Calendar, Download, Plus, Search, Sun, Moon
+  ChevronLeft, ChevronRight, ChevronDown,
+  LogOut, Calendar, Download, Plus, Search, Sun, Moon,
+  Shield, Menu
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'react-hot-toast';
 import api from './lib/api';
 import { fmt } from './lib/format';
 import { useTheme } from './hooks/useTheme';
+import TrendChart from './components/TrendChart';
+import PeriodPicker from './components/PeriodPicker';
+import { DateFilterProvider } from './context/DateFilterContext';
+
+// Global davr filtri ko'rinadigan sahifalar (1C 8.3 "Период" uslubi)
+const DATE_ROUTES = ['/sales', '/payments', '/contracts', '/reports'];
 
 import Clients          from './pages/Clients';
 import Products         from './pages/Products';
@@ -20,35 +28,56 @@ import Contracts        from './pages/Contracts';
 import SettingsPage     from './pages/Settings';
 import InteractionsPage from './pages/Interactions';
 import Login            from './pages/Login';
+import UsersPage        from './pages/Users';
+import Reports          from './pages/Reports';
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────
-function Sidebar({ collapsed, onToggle }) {
+function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
   const location = useLocation();
-  const navItems = [
+  // On mobile the drawer always shows the full-width expanded nav
+  const width = mobileOpen ? 224 : (collapsed ? 64 : 224);
+  const isCollapsed = mobileOpen ? false : collapsed;
+  const rawNavItems = [
     { name: 'Dashboard',    path: '/',               icon: LayoutDashboard },
-    { name: 'Mijozlar',     path: '/clients',        icon: Users },
-    { name: 'Mahsulotlar',  path: '/products',       icon: Box },
-    { name: 'Shartnomalar', path: '/contracts',      icon: FileText },
-    { name: 'Savdolar',     path: '/sales',          icon: ShoppingCart },
-    { name: 'Tushumlar',    path: '/payments',       icon: CreditCard },
-    { name: 'Muloqotlar',   path: '/interactions',   icon: MessageSquare },
-    { name: 'Sozlamalar',   path: '/settings',       icon: Settings },
+    { name: 'Mijozlar',     path: '/clients',        icon: Users,           module: 'clients' },
+    { name: 'Mahsulotlar',  path: '/products',       icon: Box,             module: 'products' },
+    { name: 'Shartnomalar', path: '/contracts',      icon: FileText,        module: 'contracts' },
+    { name: 'Savdolar',     path: '/sales',          icon: ShoppingCart,    module: 'sales' },
+    { name: 'Tushumlar',    path: '/payments',       icon: CreditCard,     module: 'payments' },
+    { name: 'Muloqotlar',   path: '/interactions',   icon: MessageSquare,   module: 'interactions' },
+    { name: 'Hisobotlar',   path: '/reports',        icon: TrendingUp,      module: 'reports' },
+    { name: 'Sozlamalar',   path: '/settings',       icon: Settings,        module: 'settings' },
   ];
 
+  const navItems = rawNavItems.filter(item => {
+    if (item.path === '/') return true;
+    if (user?.role === 'admin') return true;
+    return user?.permissions?.[item.module]?.read !== false;
+  });
+
+  if (user?.role === 'admin') {
+    navItems.push({ name: 'Foydalanuvchilar', path: '/users', icon: Shield });
+  }
+
   return (
-    <aside
-      className="flex flex-col z-20 shrink-0 sidebar-container"
-      style={{
-        width: collapsed ? 64 : 224,
-        background: 'var(--sb-bg)',
-        borderRight: '1px solid var(--sb-border)',
-      }}
-    >
+    <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div onClick={onMobileClose} className="fixed inset-0 bg-black/50 z-30 lg:hidden" />
+      )}
+      <aside
+        className={`flex flex-col z-40 shrink-0 sidebar-container fixed inset-y-0 left-0 lg:static lg:translate-x-0 transition-transform duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{
+          width,
+          background: 'var(--sb-bg)',
+          borderRight: '1px solid var(--sb-border)',
+        }}
+      >
       {/* Brand logo section */}
       <div
         className="h-14 flex items-center px-4 shrink-0 gap-3"
         style={{
-          justifyContent: collapsed ? 'center' : 'flex-start',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
           borderBottom: '1px solid var(--sb-border)',
         }}
       >
@@ -58,7 +87,7 @@ function Sidebar({ collapsed, onToggle }) {
         >
           <span className="text-white text-base font-bold tracking-tighter">N</span>
         </div>
-        {!collapsed && (
+        {!isCollapsed && (
           <h2 className="text-sm font-semibold tracking-tight animate-in" style={{ color: 'var(--sb-text)' }}>
             NexERP
           </h2>
@@ -67,7 +96,7 @@ function Sidebar({ collapsed, onToggle }) {
 
       {/* Navigation menu list */}
       <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
-        {!collapsed && (
+        {!isCollapsed && (
           <div
             className="text-[10px] font-semibold uppercase tracking-wider px-3 py-1 mb-1"
             style={{ color: 'var(--sb-text-2)' }}
@@ -82,7 +111,8 @@ function Sidebar({ collapsed, onToggle }) {
             <Link
               key={item.path}
               to={item.path}
-              title={collapsed ? item.name : ''}
+              onClick={onMobileClose}
+              title={isCollapsed ? item.name : ''}
               className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative"
               style={{
                 color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)',
@@ -91,37 +121,41 @@ function Sidebar({ collapsed, onToggle }) {
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sb-hover)'; e.currentTarget.style.color = 'var(--sb-text)'; }}
               onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sb-text-2)'; } }}
             >
-              <Icon size={17} style={{ color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)', flexShrink: 0 }} />
-              {!collapsed && <span className="truncate">{item.name}</span>}
+              <Icon size={19} strokeWidth={isActive ? 2.2 : 1.8} style={{ color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)', flexShrink: 0 }} />
+              {!isCollapsed && <span className="truncate">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Sidebar toggle footer */}
-      <div className="p-2" style={{ borderTop: '1px solid var(--sb-border)' }}>
+      {/* Sidebar toggle footer — desktop only */}
+      <div className="p-2 hidden lg:block" style={{ borderTop: '1px solid var(--sb-border)' }}>
         <button
           onClick={onToggle}
           className="w-full h-8 flex items-center gap-3 px-3 rounded-md text-xs font-medium transition-colors"
           style={{
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
             color: 'var(--sb-text-2)',
           }}
           onMouseEnter={e => { e.currentTarget.style.background = 'var(--sb-hover)'; e.currentTarget.style.color = 'var(--sb-text)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sb-text-2)'; }}
         >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!collapsed && <span>Yopish</span>}
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {!isCollapsed && <span>Yopish</span>}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
 // ─── Top Header ────────────────────────────────────────────────────────────
-function TopHeader({ user, theme, onToggleTheme }) {
+function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const searchRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const titles = {
     '/':             'Dashboard',
@@ -131,7 +165,9 @@ function TopHeader({ user, theme, onToggleTheme }) {
     '/sales':        'Savdolar (Yuk xatlari)',
     '/payments':     'Tushumlar reyestri',
     '/interactions': 'Muloqotlar tarixi',
+    '/reports':      'Tizim hisobotlari',
     '/settings':     'Tizim sozlamalari',
+    '/users':        'Foydalanuvchilar (RBAC)',
   };
 
   useEffect(() => {
@@ -141,6 +177,27 @@ function TopHeader({ user, theme, onToggleTheme }) {
     }
     return () => window.removeEventListener('click', handleOutsideClick);
   }, [menuOpen]);
+
+  // ⌘K / Ctrl+K — global qidiruvga fokus
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const submitSearch = (e) => {
+    e.preventDefault();
+    const q = searchValue.trim();
+    if (!q) return;
+    navigate(`/clients?q=${encodeURIComponent(q)}`);
+    setSearchValue('');
+    searchRef.current?.blur();
+  };
 
   const handleLogout = async () => {
     try {
@@ -157,44 +214,48 @@ function TopHeader({ user, theme, onToggleTheme }) {
 
   return (
     <header className="h-14 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between px-6 shrink-0 relative z-30">
-      <div className="flex items-center gap-6">
-        <h1 className="text-sm font-semibold text-[var(--text)]">
+      <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        {/* Mobile hamburger */}
+        <button
+          onClick={onMobileMenu}
+          className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition shrink-0"
+          title="Menyu"
+        >
+          <Menu size={20} strokeWidth={2} />
+        </button>
+
+        <h1 className="text-sm font-semibold text-[var(--text)] truncate">
           {titles[location.pathname] || 'NexERP'}
         </h1>
 
-        {/* Global Search Mockup */}
-        <div className="hidden md:flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-1.5 w-64 shadow-inner">
+        {/* Global Search — mijoz qidirish (Enter → Mijozlar sahifasi) */}
+        <form onSubmit={submitSearch} className="hidden md:flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-1.5 w-64 focus-within:border-[var(--accent)] transition-colors">
           <Search size={14} className="text-[var(--text-3)]" />
           <input
+            ref={searchRef}
             type="text"
-            placeholder="Qidiruv..."
+            value={searchValue}
+            onChange={e => setSearchValue(e.target.value)}
+            placeholder="Mijoz qidirish..."
             className="bg-transparent border-none outline-none text-xs w-full text-[var(--text)] placeholder-[var(--text-3)]"
           />
           <kbd className="text-[9px] px-1.5 py-0.5 border border-[var(--border)] rounded bg-[var(--surface)] font-mono text-[var(--text-3)]">
             ⌘K
           </kbd>
-        </div>
+        </form>
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Global davr filtri — faqat sana bilan ishlaydigan sahifalarda */}
+        {DATE_ROUTES.includes(location.pathname) && <PeriodPicker />}
+
         {/* Theme toggle */}
         <button
           onClick={onToggleTheme}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition"
           title={theme === 'dark' ? "Yorug' rejim" : "Qorong'u rejim"}
         >
-          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
-
-        {/* Help button */}
-        <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition" title="Yordam">
-          <HelpCircle size={17} />
-        </button>
-
-        {/* Notification indicator */}
-        <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition relative" title="Bildirishnomalar">
-          <Bell size={17} />
-          <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-[var(--surface)]" />
+          {theme === 'dark' ? <Sun size={19} strokeWidth={2} /> : <Moon size={19} strokeWidth={2} />}
         </button>
 
         <div className="w-px h-6 bg-[var(--border)]" />
@@ -237,92 +298,20 @@ function TopHeader({ user, theme, onToggleTheme }) {
   );
 }
 
-// ─── Trend SVG Chart ────────────────────────────────────────────────────────
-function TrendSVGChart({ data }) {
-  if (!data || data.length === 0) return null;
-  const max = Math.max(...data.map(d => d.amount), 1);
-  const w = 600, h = 200, pad = { l: 48, r: 16, t: 16, b: 32 };
-  
-  const xs = (i) => pad.l + i * (w - pad.l - pad.r) / (data.length - 1);
-  const ys = (v) => h - pad.b - (v / max) * (h - pad.t - pad.b);
-
-  const pathStr = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xs(i).toFixed(1)} ${ys(d.amount).toFixed(1)}`).join(' ');
-  const areaStr = `${pathStr} L ${xs(data.length-1).toFixed(1)} ${h-pad.b} L ${xs(0).toFixed(1)} ${h-pad.b} Z`;
-
-  const ticks = [0, max * 0.25, max * 0.5, max * 0.75, max];
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-48 select-none">
-      {/* horizontal grid lines */}
-      {ticks.map((t, i) => (
-        <g key={i}>
-          <line
-            x1={pad.l}
-            x2={w - pad.r}
-            y1={ys(t)}
-            y2={ys(t)}
-            stroke="var(--border)"
-            strokeDasharray="2 4"
-          />
-          <text
-            x={pad.l - 8}
-            y={ys(t) + 3}
-            fontSize="10"
-            textAnchor="end"
-            fill="var(--text-3)"
-            fontFamily="var(--mono)"
-          >
-            {fmt(Math.round(t))}
-          </text>
-        </g>
-      ))}
-
-      {/* Months */}
-      {data.map((d, i) => (
-        <text
-          key={i}
-          x={xs(i)}
-          y={h - 10}
-          fontSize="10"
-          textAnchor="middle"
-          fill="var(--text-3)"
-        >
-          {d.month}
-        </text>
-      ))}
-
-      {/* Gradient Area Fill */}
-      <defs>
-        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      <path d={areaStr} fill="url(#chartGrad)" />
-
-      {/* Bold accent Line */}
-      <path d={pathStr} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* Node Points */}
-      {data.map((d, i) => (
-        <circle
-          key={i}
-          cx={xs(i)}
-          cy={ys(d.amount)}
-          r="3"
-          fill="var(--accent)"
-          stroke="var(--surface)"
-          strokeWidth="1.5"
-        />
-      ))}
-    </svg>
-  );
-}
-
 // ─── Dashboard ─────────────────────────────────────────────────────────────
 function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const handleExportMonthly = () => {
+    if (!stats?.monthlyData?.length) return;
+    const rows = stats.monthlyData.map(d => ({ Oy: d.month, 'Summa (UZS)': Math.round(d.amount) }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Oylik savdo');
+    XLSX.writeFile(wb, `oylik_savdo_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   useEffect(() => {
     let timer;
@@ -362,30 +351,27 @@ function Dashboard() {
       value: fmt(stats.totalDebt),
       unit: 'UZS',
       sub: 'Faol qarzdorlik oboroti',
-      color: 'text-red-600',
       tone: 'danger',
+      badgeClass: 'icon-badge-danger',
       icon: TrendingDown,
-      delta: -4.8,
     },
     {
       title: 'Bugungi Savdo',
       value: fmt(stats.todayTotal),
       unit: 'UZS',
       sub: 'Bugungi yuk xatlari summasi',
-      color: 'text-emerald-600',
       tone: 'success',
+      badgeClass: 'icon-badge-success',
       icon: TrendingUp,
-      delta: 12.5,
     },
     {
       title: 'Faol Mijozlar',
       value: stats.clientsCount,
       unit: 'ta',
       sub: 'CRM ro\'yxatida',
-      color: 'text-[var(--accent)]',
       tone: 'info',
+      badgeClass: 'icon-badge-info',
       icon: Users,
-      delta: 8.2,
     },
   ] : [];
 
@@ -400,10 +386,10 @@ function Dashboard() {
             <p className="text-xs text-[var(--text-3)] mt-0.5">Tizim holati va real vaqt statistikasi</p>
           </div>
           <div className="flex gap-2">
-            <button className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] rounded-lg text-xs font-medium flex items-center gap-2 select-none">
               <Calendar size={13} /> Bugun · {new Date().toLocaleDateString('uz-UZ')}
-            </button>
-            <button className="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2" style={{ background: 'var(--accent)', color: 'var(--accent-text)', boxShadow: '0 1px 4px var(--accent-bg)' }}
+            </div>
+            <button onClick={() => navigate('/clients')} className="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2" style={{ background: 'var(--accent)', color: 'var(--accent-text)', boxShadow: '0 1px 4px var(--accent-bg)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
             >
@@ -424,28 +410,22 @@ function Dashboard() {
               ))
             : cards.map((c, i) => {
                 const Icon = c.icon;
-                const isPositive = c.delta > 0;
                 return (
-                  <div key={i} className="mini-card flex flex-col justify-between">
+                  <div key={i} className="mini-card flex flex-col justify-between group hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-default">
                     <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs font-medium text-[var(--text-2)]">{c.title}</span>
-                        <div className="p-1 rounded-md bg-[var(--surface-2)] text-[var(--text-2)]">
-                          <Icon size={14} className={c.color} />
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider">{c.title}</span>
+                        <div className={`icon-badge ${c.badgeClass} group-hover:scale-110 transition-transform duration-200`}>
+                          <Icon size={20} strokeWidth={2.2} />
                         </div>
                       </div>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-xl font-bold font-mono tracking-tight text-[var(--text)]">{c.value}</span>
-                        <span className="text-xs text-[var(--text-3)]">{c.unit}</span>
+                        <span className="text-2xl font-bold font-mono tracking-tight text-[var(--text)]">{c.value}</span>
+                        <span className="text-xs font-semibold text-[var(--text-3)]">{c.unit}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-4 text-[11px]">
-                      <span className={`font-semibold font-mono flex items-center gap-0.5 ${
-                        isPositive ? 'text-emerald-600' : 'text-red-500'
-                      }`}>
-                        {isPositive ? '+' : ''}{c.delta}%
-                      </span>
-                      <span className="text-[var(--text-3)]">{c.sub}</span>
+                    <div className="flex items-center gap-2 mt-5 border-t border-[var(--border)] pt-3">
+                      <span className="text-[var(--text-3)] text-[10px] font-medium">{c.sub}</span>
                     </div>
                   </div>
                 );
@@ -463,14 +443,18 @@ function Dashboard() {
                   <h3 className="text-xs font-semibold text-[var(--text)]">Oylik Savdo</h3>
                   <p className="text-[10px] text-[var(--text-3)] mt-0.5">Oxirgi 6 oydagi sotuv dinamikasi (mln UZS)</p>
                 </div>
-                <button className="px-2 py-1 border border-[var(--border)] rounded text-[10px] hover:bg-[var(--surface-2)] text-[var(--text-2)] flex items-center gap-1.5">
+                <button onClick={handleExportMonthly} className="px-2 py-1 border border-[var(--border)] rounded text-[10px] hover:bg-[var(--surface-2)] text-[var(--text-2)] flex items-center gap-1.5">
                   <Download size={10} /> Eksport
                 </button>
               </div>
               {loading ? (
                 <div className="h-44 bg-[var(--surface-2)] animate-pulse rounded-lg" />
               ) : stats?.monthlyData ? (
-                <TrendSVGChart data={stats.monthlyData} />
+                <TrendChart
+                  data={stats.monthlyData.map(d => ({ amount: d.amount, label: d.month }))}
+                  ticks={5}
+                  gradientId="dashboardTrendGrad"
+                />
               ) : null}
             </div>
           </div>
@@ -576,6 +560,7 @@ function Dashboard() {
 // ─── App main component ────────────────────────────────────────────────────
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const { theme, toggle: toggleTheme } = useTheme();
@@ -617,27 +602,37 @@ export default function App() {
 
   return (
     <Router>
+      <DateFilterProvider>
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       <div className="flex h-screen bg-[var(--bg)] overflow-hidden font-sans">
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
+        <Sidebar
+          collapsed={collapsed}
+          onToggle={() => setCollapsed(!collapsed)}
+          user={user}
+          mobileOpen={mobileOpen}
+          onMobileClose={() => setMobileOpen(false)}
+        />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <TopHeader user={user} theme={theme} onToggleTheme={toggleTheme} />
+          <TopHeader user={user} theme={theme} onToggleTheme={toggleTheme} onMobileMenu={() => setMobileOpen(true)} />
           <div className="flex-1 overflow-y-auto pb-8">
             <Routes>
               <Route path="/"              element={<Dashboard />} />
-              <Route path="/clients"       element={<Clients />} />
-              <Route path="/products"      element={<Products />} />
-              <Route path="/contracts"     element={<Contracts />} />
-              <Route path="/sales"         element={<Sales />} />
-              <Route path="/payments"      element={<Payments />} />
-              <Route path="/interactions"  element={<InteractionsPage />} />
-              <Route path="/settings"      element={<SettingsPage />} />
+              {(user?.role === 'admin' || user?.permissions?.clients?.read !== false) && <Route path="/clients"       element={<Clients user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.products?.read !== false) && <Route path="/products"      element={<Products user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.contracts?.read !== false) && <Route path="/contracts"     element={<Contracts user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.sales?.read !== false) && <Route path="/sales"         element={<Sales user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.payments?.read !== false) && <Route path="/payments"      element={<Payments user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.interactions?.read !== false) && <Route path="/interactions"  element={<InteractionsPage user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.settings?.read !== false) && <Route path="/settings"      element={<SettingsPage user={user} />} />}
+              {(user?.role === 'admin' || user?.permissions?.reports?.read !== false) && <Route path="/reports"       element={<Reports user={user} />} />}
+              {user?.role === 'admin' && <Route path="/users" element={<UsersPage user={user} />} />}
               <Route path="/login"         element={<Dashboard />} />
               <Route path="*"              element={<Dashboard />} />
             </Routes>
           </div>
         </div>
       </div>
+      </DateFilterProvider>
     </Router>
   );
 }

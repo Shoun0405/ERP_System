@@ -22,7 +22,7 @@ const app = express();
 
 app.use(cookieParser());
 app.use(compression());
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet());
 
 if (process.env.NODE_ENV === 'production') {
   app.use(morgan('combined'));
@@ -51,6 +51,8 @@ app.use('/api/payments',     auth, require('./routes/payments'));
 app.use('/api/interactions', auth, require('./routes/interactions'));
 app.use('/api/dashboard',    auth, require('./routes/dashboard'));
 app.use('/api/settings',     auth, require('./routes/settings'));
+app.use('/api/users',        auth, require('./routes/users'));
+app.use('/api/reports',      auth, require('./routes/reports'));
 
 // Frontend static serve (production)
 const distPath = path.join(__dirname, '../frontend/dist');

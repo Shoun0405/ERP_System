@@ -45,7 +45,11 @@ const calcPrices = (mode, value, product) => {
 
 const EMPTY_FORM = { density: '', length: '', width: '', thickness: '' };
 
-export default function Products() {
+export default function Products({ user }) {
+  const canCreate = user?.role === 'admin' || user?.permissions?.products?.create !== false;
+  const canUpdate = user?.role === 'admin' || user?.permissions?.products?.update !== false;
+  const canDelete = user?.role === 'admin' || user?.permissions?.products?.delete === true;
+
   const [products,  setProducts]  = useState([]);
   const [total,     setTotal]     = useState(0);
   const [page,      setPage]      = useState(1);
@@ -169,9 +173,11 @@ export default function Products() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Mahsulotlar bazasi</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mahsulot · Kalkulyator va spetsifikatsiya</p>
           </div>
-          <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
-            <Plus size={14}/> Yangi Mahsulot
-          </button>
+          {canCreate && (
+            <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
+              <Plus size={16} strokeWidth={2.2}/> Yangi Mahsulot
+            </button>
+          )}
         </div>
       </div>
 
@@ -180,11 +186,11 @@ export default function Products() {
         <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
-              <Plus size={16} className="text-[var(--accent)]"/>
+              <Plus size={18} strokeWidth={2.2} className="text-[var(--accent)]"/>
               Yangi Mahsulot Qo'shish
             </h3>
             <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
-              <X size={16}/>
+              <X size={18} strokeWidth={2.2}/>
             </button>
           </div>
           <form onSubmit={handleSave} className="space-y-4">
@@ -243,7 +249,7 @@ export default function Products() {
             )}
 
             <p className="text-[10px] text-[var(--text-3)] flex items-center gap-1.5 justify-center">
-              <Calculator size={11}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
+              <Calculator size={13} strokeWidth={2}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
             </p>
 
             <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
@@ -257,46 +263,48 @@ export default function Products() {
       )}
 
       {/* Global Narx Paneli */}
-      <div className="mini-card border-[oklch(0.88_0.05_250)] bg-[oklch(0.96_0.03_250)]/30">
-        <div className="flex items-center gap-6 flex-wrap">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Calculator size={14} className="text-[var(--accent)]"/>
-            <span className="text-xs font-semibold text-[var(--text)]">Global narx</span>
+      {canUpdate && (
+        <div className="mini-card border-[oklch(0.88_0.05_250)] bg-[oklch(0.96_0.03_250)]/30">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Calculator size={18} strokeWidth={2.2} className="text-[var(--accent)]"/>
+              <span className="text-xs font-semibold text-[var(--text)]">Global narx</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {modeBtn('ton', '1 tonna')}
+              {modeBtn('cbm', '1 m³')}
+              {modeBtn('sqm', '1 m²')}
+            </div>
+            <div className="flex items-center gap-2 flex-1 min-w-48">
+              <input type="number" min="0" value={priceValue}
+                onChange={e => setPriceValue(e.target.value)}
+                placeholder="Narxni kiriting (UZS)"
+                className="flex-1 px-3 py-1.5 border border-[var(--border)] bg-[var(--surface)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none text-[var(--text)] placeholder-[var(--text-3)]"/>
+              <span className="text-xs text-[var(--text-2)] shrink-0 font-medium font-mono">UZS</span>
+            </div>
+            <button onClick={applyPrices}
+              disabled={applying || !priceValue || products.length === 0}
+              className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-40 text-[var(--accent-text)] rounded-lg text-xs font-medium transition flex items-center gap-2 shrink-0 shadow-sm">
+              <RefreshCw size={15} strokeWidth={2} className={applying ? 'animate-spin' : ''}/>
+              {applying ? 'Yangilanmoqda...' : `Ko'rinayotgan ${products.length} ta mahsulotga qo'llash`}
+            </button>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {modeBtn('ton', '1 tonna')}
-            {modeBtn('cbm', '1 m³')}
-            {modeBtn('sqm', '1 m²')}
-          </div>
-          <div className="flex items-center gap-2 flex-1 min-w-48">
-            <input type="number" min="0" value={priceValue}
-              onChange={e => setPriceValue(e.target.value)}
-              placeholder="Narxni kiriting (UZS)"
-              className="flex-1 px-3 py-1.5 border border-[var(--border)] bg-[var(--surface)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none text-[var(--text)] placeholder-[var(--text-3)]"/>
-            <span className="text-xs text-[var(--text-2)] shrink-0 font-medium font-mono">UZS</span>
-          </div>
-          <button onClick={applyPrices}
-            disabled={applying || !priceValue || products.length === 0}
-            className="px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-40 text-[var(--accent-text)] rounded-lg text-xs font-medium transition flex items-center gap-2 shrink-0 shadow-sm">
-            <RefreshCw size={13} className={applying ? 'animate-spin' : ''}/>
-            {applying ? 'Yangilanmoqda...' : `Ko'rinayotgan ${products.length} ta mahsulotga qo'llash`}
-          </button>
+          {previewPrices && (
+            <div className="mt-3 pt-3 border-t border-[var(--border)] flex gap-6 text-[10.5px] text-[var(--text-2)]">
+              <span className="text-[var(--text-3)]">Birinchi mahsulot uchun preview:</span>
+              <span>1 tonna → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceTon)} UZS</strong></span>
+              <span>1 m³ → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceCbm)} UZS</strong></span>
+              <span>1 m² → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceSqm)} UZS</strong></span>
+              <span className="text-[var(--text-3)] italic">*Har mahsulot zichlik va qalinligiga qarab farq qiladi</span>
+            </div>
+          )}
         </div>
-        {previewPrices && (
-          <div className="mt-3 pt-3 border-t border-[var(--border)] flex gap-6 text-[10.5px] text-[var(--text-2)]">
-            <span className="text-[var(--text-3)]">Birinchi mahsulot uchun preview:</span>
-            <span>1 tonna → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceTon)} UZS</strong></span>
-            <span>1 m³ → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceCbm)} UZS</strong></span>
-            <span>1 m² → <strong className="text-[var(--text)] font-mono">{fmtN(previewPrices.priceSqm)} UZS</strong></span>
-            <span className="text-[var(--text-3)] italic">*Har mahsulot zichlik va qalinligiga qarab farq qiladi</span>
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="mini-card p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
+            <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
             <input type="text" placeholder="Artikul bo'yicha qidirish..." value={search} onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-full focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
@@ -316,7 +324,7 @@ export default function Products() {
                 <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 bg-[oklch(0.97_0.02_70)]/40 uppercase tracking-wider text-right whitespace-nowrap">UZS / tonna</th>
                 <th className="px-3 py-2 text-[10px] font-semibold text-emerald-700 bg-[oklch(0.97_0.03_150)]/40 uppercase tracking-wider text-right whitespace-nowrap">UZS / m³</th>
                 <th className="px-3 py-2 text-[10px] font-semibold text-blue-700 bg-[oklch(0.96_0.03_250)]/40 uppercase tracking-wider text-right whitespace-nowrap">UZS / m²</th>
-                <th className="px-3 py-2 w-16 bg-[var(--surface-2)]"/>
+                {(canUpdate || canDelete) && <th className="px-3 py-2 w-16 bg-[var(--surface-2)]"/>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
@@ -341,13 +349,19 @@ export default function Products() {
                   <td className="px-3 py-2 text-right font-semibold text-amber-700 bg-[oklch(0.97_0.02_70)]/20 font-mono text-[11px]">{p.priceTon > 0 ? fmtN(p.priceTon) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
                   <td className="px-3 py-2 text-right font-semibold text-emerald-700 bg-[oklch(0.97_0.03_150)]/20 font-mono text-[11px]">{p.priceCbm > 0 ? fmtN(p.priceCbm) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
                   <td className="px-3 py-2 text-right font-semibold text-blue-700 bg-[oklch(0.96_0.03_250)]/20 font-mono text-[11px]">{p.priceSqm > 0 ? fmtN(p.priceSqm) : <span className="text-[var(--text-3)] font-normal">—</span>}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleCopy(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={12}/></button>
-                      <button onClick={() => openEdit(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={12}/></button>
-                      <button onClick={() => setDelId(p.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={12}/></button>
-                    </div>
-                  </td>
+                  {(canUpdate || canDelete) && (
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleCopy(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={15} strokeWidth={1.8}/></button>
+                        {canUpdate && (
+                          <button onClick={() => openEdit(p)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => setDelId(p.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -419,7 +433,7 @@ export default function Products() {
               )}
 
               <p className="text-[10px] text-[var(--text-3)] flex items-center gap-1.5 justify-center">
-                <Calculator size={11}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
+                <Calculator size={13} strokeWidth={2}/> Narxlar global narx panelidan boshqariladi — bu yerda kiritilmaydi
               </p>
 
               <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-2">

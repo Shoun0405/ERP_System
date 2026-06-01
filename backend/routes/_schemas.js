@@ -117,6 +117,23 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Parol majburiy'),
 });
 
+const userCreateSchema = z.object({
+  username: z.string().min(3, 'Foydalanuvchi nomi kamida 3 ta belgidan iborat bo\'lishi kerak').max(50),
+  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
+  fullName: z.string().min(1, 'Foydalanuvchi to\'liq ismi majburiy').max(100),
+  role: z.enum(['admin', 'seller', 'user']).default('seller'),
+  isActive: z.boolean().default(true),
+  permissions: z.any().optional(),
+});
+
+const userUpdateSchema = z.object({
+  fullName: z.string().min(1, 'Foydalanuvchi to\'liq ismi majburiy').max(100).optional(),
+  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100).optional().nullable().or(z.literal('')),
+  role: z.enum(['admin', 'seller', 'user']).optional(),
+  isActive: z.boolean().optional(),
+  permissions: z.any().optional(),
+});
+
 module.exports = {
   clientSchema,
   productSchema,
@@ -129,4 +146,7 @@ module.exports = {
   specSchema,
   specProductSchema,
   loginSchema,
+  userCreateSchema,
+  userUpdateSchema,
 };
+

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
+import { useDateFilter } from '../context/DateFilterContext';
 import { useModalKeys } from '../hooks/useModalKeys';
 import Pagination from '../components/Pagination';
 import { fmt, fmtDate } from '../lib/format';
@@ -8,7 +9,9 @@ import { Plus, X, Trash2, AlertCircle, Search, Copy } from 'lucide-react';
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
-export default function Payments() {
+export default function Payments({ user }) {
+  const canCreate = user?.role === 'admin' || user?.permissions?.payments?.create !== false;
+  const canDelete = user?.role === 'admin' || user?.permissions?.payments?.delete === true;
   const [payments,  setPayments]  = useState([]);
   const [total,     setTotal]     = useState(0);
   const [page,      setPage]      = useState(1);
@@ -24,8 +27,7 @@ export default function Payments() {
   const [filterClient, setFilterClient] = useState('');
   const [search,    setSearch]    = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [dateFrom,  setDateFrom]  = useState('');
-  const [dateTo,    setDateTo]    = useState('');
+  const { from: dateFrom, to: dateTo } = useDateFilter();
 
   const [form, setForm] = useState({ date: today(), amount: '', note: '', clientId: '', contractId: '' });
 
@@ -55,7 +57,7 @@ export default function Payments() {
   }, [form.clientId]);
 
   const totalIn = payments.reduce((s, p) => s + p.amount, 0);
-  const hasFilter = filterClient || dateFrom || dateTo || search;
+  const hasFilter = filterClient || search;
 
   const openModal = () => {
     setForm({ date: today(), amount: '', note: '', clientId: '', contractId: '' });
@@ -107,9 +109,11 @@ export default function Payments() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Tushumlar</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta to'lov</p>
           </div>
-          <button onClick={openModal} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
-            <Plus size={14}/> Yangi Tushum
-          </button>
+          {canCreate && (
+            <button onClick={openModal} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
+              <Plus size={16} strokeWidth={2.2}/> Yangi Tushum
+            </button>
+          )}
         </div>
       </div>
 
@@ -118,11 +122,11 @@ export default function Payments() {
         <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
-              <Plus size={16} className="text-[var(--accent)]"/>
+              <Plus size={18} strokeWidth={2.2} className="text-[var(--accent)]"/>
               Yangi Tushum Kiritish
             </h3>
             <button onClick={() => setModal(false)} className="text-[var(--text-3)] hover:text-[var(--text-2)] p-1 rounded-md hover:bg-[var(--surface-2)]">
-              <X size={16}/>
+              <X size={18} strokeWidth={2.2}/>
             </button>
           </div>
           <form onSubmit={handleSave} className="space-y-4">
@@ -167,7 +171,7 @@ export default function Payments() {
       {debtSummary.length > 0 && (
         <div className="mini-card p-0">
           <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-2">
-            <AlertCircle size={14} className="text-red-500"/>
+            <AlertCircle size={18} strokeWidth={2} className="text-red-500"/>
             <h3 className="text-xs font-semibold text-[var(--text)]">Qarzdorlik holati</h3>
           </div>
           <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -197,18 +201,14 @@ export default function Payments() {
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
+              <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
               <input type="text" placeholder="Mijoz, izoh..." value={search} onChange={e => setSearch(e.target.value)}
                 className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] outline-none transition w-40 text-[var(--text)] placeholder-[var(--text-3)]"/>
             </div>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]" title="Dan"/>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]" title="Gacha"/>
             {hasFilter && (
-              <button onClick={() => { setFilterClient(''); setSearch(''); setDateFrom(''); setDateTo(''); }}
+              <button onClick={() => { setFilterClient(''); setSearch(''); }}
                 className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
-                <X size={12}/> Tozalash
+                <X size={14} strokeWidth={2}/> Tozalash
               </button>
             )}
           </div>
@@ -247,8 +247,10 @@ export default function Payments() {
                   <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{fmt(p.amount)} UZS</td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={14}/></button>
-                      <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={14}/></button>
+                      <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
+                      {canDelete && (
+                        <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                      )}
                     </div>
                   </td>
                 </tr>

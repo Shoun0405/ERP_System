@@ -2,6 +2,8 @@ const router = require('express').Router();
 const prisma = require('../prisma');
 const { specSchema } = require('./_schemas');
 const { calcVat, calcRowTotal } = require('../lib/vat');
+const { requireRole, requirePermission } = require('../middleware/rbac');
+const { logAudit } = require('../lib/audit');
 
 // GET /api/specs?contractId=
 router.get('/', async (req, res, next) => {
@@ -35,7 +37,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST /api/specs — transaction: spec + products + contract.specCounter++
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('contracts', 'create'), async (req, res, next) => {
   try {
     const body = specSchema.parse(req.body);
 
@@ -81,12 +83,14 @@ router.post('/', async (req, res, next) => {
       return spec;
     });
 
+    await logAudit(req.user.id, 'create', 'specification', result.id, body, req);
+
     res.json(result);
   } catch (e) { next(e); }
 });
 
 // PUT /api/specs/:id — mahsulot qatorlari to'liq almashtiriladi
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('contracts', 'update'), async (req, res, next) => {
   try {
     const body = specSchema.partial({ contractId: true, products: true }).parse(req.body);
 
@@ -131,14 +135,24 @@ router.put('/:id', async (req, res, next) => {
       });
     });
 
+    await logAudit(req.user.id, 'update', 'specification', req.params.id, body, req);
+
     res.json(updated);
   } catch (e) { next(e); }
 });
 
-// DELETE /api/specs/:id — bog'langan Sale bo'lsa 409
-router.delete('/:id', async (req, res, next) => {
+// DELETE /api/specs/:id — bog'langan Sale bo'lsa 409 (Admin-only)
+router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res, next) => {
   try {
-    await prisma.specification.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    const spec = await prisma.specification.findUnique({ where: { id } });
+    if (!spec) {
+      return res.status(404).json({ error: 'Spetsifikatsiya topilmadi' });
+    }
+    await prisma.specification.delete({ where: { id } });
+    
+    await logAudit(req.user.id, 'delete', 'specification', id, { number: spec.number }, req);
+
     res.json({ success: true });
   } catch (e) {
     if (e.code === 'P2003') return res.status(409).json({ error: "Bu spets bo'yicha savdo mavjud, avval savdoni o'chiring" });

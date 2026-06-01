@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronDown, ChevronRight, MoreVertical, Pencil, Trash2,
   FileText, FileSpreadsheet, X, Check, AlertTriangle,
-  ShoppingCart, RefreshCw, Search, Printer, Copy, Download
+  ShoppingCart, RefreshCw, Search, Printer, Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { API } from '../lib/api';
@@ -11,6 +11,7 @@ import { fmt, fmtDate } from '../lib/format';
 import { calcRowTotal, calcVat } from '../lib/vat';
 import { useInlineForm } from '../hooks/useInlineForm';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { useDateFilter } from '../context/DateFilterContext';
 import Pagination from '../components/Pagination';
 
 const STATUS_LABELS = { yangi: 'Yangi', amalda: 'Amalda', yopilgan: 'Yopilgan' };
@@ -255,7 +256,9 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
 }
 
 // ─── ContractRow (ro'yxat qatori + expand) ─────────────────────────────────
-function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDeleted }) {
+function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDeleted, user }) {
+  const canUpdate = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
+  const canDelete = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
   const navigate = useNavigate();
   const [expanded, setExpanded]  = useState(false);
   const [specs, setSpecs]        = useState(null);
@@ -335,8 +338,8 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
           <div className="flex items-center gap-2">
             <span className={`shrink-0 rounded p-0.5 transition-colors ${expanded ? 'bg-[var(--accent-bg)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}>
               {expanded
-                ? <ChevronDown size={15} />
-                : <ChevronRight size={15} />}
+                ? <ChevronDown size={17} strokeWidth={2.2} />
+                : <ChevronRight size={17} strokeWidth={2.2} />}
             </span>
             <span className="text-sm font-semibold text-[var(--text)]">{c.client?.name}</span>
           </div>
@@ -364,7 +367,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <button onClick={openMenu}
             className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]">
-            <MoreVertical size={15} />
+            <MoreVertical size={18} strokeWidth={2} />
           </button>
           {menuOpen && menuPos && (
             <div
@@ -372,23 +375,27 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
               className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl w-44 py-1"
               onMouseDown={e => e.stopPropagation()}
             >
-              <button onClick={() => { setMenuOpen(false); onEdit(c); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
-                <Pencil size={14} /> Tahrirlash
-              </button>
-              <button onClick={() => { setMenuOpen(false); onDelete(c); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                <Trash2 size={14} /> O'chirish
-              </button>
+              {canUpdate && (
+                <button onClick={() => { setMenuOpen(false); onEdit(c); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
+                  <Pencil size={15} strokeWidth={1.8} /> Tahrirlash
+                </button>
+              )}
+              {canDelete && (
+                <button onClick={() => { setMenuOpen(false); onDelete(c); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                  <Trash2 size={15} strokeWidth={1.8} /> O'chirish
+                </button>
+              )}
               <a href={`${API}/api/export/contracts/${c.id}/pdf`} target="_blank" rel="noreferrer"
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>
-                <FileText size={14} /> PDF yuklab olish
+                <FileText size={15} strokeWidth={1.8} /> PDF yuklab olish
               </a>
               <a href={`${API}/api/export/contracts/${c.id}/excel`}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>
-                <FileSpreadsheet size={14} /> Excel yuklab olish
+                <FileSpreadsheet size={15} strokeWidth={1.8} /> Excel yuklab olish
               </a>
             </div>
           )}
@@ -935,7 +942,9 @@ const fmtInn = (inn) => {
   return d.replace(/(\d{3})(?=\d)/g, '$1 ');
 };
 
-export default function Contracts() {
+export default function Contracts({ user }) {
+  // Mijoz/tahrirlash/o'chirish ruxsatlari ContractRow ichida tekshiriladi
+  const canCreate = user?.role === 'admin' || user?.permissions?.contracts?.create !== false;
   const [contracts, setContracts] = useState([]);
   const [total, setTotal]         = useState(0);
   const [page, setPage]           = useState(1);
@@ -949,35 +958,9 @@ export default function Contracts() {
   const [editContract, setEditContract] = useState(null);
   const [delContract, setDelContract]  = useState(null);
   const form = useInlineForm();
-  const [dateFrom, setDateFrom]   = useState('');
-  const [dateTo, setDateTo]       = useState('');
+  const { from: dateFrom, to: dateTo } = useDateFilter();
   const [debtFilter, setDebtFilter] = useState('barchasi');
   const LIMIT = 20;
-
-  const prevMonth = () => {
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-    const to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
-    setDateFrom(from); setDateTo(to);
-  };
-  const monthStart = () => {
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const to = now.toISOString().split('T')[0];
-    setDateFrom(from); setDateTo(to);
-  };
-  const yearStart = () => {
-    const now = new Date();
-    const from = `${now.getFullYear()}-01-01`;
-    const to = now.toISOString().split('T')[0];
-    setDateFrom(from); setDateTo(to);
-  };
-  const prevYear = () => {
-    const now = new Date();
-    const from = `${now.getFullYear() - 1}-01-01`;
-    const to = `${now.getFullYear() - 1}-12-31`;
-    setDateFrom(from); setDateTo(to);
-  };
 
   // Debounced search
   useEffect(() => {
@@ -999,12 +982,13 @@ export default function Contracts() {
         ...(status          ? { status }                   : {}),
         ...(dateFrom        ? { from: dateFrom }           : {}),
         ...(dateTo          ? { to: dateTo }               : {}),
+        ...(debtFilter && debtFilter !== 'barchasi' ? { debtFilter } : {}),
       });
       const { data } = await api.get(`/api/contracts?${params}`);
       setContracts(data.data);
       setTotal(data.total);
     } finally { setLoading(false); }
-  }, [page, debouncedSearch, status, sortBy, sortDir, dateFrom, dateTo]);
+  }, [page, debouncedSearch, status, sortBy, sortDir, dateFrom, dateTo, debtFilter]);
 
   const toggleSort = (col) => {
     if (sortBy === col) {
@@ -1016,7 +1000,7 @@ export default function Contracts() {
     setPage(1);
   };
 
-  useEffect(() => { load(page); }, [page, debouncedSearch, status, sortBy, sortDir, dateFrom, dateTo]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [dateFrom, dateTo, debtFilter]);
 
   const handleSaved = (saved) => {
@@ -1071,11 +1055,13 @@ export default function Contracts() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Shartnomalar</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">Jami: {total} ta</p>
           </div>
-          <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 btn-primary text-xs font-medium rounded-lg transition shadow-sm">
-            <Plus size={14} />
-            {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
-          </button>
+          {canCreate && (
+            <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 btn-primary text-xs font-medium rounded-lg transition shadow-sm">
+              <Plus size={16} strokeWidth={2.2} />
+              {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1133,19 +1119,12 @@ export default function Contracts() {
       <div className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] space-y-3">
         <div className="flex gap-3 flex-wrap items-center">
           <div className="relative flex-1 min-w-48">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+            <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <input
               value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
               placeholder="Qidirish: mijoz, INN, raqam..."
               className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"
             />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--accent)] text-[var(--text)]" title="Dan" />
-            <span className="text-xs text-[var(--text-3)]">—</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--accent)] text-[var(--text)]" title="Gacha" />
           </div>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
             className="border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
@@ -1222,6 +1201,7 @@ export default function Contracts() {
                     onDelete={setDelContract}
                     onSpecSaved={() => load(page)}
                     onSpecDeleted={() => load(page)}
+                    user={user}
                   />
                 ))
               )}

@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { saleSchema } = require('./_schemas');
+const { requireRole, requirePermission } = require('../middleware/rbac');
+const { logAudit } = require('../lib/audit');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -94,7 +96,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('sales', 'create'), async (req, res, next) => {
   try {
     const parsed = saleSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -174,6 +176,8 @@ router.post('/', async (req, res, next) => {
       });
     });
 
+    await logAudit(req.user.id, 'create', 'sale', sale.id, parsed.data, req);
+
     res.json(sale);
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.publicMessage || e.message });
@@ -182,7 +186,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) => {
   try {
     const data = saleSchema.partial().parse(req.body);
     const saleId = req.params.id;
@@ -275,6 +279,8 @@ router.put('/:id', async (req, res, next) => {
       });
     });
 
+    await logAudit(req.user.id, 'update', 'sale', saleId, data, req);
+
     res.json(updatedSale);
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.publicMessage || e.message });
@@ -283,20 +289,22 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/bulk-delete', async (req, res, next) => {
+// Admin-only bulk delete
+router.post('/bulk-delete', requirePermission('sales', 'delete'), async (req, res, next) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids massiv bo\'lishi kerak' });
     await prisma.sale.deleteMany({
       where: { id: { in: ids } },
     });
+    await logAudit(req.user.id, 'delete', 'sale', null, { ids }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);
   }
 });
 
-router.post('/bulk-factura', async (req, res, next) => {
+router.post('/bulk-factura', requirePermission('sales', 'update'), async (req, res, next) => {
   try {
     const { ids, status } = req.body;
     if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids massiv bo\'lishi kerak' });
@@ -305,15 +313,23 @@ router.post('/bulk-factura', async (req, res, next) => {
       where: { id: { in: ids } },
       data: { facturaStatus: status },
     });
+    await logAudit(req.user.id, 'update', 'sale', null, { ids, status }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+// Admin-only single delete
+router.delete('/:id', requirePermission('sales', 'delete'), async (req, res, next) => {
   try {
-    await prisma.sale.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    const sale = await prisma.sale.findUnique({ where: { id } });
+    if (!sale) {
+      return res.status(404).json({ error: 'Savdo topilmadi' });
+    }
+    await prisma.sale.delete({ where: { id } });
+    await logAudit(req.user.id, 'delete', 'sale', id, { nakladnoy: sale.nakladnoy }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);

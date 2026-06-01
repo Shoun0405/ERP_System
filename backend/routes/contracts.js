@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
+const { Prisma } = require('@prisma/client');
 const { contractSchema } = require('./_schemas');
+const { requireRole, requirePermission } = require('../middleware/rbac');
+const { logAudit } = require('../lib/audit');
 
 const SORT_FIELDS = new Set(['date', 'number', 'totalValue', 'status', 'createdAt', 'client']);
 
@@ -35,6 +38,31 @@ router.get('/', async (req, res, next) => {
         ],
       } : {}),
     };
+
+    // Qarzdorlik bo'yicha filtr: debt = yetkazilgan (delivered) − to'langan (paid).
+    // Mos id'larni oldindan topib, Prisma `where` ga qo'shamiz (boshqa shartlar bilan kesishadi).
+    const debtFilter = req.query.debtFilter || 'barchasi';
+    if (['qarzdorlar', 'haqdorlar', 'yangi'].includes(debtFilter)) {
+      const cmp = debtFilter === 'qarzdorlar' ? Prisma.sql`> 0`
+                : debtFilter === 'haqdorlar'  ? Prisma.sql`< 0`
+                :                               Prisma.sql`= 0`;
+      const debtRows = await prisma.$queryRaw(Prisma.sql`
+        SELECT c.id::text AS id
+        FROM "Contract" c
+        LEFT JOIN (
+          SELECT "contractId", SUM(amount) AS paid
+          FROM "Payment" GROUP BY "contractId"
+        ) p_agg ON p_agg."contractId" = c.id
+        LEFT JOIN (
+          SELECT s."contractId", SUM(sp."rowAmount") AS delivered
+          FROM "Sale" s
+          JOIN "SaleProduct" sp ON sp."saleId" = s.id
+          GROUP BY s."contractId"
+        ) d_agg ON d_agg."contractId" = c.id
+        WHERE (COALESCE(d_agg.delivered, 0) - COALESCE(p_agg.paid, 0)) ${cmp}
+      `);
+      where.id = { in: debtRows.map(r => r.id) };
+    }
 
     const [contracts, total] = await Promise.all([
       prisma.contract.findMany({
@@ -149,7 +177,7 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // POST /api/contracts — auto yoki manual numbering
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('contracts', 'create'), async (req, res, next) => {
   try {
     const body    = contractSchema.parse(req.body);
     const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
@@ -187,6 +215,9 @@ router.post('/', async (req, res, next) => {
       },
       include: { client: { select: { id: true, name: true, inn: true } } },
     });
+    
+    await logAudit(req.user.id, 'create', 'contract', contract.id, body, req);
+
     res.json(contract);
   } catch (e) {
     if (e.code === 'P2002') return res.status(409).json({ error: 'Bu raqam allaqachon mavjud' });
@@ -195,7 +226,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // PUT /api/contracts/:id — faqat tahrirlash mumkin bo'lgan maydonlar
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('contracts', 'update'), async (req, res, next) => {
   try {
     const body     = contractSchema.partial().parse(req.body);
     const contract = await prisma.contract.update({
@@ -210,14 +241,22 @@ router.put('/:id', async (req, res, next) => {
       },
       include: { client: { select: { id: true, name: true, inn: true } } },
     });
+    
+    await logAudit(req.user.id, 'update', 'contract', contract.id, body, req);
+
     res.json(contract);
   } catch (e) { next(e); }
 });
 
-// DELETE /api/contracts/:id
-router.delete('/:id', async (req, res, next) => {
+// DELETE /api/contracts/:id (Admin-only delete)
+router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res, next) => {
   try {
     const contractId = req.params.id;
+    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) {
+      return res.status(404).json({ error: 'Shartnoma topilmadi' });
+    }
+
     const [linkedSales, linkedPayments] = await Promise.all([
       prisma.sale.count({ where: { contractId } }),
       prisma.payment.count({ where: { contractId } }),
@@ -226,6 +265,9 @@ router.delete('/:id', async (req, res, next) => {
       return res.status(409).json({ error: "Bog'langan savdo yoki to'lov mavjud" });
     }
     await prisma.contract.delete({ where: { id: contractId } });
+    
+    await logAudit(req.user.id, 'delete', 'contract', contractId, { number: contract.number }, req);
+
     res.json({ success: true });
   } catch (e) {
     next(e);

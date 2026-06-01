@@ -86,7 +86,7 @@ export default function Settings() {
         {/* Kompaniya ma'lumotlari */}
         <div className="mini-card space-y-4">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Building2 size={14} className="text-[var(--accent)]" /> Kompaniya ma'lumotlari
+            <Building2 size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> Kompaniya ma'lumotlari
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -123,7 +123,7 @@ export default function Settings() {
         {/* Sotuvchilar */}
         <div className="mini-card space-y-4">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Users size={14} className="text-[var(--accent)]" /> Sotuvchilar ro'yxati
+            <Users size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> Sotuvchilar ro'yxati
           </h3>
           <div className="flex gap-2">
             <input
@@ -134,7 +134,7 @@ export default function Settings() {
               placeholder="Sotuvchi F.I.O. va Enter bosing..."
             />
             <button type="button" onClick={addSeller} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
-              <Plus size={13} /> Qo'shish
+              <Plus size={16} strokeWidth={2.2} /> Qo'shish
             </button>
           </div>
           {data.sellers.length === 0 ? (
@@ -147,7 +147,7 @@ export default function Settings() {
                   <button
                     type="button" onClick={() => removeSeller(s)}
                     className="text-[var(--text-3)] hover:text-red-500 transition p-1 rounded"
-                  ><Trash2 size={13} /></button>
+                  ><Trash2 size={15} strokeWidth={1.8} /></button>
                 </div>
               ))}
             </div>
@@ -157,7 +157,7 @@ export default function Settings() {
         {/* Ma'lumotlar zaxirasi */}
         <div className="mini-card space-y-3">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Database size={14} className="text-[var(--accent)]" /> Ma'lumotlar zaxirasi
+            <Database size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> Ma'lumotlar zaxirasi
           </h3>
           <p className="text-xs text-[var(--text-3)]">PostgreSQL bazasi zaxirasini yuklab olish (pg_dump format):</p>
           <div className="flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-1.5">
@@ -187,7 +187,7 @@ export default function Settings() {
                 : 'btn-primary disabled:opacity-60'
             }`}
           >
-            <Save size={13} />
+            <Save size={16} strokeWidth={2.2} />
             {saving ? 'Saqlanmoqda...' : saved ? '✓ Saqlandi!' : 'O\'zgarishlarni saqlash'}
           </button>
         </div>

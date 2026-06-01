@@ -129,7 +129,7 @@ export default function InteractionsPage() {
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta yozuv</p>
           </div>
           <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
-            <Plus size={14}/> Yangi muloqot
+            <Plus size={16} strokeWidth={2.2}/> Yangi muloqot
           </button>
         </div>
       </div>
@@ -139,11 +139,11 @@ export default function InteractionsPage() {
         <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
-              <Plus size={16} className="text-[var(--accent)]"/>
+              <Plus size={18} strokeWidth={2.2} className="text-[var(--accent)]"/>
               Yangi Muloqot Qo'shish
             </h3>
             <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
-              <X size={16}/>
+              <X size={18} strokeWidth={2.2}/>
             </button>
           </div>
           <form onSubmit={handleSave} className="space-y-4">
@@ -195,14 +195,14 @@ export default function InteractionsPage() {
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
+            <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
             <input type="text" placeholder="Mijoz, izoh, tur..." value={search} onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] outline-none transition w-44 text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
           {hasFilter && (
             <button onClick={() => { setFilterClient(''); setSearch(''); }}
               className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
-              <X size={12}/> Tozalash
+              <X size={14} strokeWidth={2}/> Tozalash
             </button>
           )}
         </div>
@@ -227,7 +227,7 @@ export default function InteractionsPage() {
             return (
               <div key={it.id} className="px-5 py-3 flex gap-4 hover:bg-[var(--surface-2)] transition-colors group border-b border-[var(--border)] last:border-none">
                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${TYPE_COLORS[it.type] || TYPE_COLORS['Boshqa']}`}>
-                  <Icon size={14}/>
+                  <Icon size={18} strokeWidth={2}/>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -238,14 +238,14 @@ export default function InteractionsPage() {
                   {it.note && <p className="text-xs text-[var(--text-2)] mt-1">{it.note}</p>}
                   {it.nextDate && (
                     <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1 font-semibold">
-                      <Calendar size={11}/> Keyingi: {new Date(it.nextDate).toLocaleDateString('uz-UZ')}
+                      <Calendar size={13} strokeWidth={2}/> Keyingi: {new Date(it.nextDate).toLocaleDateString('uz-UZ')}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button onClick={() => handleCopy(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={12}/></button>
-                  <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={12}/></button>
-                  <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={12}/></button>
+                  <button onClick={() => handleCopy(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={15} strokeWidth={1.8}/></button>
+                  <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
+                  <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
                 </div>
               </div>
             );

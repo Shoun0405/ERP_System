@@ -25,13 +25,17 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Foydalanuvchi nomi yoki parol noto\'g\'ri' });
     }
 
+    if (!user.isActive) {
+      return res.status(403).json({ error: 'Foydalanuvchi hisobi faolsizlantirilgan' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: 'Foydalanuvchi nomi yoki parol noto\'g\'ri' });
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: user.id, username: user.username, role: user.role, fullName: user.fullName, permissions: user.permissions },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -49,7 +53,9 @@ router.post('/login', async (req, res, next) => {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        fullName: user.fullName,
+        permissions: user.permissions
       }
     });
   } catch (err) {

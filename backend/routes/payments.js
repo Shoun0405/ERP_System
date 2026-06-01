@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { paymentSchema } = require('./_schemas');
+const { requireRole, requirePermission } = require('../middleware/rbac');
+const { logAudit } = require('../lib/audit');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -48,7 +50,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('payments', 'create'), async (req, res, next) => {
   try {
     const { date, amount, note, clientId, contractId } = paymentSchema.parse(req.body);
 
@@ -72,15 +74,25 @@ router.post('/', async (req, res, next) => {
         contract: { select: { id: true, number: true } },
       },
     });
+
+    await logAudit(req.user.id, 'create', 'payment', payment.id, { date, amount, note, clientId, contractId }, req);
+
     res.json(payment);
   } catch (e) {
     next(e);
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+// Admin-only delete
+router.delete('/:id', requirePermission('payments', 'delete'), async (req, res, next) => {
   try {
-    await prisma.payment.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment) {
+      return res.status(404).json({ error: 'To\'lov topilmadi' });
+    }
+    await prisma.payment.delete({ where: { id } });
+    await logAudit(req.user.id, 'delete', 'payment', id, { amount: payment.amount }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);

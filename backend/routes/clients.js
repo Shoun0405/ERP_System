@@ -2,6 +2,8 @@ const router = require('express').Router();
 const prisma = require('../prisma');
 const { Prisma } = require('@prisma/client');
 const { clientSchema } = require('./_schemas');
+const { requireRole, requirePermission } = require('../middleware/rbac');
+const { logAudit } = require('../lib/audit');
 
 const SORT_COLS = {
   name:      'name',
@@ -101,30 +103,39 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('clients', 'create'), async (req, res, next) => {
   try {
     const data = clientSchema.parse(req.body);
     const client = await prisma.client.create({ data });
+    await logAudit(req.user.id, 'create', 'client', client.id, data, req);
     res.json(client);
   } catch (e) {
     next(e);
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('clients', 'update'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const data = clientSchema.partial().parse(req.body);
     const client = await prisma.client.update({ where: { id }, data });
+    await logAudit(req.user.id, 'update', 'client', id, data, req);
     res.json(client);
   } catch (e) {
     next(e);
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+// Admin-only delete
+router.delete('/:id', requirePermission('clients', 'delete'), async (req, res, next) => {
   try {
-    await prisma.client.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    const client = await prisma.client.findUnique({ where: { id } });
+    if (!client) {
+      return res.status(404).json({ error: 'Mijoz topilmadi' });
+    }
+    await prisma.client.delete({ where: { id } });
+    await logAudit(req.user.id, 'delete', 'client', id, { name: client.name }, req);
     res.json({ success: true });
   } catch (e) {
     if (e.code === 'P2003') return res.status(409).json({ error: "Bog'langan shartnoma, savdo yoki to'lov mavjud" });

@@ -161,9 +161,14 @@ export default function Login() {
               />
               <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>Eslab qolish</span>
             </label>
-            <span className="text-[11px] cursor-pointer transition" style={{ color: 'var(--text-3)' }}>
+            <button
+              type="button"
+              onClick={() => toast('Parolni tiklash uchun administrator bilan bog\'laning.', { icon: '🔑' })}
+              className="text-[11px] cursor-pointer transition hover:underline bg-transparent border-0 p-0"
+              style={{ color: 'var(--text-3)' }}
+            >
               Parolni unutdingizmi?
-            </span>
+            </button>
           </div>
 
           {/* Submit */}

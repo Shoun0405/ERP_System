@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { interactionSchema } = require('./_schemas');
+const { logAudit } = require('../lib/audit');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -38,9 +39,12 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+const { requirePermission } = require('../middleware/rbac');
+
+router.post('/', requirePermission('interactions', 'create'), async (req, res, next) => {
   try {
-    const { date, type, note, nextDate, clientId } = interactionSchema.parse(req.body);
+    const data = interactionSchema.parse(req.body);
+    const { date, type, note, nextDate, clientId } = data;
     const interaction = await prisma.interaction.create({
       data: {
         date: new Date(date),
@@ -51,15 +55,19 @@ router.post('/', async (req, res, next) => {
       },
       include: { client: true },
     });
+    
+    await logAudit(req.user.id, 'create', 'interaction', interaction.id, data, req);
+
     res.json(interaction);
   } catch (e) {
     next(e);
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('interactions', 'update'), async (req, res, next) => {
   try {
-    const { date, type, note, nextDate, clientId } = interactionSchema.partial().parse(req.body);
+    const data = interactionSchema.partial().parse(req.body);
+    const { date, type, note, nextDate, clientId } = data;
     const interaction = await prisma.interaction.update({
       where: { id: req.params.id },
       data: {
@@ -71,15 +79,26 @@ router.put('/:id', async (req, res, next) => {
       },
       include: { client: true },
     });
+    
+    await logAudit(req.user.id, 'update', 'interaction', req.params.id, data, req);
+
     res.json(interaction);
   } catch (e) {
     next(e);
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('interactions', 'delete'), async (req, res, next) => {
   try {
-    await prisma.interaction.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    const interaction = await prisma.interaction.findUnique({ where: { id } });
+    if (!interaction) {
+      return res.status(404).json({ error: 'Muloqot topilmadi' });
+    }
+    await prisma.interaction.delete({ where: { id } });
+    
+    await logAudit(req.user.id, 'delete', 'interaction', id, { type: interaction.type }, req);
+
     res.json({ success: true });
   } catch (e) {
     next(e);

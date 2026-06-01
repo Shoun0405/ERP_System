@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useModalKeys } from '../hooks/useModalKeys';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 import * as XLSX from 'xlsx';
 import { fmt } from '../lib/format';
-import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
 
 const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', seller:'' };
 const SC = {
@@ -108,7 +109,15 @@ function MultiSellerSelect({ sellers, value, onChange }) {
   );
 }
 
-export default function Clients() {
+export default function Clients({ user }) {
+  const canCreate = user?.role === 'admin' || user?.permissions?.clients?.create !== false;
+  const canUpdate = user?.role === 'admin' || user?.permissions?.clients?.update !== false;
+  const canDelete = user?.role === 'admin' || user?.permissions?.clients?.delete === true;
+
+  const canCreateContract = user?.role === 'admin' || user?.permissions?.contracts?.create !== false;
+  const canUpdateContract = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
+  const canDeleteContract = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
+
   const [clients,  setClients]  = useState([]);
   const [total,    setTotal]    = useState(0);
   const [page,     setPage]     = useState(1);
@@ -116,8 +125,9 @@ export default function Clients() {
 
   const [loading,  setLoading]  = useState(true);
   const [sellers,  setSellers]  = useState([]);
-  const [search,   setSearch]   = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const [search,   setSearch]   = useState(searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('q') || '');
   const [sort,     setSort]     = useState({ col:'createdAt', dir:'desc' });
   const [debtFilter, setDebtFilter] = useState('barchasi');
   const [expanded, setExpanded] = useState(null);
@@ -144,6 +154,12 @@ export default function Clients() {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  // Sync search from global header ?q= param
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) setSearch(q);
+  }, [searchParams]);
 
   useEffect(() => {
     setPage(1);
@@ -304,13 +320,15 @@ export default function Clients() {
             <h2 className="text-lg font-semibold text-[var(--text)]">Mijozlar (CRM)</h2>
             <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta mijoz</p>
           </div>
-          <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
-            <Plus size={14}/> Yangi Mijoz
-          </button>
+          {canCreate && (
+            <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
+              <Plus size={16} strokeWidth={2.2}/> Yangi Mijoz
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
           <button onClick={handleExport} className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
-            <Download size={14}/> Excel
+            <Download size={16} strokeWidth={2.2}/> Excel
           </button>
         </div>
       </div>
@@ -342,18 +360,18 @@ export default function Clients() {
         <div className="mini-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
-              <Plus size={16} className="text-[var(--accent)]"/>
+              <Plus size={18} strokeWidth={2.2} className="text-[var(--accent)]"/>
               Yangi Mijoz Qo'shish
             </h3>
             <button onClick={closeModal} className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
-              <X size={16}/>
+              <X size={18} strokeWidth={2.2}/>
             </button>
           </div>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Tashkilot nomi *</label>
-                <input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className={inp('name')} placeholder="MChJ, XK..."/>
+                <input autoFocus type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className={inp('name')} placeholder="MChJ, XK..."/>
                 {errors.name&&<p className="text-[10px] text-red-500 mt-0.5">{errors.name}</p>}
               </div>
               <div>
@@ -419,7 +437,7 @@ export default function Clients() {
       <div className="mini-card p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] w-4 h-4"/>
+            <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
             <input type="text" placeholder="Mijoz, STIR, telefon, sotuvchi..." value={search} onChange={e=>setSearch(e.target.value)}
               className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-full focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
@@ -443,12 +461,28 @@ export default function Clients() {
                   <td key={j} className="px-5 py-3"><div className="h-4 bg-[var(--surface-2)] animate-pulse rounded"/></td>
                 ))}</tr>
               )) : clients.length===0 ? (
-                <tr><td colSpan={COLS} className="px-5 py-12 text-center text-[var(--text-3)] text-xs">{search?'Topilmadi':'Hozircha mijozlar yo\'q'}</td></tr>
+                <tr><td colSpan={COLS} className="px-5 py-12 text-center">
+                  {search ? (
+                    <span className="text-[var(--text-3)] text-xs">Topilmadi</span>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <span className="text-[var(--text-3)] text-xs">Hozircha mijozlar yo'q</span>
+                      {canCreate && (
+                        <button onClick={openAdd} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium inline-flex items-center gap-2 shadow-sm">
+                          <Plus size={15} strokeWidth={2.2}/> Birinchi mijozni qo'shing
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td></tr>
               ) : clients.map(c=>(
                 <Fragment key={c.id}>
-                  <tr className={`hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group ${expanded===c.id?'bg-[var(--surface-2)]':''}`}>
+                  <tr onClick={()=>toggleExpand(c.id)} className={`hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group cursor-pointer ${expanded===c.id?'bg-[var(--surface-2)]':''}`}>
                     <td className="px-5 py-2.5">
                       <div className="flex items-center gap-3">
+                        <span className={`shrink-0 rounded p-0.5 transition-colors ${expanded===c.id ? 'text-[var(--accent)]' : 'text-[var(--text-3)] group-hover:text-[var(--text-2)]'}`}>
+                          {expanded===c.id ? <ChevronDown size={16} strokeWidth={2.2}/> : <ChevronRight size={16} strokeWidth={2.2}/>}
+                        </span>
                         <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)] text-[11px] font-semibold shrink-0">{c.name.charAt(0).toUpperCase()}</div>
                         <div>
                           <p className="text-xs font-semibold text-[var(--text)]">{c.name}</p>
@@ -465,14 +499,15 @@ export default function Clients() {
                     <td className="px-5 py-2.5 text-xs text-right font-semibold font-mono">
                       {c.debt>0?<span className="text-red-500">{fmt(c.debt)} UZS</span>:c.debt<0?<span className="text-emerald-600">+{fmt(Math.abs(c.debt))} UZS</span>:<span className="text-[var(--text-3)]">0</span>}
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-5 py-2.5" onClick={e=>e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={()=>handleCopy(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Nusxa olish"><Copy size={13}/></button>
-                        <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={13}/></button>
-                        <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={13}/></button>
-                        <button onClick={()=>toggleExpand(c.id)} className={`p-1 rounded transition ${expanded===c.id?'text-[var(--accent)] bg-[var(--accent-bg)]':'text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'}`} title="Batafsil">
-                          {expanded===c.id?<ChevronUp size={13}/>:<ChevronDown size={13}/>}
-                        </button>
+                        <button onClick={()=>handleCopy(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
+                        {canUpdate && (
+                          <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
+                        )}
+                        {canDelete && (
+                          <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -493,10 +528,12 @@ export default function Clients() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-2">
-                              <button onClick={() => openContractAdd(c.id)}
-                                className="flex items-center gap-0.5 text-xs text-[var(--accent)] hover:underline font-medium">
-                                <Plus size={11}/> Yangi shartnoma qo'shish
-                              </button>
+                              {canCreateContract && (
+                                <button onClick={() => openContractAdd(c.id)}
+                                  className="flex items-center gap-0.5 text-xs text-[var(--accent)] hover:underline font-medium">
+                                  <Plus size={11}/> Yangi shartnoma qo'shish
+                                </button>
+                              )}
                               <span className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnomalar</span>
                             </div>
                             {!expandContracts[c.id] ? (
@@ -511,8 +548,12 @@ export default function Clients() {
                                     <span className="text-[var(--text-3)] font-mono text-[10px]">{new Date(ct.date).toLocaleDateString('uz-UZ')}</span>
                                     <span className="text-[var(--accent)] font-semibold font-mono">{fmt(ct.totalValue)}</span>
                                     <div className="flex gap-1 opacity-0 group-hover/ct:opacity-100 transition-opacity">
-                                      <button onClick={() => openContractEdit(ct, c.id)} className="p-0.5 text-[var(--text-3)] hover:text-[var(--accent)] rounded"><Edit2 size={10}/></button>
-                                      <button onClick={() => setDelContractId({ id: ct.id, clientId: c.id })} className="p-0.5 text-[var(--text-3)] hover:text-red-500 rounded"><Trash2 size={10}/></button>
+                                      {canUpdateContract && (
+                                        <button onClick={() => openContractEdit(ct, c.id)} className="p-0.5 text-[var(--text-3)] hover:text-[var(--accent)] rounded"><Edit2 size={10}/></button>
+                                      )}
+                                      {canDeleteContract && (
+                                        <button onClick={() => setDelContractId({ id: ct.id, clientId: c.id })} className="p-0.5 text-[var(--text-3)] hover:text-red-500 rounded"><Trash2 size={10}/></button>
+                                      )}
                                     </div>
                                   </div>
                                 ))}
@@ -545,7 +586,7 @@ export default function Clients() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Tashkilot nomi *</label>
-                  <input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className={inp('name')} placeholder="MChJ, XK..."/>
+                  <input autoFocus type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className={inp('name')} placeholder="MChJ, XK..."/>
                   {errors.name&&<p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                 </div>
                 <div>
