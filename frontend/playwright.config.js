@@ -12,7 +12,17 @@ export default defineConfig({
     actionTimeout:    8_000,
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Auth setup — login qilib storageState yozadi
+    { name: 'setup', testMatch: /auth\.setup\.js/ },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // page va request fixturelari shu cookie ni meros oladi
+        storageState: 'e2e/.auth/state.json',
+      },
+      dependencies: ['setup'],
+    },
   ],
   webServer: [
     {

@@ -30,3 +30,8 @@ Thumbs.db
 # Editor
 .vscode/settings.json
 *.swp
+
+# Playwright auth state (session cookie)
+frontend/e2e/.auth/
+test-results/
+playwright-report/

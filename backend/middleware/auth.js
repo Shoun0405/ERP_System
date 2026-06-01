@@ -1,4 +1,5 @@
 const { verifyToken } = require('../lib/jwt');
+const { isRevoked } = require('../lib/revocation');
 
 module.exports = (req, res, next) => {
   // M-1: Bypass faqat NODE_ENV=test VA TEST_AUTH_BYPASS=1 birga bo'lganda ishlaydi.
@@ -23,6 +24,10 @@ module.exports = (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
+    // H-4: bekor qilingan (o'chirilgan/faolsizlantirilgan) foydalanuvchi tokenini DB siz rad etamiz
+    if (isRevoked(decoded.id)) {
+      return res.status(401).json({ error: 'Sessiya bekor qilingan. Iltimos, qayta tizimga kiring.' });
+    }
     req.user = decoded;
     next();
   } catch (err) {

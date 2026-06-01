@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const { userCreateSchema, userUpdateSchema } = require('./_schemas');
 const { logAudit } = require('../lib/audit');
+const { revokeUser, allowUser } = require('../lib/revocation');
 
 const DEFAULT_PERMISSIONS = {
   clients:      { read: true, create: true, update: true, delete: false },
@@ -144,6 +145,15 @@ router.put('/:id', async (req, res, next) => {
       }
     });
 
+    // H-4: token ichidagi da'volar eskirganda yoki foydalanuvchi faolsizlanganda
+    // mavjud sessiyani bekor qilamiz — qayta login yangi (yangilangan) token beradi.
+    const claimsChanged = role !== undefined || permissions !== undefined || ('password' in updateData);
+    if (isActive === false || claimsChanged) {
+      revokeUser(id);
+    } else if (isActive === true) {
+      allowUser(id); // qayta faollashtirildi — blocklist dan olib tashlaymiz
+    }
+
     await logAudit(req.user.id, 'update', 'user', id, { fullName, role, isActive }, req);
 
     res.json(updatedUser);
@@ -171,6 +181,9 @@ router.delete('/:id', async (req, res, next) => {
     await prisma.user.delete({
       where: { id }
     });
+
+    // H-4: o'chirilgan foydalanuvchining hali amal qiladigan tokenini bloklaymiz
+    revokeUser(id);
 
     await logAudit(req.user.id, 'delete', 'user', id, { username: user.username }, req);
 

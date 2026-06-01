@@ -13,9 +13,12 @@
 **Bajarildi (2026-06-02):** C-1 (JWT secret), C-3 (GET RBAC), H-3 (login rate-limit), M-1 (test bypass
 qattiqlashtirish), H-7 (test crash tuzatildi). Test suite: **50/50 o'tdi**. Tafsilotlar Bosqich 14 va 17 da.
 
-**Keyingi qadam:** H-4 (token tirikligi/refresh) → keyin Bosqich 15 (ombor + C-2 moliyaviy butunlik).
+**Bajarildi (2026-06-02, 2-tur):** H-4 (in-memory token revocation blocklist) + Playwright E2E
+autentifikatsiya integratsiyasi (storageState pattern). Backend **53/53**, E2E **4/4** (barqaror).
 
-**Bosqich 1–13 HAMMASI BAJARILDI. Bosqich 14 (JWT) — C-1/C-3/H-3/M-1 bajarildi, H-4 qoldi.**
+**Keyingi qadam:** Bosqich 15 (ombor + C-2 moliyaviy butunlik) → Bosqich 16 (audit UI + Decimal + hisobot).
+
+**Bosqich 1–13 HAMMASI BAJARILDI. Bosqich 14 (JWT) — C-1/C-3/H-3/M-1/H-4 BAJARILDI (CSRF ixtiyoriy qoldi).**
 
 Bosqich 14c da bajarildi: `routes/sales.js` — `specId` qabul qiladi, `contractId` Spec dan avtomatik; GET da `contract.number`, `spec.number` included; `Sales.jsx` to'liq qayta yozildi — modal o'rniga `useInlineForm` accordion; cascade (mijoz→shartnoma→spets); spets tanlanganda mahsulotlar prefill; jadvalda "Shartnoma №" va "Spets №" ustunlari.
 
@@ -463,8 +466,7 @@ Asosiy JWT login allaqachon bor (`47b2ad3`). Quyidagilar **xavfsizlik bo'shliqla
 - [x] **Secret majburiyligi (C-1):** `backend/lib/jwt.js` — yagona manba (`signToken`/`verifyToken`); `JWT_SECRET` yo'q yoki <32 belgi bo'lsa `console.error`+`process.exit(1)`. Zaif default (`'secret_jwt_erp_system_123'`) `middleware/auth.js` va `routes/auth.js` dan o'chirildi. `.env` ga 96-belgilik sekret + `JWT_TTL`; commit qilinadigan `backend/.env.example` qo'shildi. Tekshirildi: yo'q/zaif → exit 1, kuchli → sign/verify OK.
 - [x] **GET RBAC (C-3):** `requirePermission('<module>','read')` qo'shildi — clients, products, sales (2 GET), payments, contracts (3 GET), specs, interactions GET lariga + `export.js` (6 ta export route). `settings` GET (umumiy konfiguratsiya, formalar uchun kerak) va `dashboard` (bosh sahifa) ataylab ochiq qoldirildi. Yangi `tests/rbac.test.mjs` (4 test): read:false→403, read:true→200, tokensiz→401.
 - [x] **Login rate-limit (H-3):** `app.js` — `/api/auth/login` ga `max:10 / 15min`, `skipSuccessfulRequests:true`, do'stona xato xabari.
-- [ ] **Token tirikligi (H-4):** Variant A — access 15min + refresh 7kun, `/api/auth/refresh` rotatsiya; refresh tokenni `httpOnly` cookie + DB `RefreshToken` jadvali (revocation). Variant B (kichik tizim) — har so'rovda `prisma.user.findUnique(select isActive, permissions)` va token faqat `id`. **Tavsiya: Variant B** (5-20 user, soddaroq). *(KEYINGI QADAM — bu turda bajarilmadi.)*
-  - Yangi sxema (agar Variant A): `model RefreshToken { id String @id @default(uuid()) userId String tokenHash String @unique expiresAt DateTime revokedAt DateTime? user User @relation(...) @@index([userId]) }`
+- [x] **Token tirikligi (H-4) — in-memory revocation blocklist:** `backend/lib/revocation.js` — process-ichi `Set` (`revokeUser`/`allowUser`/`isRevoked`). `middleware/auth.js` token tekshirgandan keyin DB SIZ `isRevoked(id)` ni tekshiradi → bekor qilingan bo'lsa 401. `routes/users.js`: DELETE da `revokeUser`; PUT da `isActive:false` yoki rol/huquq/parol o'zgarsa `revokeUser` (eskirgan token majburiy yangilanadi), qayta faollashtirilganda `allowUser`. Yangi `tests/revocation.test.mjs` (3 test): faol→200, faolsizlantirilgach eski token→401, qayta faollashtirilgach→200. Cheklov (kod izohida): process-ga xos (PM2 instances=1), restart da tozalanadi — to'liq yechim Variant A (DB `RefreshToken` + qisqa access token), kelajakda kerak bo'lsa.
 - [x] **Test bypass qattiqlashtirish (M-1):** Bypass endi `NODE_ENV==='test' && TEST_AUTH_BYPASS==='1'` ikkalasini talab qiladi (`middleware/auth.js`, `rbac.js`). `tests/env-setup.mjs` da flag yoqildi. Prod da xato bilan `NODE_ENV=test` qo'yilsa ham bypass ishlamaydi.
 - [ ] **CSRF (M-5 bilan):** sameSite=lax yetarli emas deb topilsa, mutatsion so'rovlarga `X-CSRF-Token` (double-submit cookie). *(KEYINGI QADAM.)*
 
@@ -521,6 +523,7 @@ Hozir **ombor qoldig'i umuman yo'q** — savdo qancha bo'lsa ham mahsulot cheksi
 - [x] **H-7 / test crash:** `global-setup.mjs` — `prisma db push --force-reset` Prisma 6 destructive guard ni ishga tushirardi → worker crash. `--force-reset` olib tashlandi (test fayllari `cleanAll()` bilan o'zlari tozalanadi), endi faqat `db push --skip-generate` sxemani sinxronlaydi. Natija: **50/50 test o'tdi (10 fayl), crash yo'q** (oldin 43/46 + crash).
 - [ ] **Qamrov kengaytirish:** validatsiya 400 (manfiy summa, buzuq UUID), FK 409 (linked delete), RBAC 403 (read/write huquq yo'q), auth 401 (token yo'q/yaroqsiz) — har modul uchun. Hozir asosan happy-path.
 - [ ] **C-2 regress testi:** buzuq `rowAmount` bilan savdo → server qayta hisoblaydi yoki rad etadi.
+- [x] **Playwright E2E auth fix:** auth endi majburiy bo'lgani uchun e2e so'rovlari 401 olardi. `e2e/auth.setup.js` (setup loyihasi) — `scripts/seed-e2e-user.js` bilan dev bazaga e2e admin qo'shadi, login qilib `storageState` (cookie) saqlaydi; `playwright.config.js` da `setup` loyihasi + `chromium` uchun `storageState` (page va request ikkalasi avtorizatsiyalanadi). `flow.spec.js` CommonJS→ESM (type:module), Savdo formasiga `data-testid` lar (`sale-form`, `sale-client`, `sale-contract`, `sale-nakladnoy`, `sale-seller`, `row-product`, `row-amount`) + barqaror selektorlar + afterAll to'liq tozalash. Natija: **4/4 o'tdi (barqaror, retries=0)**.
 - [ ] CI (GitHub Actions / local) — `npm test` + `npm run lint` + `npm run build` har push da.
 
 ---

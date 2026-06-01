@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 const BASE = 'http://localhost:5173';
 const API  = 'http://localhost:3001/api';
@@ -45,7 +45,21 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.afterAll(async ({ request }) => {
-  // Tozalash
+  // Tozalash — avval bog'liq savdo va to'lovlarni o'chiramiz (FK 409 dan qochish),
+  // shunda mijoz/shartnoma ham o'chadi va testlar takror ishlaganda ma'lumot to'planmaydi.
+  if (clientId) {
+    const salesRes = await request.get(`${API}/sales?clientId=${clientId}&limit=200`);
+    if (salesRes.ok()) {
+      const ids = ((await salesRes.json()).data || []).map(s => s.id);
+      if (ids.length) await request.post(`${API}/sales/bulk-delete`, { data: { ids } }).catch(() => {});
+    }
+    const payRes = await request.get(`${API}/payments?clientId=${clientId}&limit=200`);
+    if (payRes.ok()) {
+      for (const p of ((await payRes.json()).data || [])) {
+        await request.delete(`${API}/payments/${p.id}`).catch(() => {});
+      }
+    }
+  }
   if (contractId) await request.delete(`${API}/contracts/${contractId}`).catch(() => {});
   if (clientId)   await request.delete(`${API}/clients/${clientId}`).catch(() => {});
   if (productId)  await request.delete(`${API}/products/${productId}`).catch(() => {});
@@ -64,40 +78,43 @@ test('1. Yangi mijoz listda ko\'rinadi', async ({ page }) => {
   await expect(page.locator('tbody')).toContainText(clientName);
 });
 
-// ─── Flow 2: Savdo yaratish — debt dashboard da yangilanishi ──────────────
+// ─── Flow 2: Savdo yaratish — savdolar listda ko'rinishi ──────────────────
 test('2. Savdo yaratganda mijoz qarzdorligi oshadi', async ({ page }) => {
-  // Dashboard da eski qiymatni olamiz
-  await page.goto(`${BASE}/`);
-  await page.waitForSelector('.mini-card');
-
-  // Savdo yaratish
   await page.goto(`${BASE}/sales`);
+  // Sahifa ma'lumotlari yuklanib, tartib barqarorlashishini kutamiz (tugma siljimasligi uchun)
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector('table');
 
-  await page.locator('button:has-text("Yangi Yuk Xati")').click();
-  await page.waitForSelector('form');
+  // Inline formani ochamiz
+  await page.getByRole('button', { name: 'Yangi Yuk Xati' }).click();
+  const form = page.getByTestId('sale-form');
+  await form.waitFor();
 
-  // Mijoz tanlash
-  await page.locator('select').first().selectOption({ value: clientId });
-  await page.waitForTimeout(500); // shartnomalar yuklansin
+  // Mijoz tanlash → shartnomalar async yuklanadi
+  await form.getByTestId('sale-client').selectOption({ value: clientId });
 
-  // Shartnoma tanlash
-  await page.locator('select').nth(1).selectOption({ value: contractId });
+  // Shartnoma optioni paydo bo'lishini kutamiz, so'ng tanlaymiz
+  const contractSel = form.getByTestId('sale-contract');
+  await expect(contractSel.locator(`option[value="${contractId}"]`)).toBeAttached();
+  await contractSel.selectOption({ value: contractId });
 
-  // Sana (bugun — default)
-  await page.locator('input[type="text"]').first().fill('E2E-001');
-  await page.locator('input[placeholder="F.I.O."]').fill('Test Sotuvchi');
+  // Yuk xati raqami va sotuvchi (mijoz tanlangach seller maydoni reset bo'ladi)
+  await form.getByTestId('sale-nakladnoy').fill('E2E-001');
+  await form.getByTestId('sale-seller').fill('Test Sotuvchi');
 
-  // Mahsulot qatori
-  await page.locator('select[required]').last().selectOption({ value: productId });
-  await page.locator('input[type="number"]').filter({ hasText: '' }).nth(0).fill('5');
+  // Mahsulot qatori: mahsulot + miqdor + narx
+  await form.getByTestId('row-product').selectOption({ value: productId });
+  await form.getByTestId('row-amount').fill('5');
+  await form.locator('input[placeholder="Narx"]').fill('1000000');
 
   // Saqlash
-  await page.locator('button:has-text("Yuk xatini saqlash")').click();
-  await page.waitForTimeout(1000);
+  await page.getByRole('button', { name: 'Yuk xatini saqlash' }).click();
 
-  // Savdolar listda yangi yozuv bo'lishi kerak
-  await expect(page.locator('table')).toContainText('E2E-001');
+  // Muvaffaqiyatli saqlangach forma yopiladi va list yangilanadi
+  await expect(form).toBeHidden();
+
+  // Savdolar listda yangi yozuv (nakladnoy katakchasi) ko'rinishi kerak
+  await expect(page.getByRole('cell', { name: 'E2E-001' }).first()).toBeVisible();
 });
 
 // ─── Flow 3: To'lov qo'shish — debt kamayishi ─────────────────────────────

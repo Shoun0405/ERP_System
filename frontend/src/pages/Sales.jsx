@@ -199,7 +199,7 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
     <tr className="border-b border-[var(--border)] hover:bg-[var(--surface-2)]/50">
       <td className="p-2 text-center text-sm text-[var(--text-3)] font-medium">{idx + 1}</td>
       <td className="p-2">
-        <select value={row.productId} onChange={e => handleProductChange(e.target.value)} className={s}>
+        <select data-testid="row-product" value={row.productId} onChange={e => handleProductChange(e.target.value)} className={s}>
           <option value="">— Tanlang —</option>
           {products.map(p => <option key={p.id} value={p.id}>{p.article}</option>)}
         </select>
@@ -213,7 +213,7 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
         </select>
       </td>
       <td className="p-2 w-24">
-        <input type="number" min="0" step="any" value={row.amount || ''}
+        <input data-testid="row-amount" type="number" min="0" step="any" value={row.amount || ''}
           onChange={e => handleChange('amount', e.target.value)} className={s} placeholder="Miqdor" />
       </td>
       <td className="p-2 w-32">
@@ -449,7 +449,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
   const inp = 'w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]';
 
   return (
-    <div className="mini-card rounded-xl p-5 mb-4 space-y-4">
+    <div data-testid="sale-form" className="mini-card rounded-xl p-5 mb-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
           <FileText size={15} className="text-[var(--accent)]" /> {editing ? "Yuk Xatini Tahrirlash" : "Yangi Yuk Xati"}
@@ -461,7 +461,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div>
           <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><User size={11} className="inline mr-1"/>Mijoz *</label>
-          <select value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} className={inp}>
+          <select data-testid="sale-client" value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} className={inp}>
             <option value="">— Tanlang —</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -469,7 +469,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
 
         <div>
           <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Shartnoma</label>
-          <select value={form.contractId}
+          <select data-testid="sale-contract" value={form.contractId}
             onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))}
             disabled={!form.clientId} className={inp}>
             <option value="">— Ixtiyoriy —</option>
@@ -504,19 +504,19 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
 
         <div>
           <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Hash size={11} className="inline mr-1"/>Yuk xati № *</label>
-          <input type="text" value={form.nakladnoy} placeholder="НГ-1234"
+          <input data-testid="sale-nakladnoy" type="text" value={form.nakladnoy} placeholder="НГ-1234"
             onChange={e => setForm(f => ({ ...f, nakladnoy: e.target.value }))} className={inp} />
         </div>
 
         <div>
           <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sotuvchi *</label>
           {clientSellers.length > 0 ? (
-            <select value={form.sellerName} onChange={e => setForm(f => ({ ...f, sellerName: e.target.value }))} className={inp}>
+            <select data-testid="sale-seller" value={form.sellerName} onChange={e => setForm(f => ({ ...f, sellerName: e.target.value }))} className={inp}>
               <option value="">— Sotuvchini tanlang —</option>
               {clientSellers.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           ) : (
-            <input type="text" value={form.sellerName} placeholder="F.I.O."
+            <input data-testid="sale-seller" type="text" value={form.sellerName} placeholder="F.I.O."
               onChange={e => setForm(f => ({ ...f, sellerName: e.target.value }))} className={inp} />
           )}
         </div>
