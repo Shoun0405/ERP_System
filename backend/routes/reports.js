@@ -56,6 +56,100 @@ router.get('/sales-by-period', async (req, res, next) => {
   }
 });
 
+// GET /api/reports/client-by-contracts/:clientId
+// Har bir shartnoma bo'yicha alohida saldo
+router.get('/client-by-contracts/:clientId', async (req, res, next) => {
+  try {
+    const { clientId } = req.params;
+
+    const client = await prisma.client.findUnique({ where: { id: clientId } });
+    if (!client) return res.status(404).json({ error: 'Mijoz topilmadi' });
+
+    const [contracts, sales, payments] = await Promise.all([
+      prisma.contract.findMany({
+        where: { clientId },
+        select: { id: true, number: true, date: true, status: true },
+        orderBy: { date: 'asc' }
+      }),
+      prisma.sale.findMany({
+        where: { clientId },
+        select: { id: true, date: true, nakladnoy: true, totalAmount: true, contractId: true }
+      }),
+      prisma.payment.findMany({
+        where: { clientId },
+        select: { id: true, date: true, amount: true, note: true, contractId: true }
+      })
+    ]);
+
+    // Build map: contractId (null = no contract) -> raw items
+    const itemsMap = new Map();
+    itemsMap.set(null, []);
+    contracts.forEach(c => itemsMap.set(c.id, []));
+
+    sales.forEach(s => {
+      const key = s.contractId || null;
+      if (!itemsMap.has(key)) itemsMap.set(key, []);
+      itemsMap.get(key).push({
+        id: s.id, date: s.date, type: 'sale',
+        debit: s.totalAmount, credit: 0, amount: s.totalAmount,
+        desc: `Savdo (Nakladnoy № ${s.nakladnoy})`
+      });
+    });
+
+    payments.forEach(p => {
+      const key = p.contractId || null;
+      if (!itemsMap.has(key)) itemsMap.set(key, []);
+      itemsMap.get(key).push({
+        id: p.id, date: p.date, type: 'payment',
+        debit: 0, credit: p.amount, amount: -p.amount,
+        desc: `To'lov` + (p.note ? ` (${p.note})` : '')
+      });
+    });
+
+    const buildStatement = (items) => {
+      items.sort((a, b) => new Date(a.date) - new Date(b.date));
+      let balance = 0;
+      return items.map(item => {
+        balance += item.amount;
+        return { ...item, balance };
+      });
+    };
+
+    const groups = [];
+
+    // Contracts in order
+    contracts.forEach(c => {
+      const items = itemsMap.get(c.id) || [];
+      if (items.length === 0) return;
+      const statement = buildStatement(items);
+      groups.push({
+        contract: { id: c.id, number: c.number, date: c.date, status: c.status },
+        statement,
+        finalBalance: statement.at(-1)?.balance ?? 0
+      });
+    });
+
+    // Items without a contract
+    const noContractItems = itemsMap.get(null) || [];
+    if (noContractItems.length > 0) {
+      const statement = buildStatement(noContractItems);
+      groups.push({
+        contract: null,
+        statement,
+        finalBalance: statement.at(-1)?.balance ?? 0
+      });
+    }
+
+    res.json({
+      client: { id: client.id, name: client.name, phone: client.phone },
+      groups,
+      totalBalance: groups.reduce((s, g) => s + g.finalBalance, 0)
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/reports/client-statement/:clientId
 router.get('/client-statement/:clientId', async (req, res, next) => {
   try {

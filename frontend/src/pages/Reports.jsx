@@ -643,11 +643,95 @@ function DebtorsSection() {
 }
 
 // ── MIJOZ KARTASI ─────────────────────────────────────────────────────────────
+
+// Bitta shartnoma uchun jadval
+function ContractLedgerTable({ group }) {
+  const { contract, statement, finalBalance } = group;
+  const totalDebit  = statement.reduce((s, i) => s + i.debit, 0);
+  const totalCredit = statement.reduce((s, i) => s + i.credit, 0);
+
+  return (
+    <div className="card border border-[var(--border)] p-0">
+      {/* Header */}
+      <div className={`px-5 py-2.5 border-b border-[var(--border)] flex justify-between items-center rounded-t-xl ${
+        contract ? 'bg-indigo-50 dark:bg-indigo-950/30' : 'bg-[var(--surface-2)]'
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+            contract ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
+                     : 'bg-[var(--border)] text-[var(--text-3)]'
+          }`}>
+            {contract ? `Shartnoma` : 'Shartnoma yo\'q'}
+          </span>
+          {contract && (
+            <span className="text-xs font-semibold text-[var(--text)]">
+              № {contract.number}
+              {contract.date && (
+                <span className="text-[10px] font-normal text-[var(--text-3)] ml-1.5">
+                  ({fmtDate(contract.date)})
+                </span>
+              )}
+            </span>
+          )}
+          <span className="text-[10px] text-[var(--text-3)]">{statement.length} ta yozuv</span>
+        </div>
+        <div className={`text-xs font-extrabold font-mono ${finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+          Saldo: {fmt(finalBalance)} UZS
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+              <th className="px-5 py-2">Sana</th>
+              <th className="px-5 py-2">Tavsif</th>
+              <th className="px-5 py-2 text-right">Savdo (Debet)</th>
+              <th className="px-5 py-2 text-right">To'lov (Kredit)</th>
+              <th className="px-5 py-2 text-right">Balans</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {statement.map((item, idx) => (
+              <tr key={idx} className="hover:bg-[var(--surface-2)]">
+                <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-2)]">{fmtDate(item.date)}</td>
+                <td className="px-5 py-2.5 text-xs text-[var(--text)]">{item.desc}</td>
+                <td className="px-5 py-2.5 text-[11px] text-right font-mono text-slate-700 dark:text-slate-300">
+                  {item.debit > 0 ? `${fmt(item.debit)} UZS` : '—'}
+                </td>
+                <td className="px-5 py-2.5 text-[11px] text-right font-mono text-emerald-600">
+                  {item.credit > 0 ? `${fmt(item.credit)} UZS` : '—'}
+                </td>
+                <td className={`px-5 py-2.5 text-[11px] text-right font-mono font-bold ${item.balance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                  {fmt(item.balance)} UZS
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-[var(--surface-2)] font-bold text-xs border-t border-[var(--border)]">
+              <td colSpan="2" className="px-5 py-2 text-[var(--text)]">Jami:</td>
+              <td className="px-5 py-2 text-right font-mono text-slate-700 dark:text-slate-300">{fmt(totalDebit)} UZS</td>
+              <td className="px-5 py-2 text-right font-mono text-emerald-600">{fmt(totalCredit)} UZS</td>
+              <td className={`px-5 py-2 text-right font-mono font-extrabold ${finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                {fmt(finalBalance)} UZS
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function ClientStatementSection() {
-  const [clients, setClients]   = useState([]);
-  const [selId, setSelId]       = useState('');
-  const [stmt, setStmt]         = useState(null);
-  const [loading, setLoading]   = useState(false);
+  const [clients, setClients]       = useState([]);
+  const [selId, setSelId]           = useState('');
+  const [byContract, setByContract] = useState(false);
+  const [stmt, setStmt]             = useState(null);
+  const [contractData, setContractData] = useState(null);
+  const [loading, setLoading]       = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -662,35 +746,31 @@ function ClientStatementSection() {
 
   useEffect(() => {
     if (!selId) return;
+    setStmt(null);
+    setContractData(null);
+    setLoading(true);
+    const url = byContract
+      ? `/api/reports/client-by-contracts/${selId}`
+      : `/api/reports/client-statement/${selId}`;
     (async () => {
-      setLoading(true);
       try {
-        const r = await api.get(`/api/reports/client-statement/${selId}`);
-        setStmt(r.data);
+        const r = await api.get(url);
+        if (byContract) setContractData(r.data);
+        else setStmt(r.data);
       } catch {} finally { setLoading(false); }
     })();
-  }, [selId]);
+  }, [selId, byContract]);
 
-  const totalDebit  = stmt?.statement.reduce((s, i) => s + i.debit, 0) || 0;
-  const totalCredit = stmt?.statement.reduce((s, i) => s + i.credit, 0) || 0;
+  const totalDebit  = stmt?.statement?.reduce((s, i) => s + i.debit, 0) || 0;
+  const totalCredit = stmt?.statement?.reduce((s, i) => s + i.credit, 0) || 0;
 
   return (
     <div className="space-y-6 animate-in">
       <SectionHeader title="Mijoz analitik kartasi" subtitle="Xronologik tartibda savdolar, to'lovlar va joriy balans" />
 
-      <div className="card border border-[var(--border)] p-0">
-        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-          <div>
-            <h3 className="text-xs font-semibold text-[var(--text)]">Mijozni tanlang</h3>
-            {stmt && (
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5">
-                Savdo: {fmt(totalDebit)} UZS &nbsp;|&nbsp; To'lov: {fmt(totalCredit)} UZS &nbsp;|&nbsp; Joriy qarz:{' '}
-                <span className={`font-bold ${stmt.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {fmt(stmt.finalBalance)} UZS
-                </span>
-              </p>
-            )}
-          </div>
+      {/* Controls */}
+      <div className="card border border-[var(--border)] p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="flex items-center gap-3">
           <select
             value={selId}
             onChange={e => setSelId(e.target.value)}
@@ -698,51 +778,137 @@ function ClientStatementSection() {
           >
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-        </div>
 
-        <div className="overflow-x-auto min-h-[250px]">
-          {loading ? (
-            <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
-          ) : !stmt?.statement?.length ? (
-            <div className="p-8 text-center text-xs text-[var(--text-3)]">Ushbu mijoz bo'yicha aylanmalar topilmadi</div>
-          ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                  <th className="px-5 py-2">Sana</th>
-                  <th className="px-5 py-2">Tavsif (Hujjat)</th>
-                  <th className="px-5 py-2 text-right">Savdo (Debet)</th>
-                  <th className="px-5 py-2 text-right">To'lov (Kredit)</th>
-                  <th className="px-5 py-2 text-right">Balans (Qarz)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)]">
-                {stmt.statement.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-[var(--surface-2)]">
-                    <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-2)]">{fmtDate(item.date)}</td>
-                    <td className="px-5 py-2.5 text-xs text-[var(--text)]">{item.desc}</td>
-                    <td className="px-5 py-2.5 text-[11px] text-right font-mono text-slate-700 dark:text-slate-300">{item.debit > 0 ? `${fmt(item.debit)} UZS` : '—'}</td>
-                    <td className="px-5 py-2.5 text-[11px] text-right font-mono text-emerald-600">{item.credit > 0 ? `${fmt(item.credit)} UZS` : '—'}</td>
-                    <td className={`px-5 py-2.5 text-[11px] text-right font-mono font-extrabold ${item.balance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                      {fmt(item.balance)} UZS
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                  <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">Jami aylanma yakuni:</td>
-                  <td className="px-5 py-2.5 text-right font-mono text-slate-700 dark:text-slate-300">{fmt(totalDebit)} UZS</td>
-                  <td className="px-5 py-2.5 text-right font-mono text-emerald-600">{fmt(totalCredit)} UZS</td>
-                  <td className={`px-5 py-2.5 text-right font-mono font-extrabold ${stmt.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                    {fmt(stmt.finalBalance)} UZS
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+          {/* Summary badges */}
+          {!byContract && stmt && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-0.5 font-mono">
+                Savdo: {fmt(totalDebit)} UZS
+              </span>
+              <span className="text-[10px] bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-0.5 font-mono text-emerald-600">
+                To'lov: {fmt(totalCredit)} UZS
+              </span>
+              <span className={`text-[10px] rounded px-2 py-0.5 font-mono font-bold border ${
+                stmt.finalBalance > 0
+                  ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/30 dark:border-red-800'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-800'
+              }`}>
+                Qarz: {fmt(stmt.finalBalance)} UZS
+              </span>
+            </div>
+          )}
+          {byContract && contractData && (
+            <span className={`text-[10px] rounded px-2 py-0.5 font-mono font-bold border ${
+              contractData.totalBalance > 0
+                ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/30 dark:border-red-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-800'
+            }`}>
+              Jami qarz: {fmt(contractData.totalBalance)} UZS
+            </span>
           )}
         </div>
+
+        {/* Toggle: shartnomalar bo'yicha */}
+        <label className="flex items-center gap-2 cursor-pointer select-none shrink-0">
+          <button
+            onClick={() => setByContract(v => !v)}
+            className={`relative inline-flex w-9 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
+              byContract ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
+            }`}
+            role="switch"
+            aria-checked={byContract}
+          >
+            <span className={`inline-block w-4 h-4 bg-white rounded-full shadow absolute top-0.5 transition-transform ${
+              byContract ? 'translate-x-4' : 'translate-x-0.5'
+            }`} />
+          </button>
+          <span className="text-xs font-medium text-[var(--text)]">Shartnomalar bo'yicha</span>
+        </label>
       </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">
+          Yuklanmoqda...
+        </div>
+      ) : byContract ? (
+        /* ── Shartnomalar bo'yicha view ── */
+        contractData?.groups?.length ? (
+          <div className="space-y-4">
+            {contractData.groups.map((group, idx) => (
+              <ContractLedgerTable key={group.contract?.id ?? 'no-contract'} group={group} />
+            ))}
+
+            {/* Grand total */}
+            {contractData.groups.length > 1 && (
+              <div className="card border-2 border-[var(--accent)] p-4 flex justify-between items-center">
+                <span className="text-xs font-bold text-[var(--text)]">
+                  Jami balans ({contractData.groups.length} ta shartnoma bo'yicha):
+                </span>
+                <span className={`text-base font-extrabold font-mono ${
+                  contractData.totalBalance > 0 ? 'text-red-500' : 'text-emerald-600'
+                }`}>
+                  {fmt(contractData.totalBalance)} UZS
+                </span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">
+            Ushbu mijoz bo'yicha shartnomalar topilmadi
+          </div>
+        )
+      ) : (
+        /* ── Oddiy view ── */
+        <div className="card border border-[var(--border)] p-0">
+          <div className="overflow-x-auto min-h-[250px]">
+            {!stmt?.statement?.length ? (
+              <div className="p-10 text-center text-xs text-[var(--text-3)]">
+                Ushbu mijoz bo'yicha aylanmalar topilmadi
+              </div>
+            ) : (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                    <th className="px-5 py-2">Sana</th>
+                    <th className="px-5 py-2">Tavsif (Hujjat)</th>
+                    <th className="px-5 py-2 text-right">Savdo (Debet)</th>
+                    <th className="px-5 py-2 text-right">To'lov (Kredit)</th>
+                    <th className="px-5 py-2 text-right">Balans (Qarz)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {stmt.statement.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-[var(--surface-2)]">
+                      <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-2)]">{fmtDate(item.date)}</td>
+                      <td className="px-5 py-2.5 text-xs text-[var(--text)]">{item.desc}</td>
+                      <td className="px-5 py-2.5 text-[11px] text-right font-mono text-slate-700 dark:text-slate-300">
+                        {item.debit > 0 ? `${fmt(item.debit)} UZS` : '—'}
+                      </td>
+                      <td className="px-5 py-2.5 text-[11px] text-right font-mono text-emerald-600">
+                        {item.credit > 0 ? `${fmt(item.credit)} UZS` : '—'}
+                      </td>
+                      <td className={`px-5 py-2.5 text-[11px] text-right font-mono font-extrabold ${item.balance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                        {fmt(item.balance)} UZS
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
+                    <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">Jami aylanma yakuni:</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-slate-700 dark:text-slate-300">{fmt(totalDebit)} UZS</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-emerald-600">{fmt(totalCredit)} UZS</td>
+                    <td className={`px-5 py-2.5 text-right font-mono font-extrabold ${stmt.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                      {fmt(stmt.finalBalance)} UZS
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
