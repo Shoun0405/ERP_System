@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import api, { API } from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
-import { Save, Plus, Trash2, Building2, Users, Database } from 'lucide-react';
+import { Save, Plus, Trash2, Building2, Users, Database, Percent } from 'lucide-react';
 
 const EMPTY = {
   companyName: '', companyAddress: '', companyInn: '',
   companyPhone: '', companyBank: '', companyMfo: '', companyAccount: '',
   companyDirector: '',
   sellers: [],
+  vatRate: 0.12,
 };
 
 export default function Settings() {
@@ -122,6 +123,35 @@ export default function Settings() {
               <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Direktor (rahbar)</label>
               <input type="text" value={data.companyDirector} onChange={e => setData(d => ({ ...d, companyDirector: e.target.value }))} className={inp} placeholder="F.I.O. — shartnomada «в лице директора»" />
             </div>
+          </div>
+        </div>
+
+        {/* QQS (VAT) stavkasi */}
+        <div className="mini-card space-y-4">
+          <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
+            <Percent size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> QQS (VAT) stavkasi
+          </h3>
+          <div className="flex items-end gap-3">
+            <div className="w-40">
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">QQS stavkasi (%)</label>
+              <div className="relative">
+                <input
+                  type="number" min="0" max="100" step="0.1"
+                  value={Math.round((data.vatRate ?? 0) * 1000) / 10}
+                  onChange={e => {
+                    const pct = e.target.value === '' ? 0 : Number(e.target.value);
+                    const rate = Math.min(1, Math.max(0, pct / 100));
+                    setData(d => ({ ...d, vatRate: rate }));
+                  }}
+                  className={`${inp} pr-7 text-right`}
+                  placeholder="12"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-3)] pointer-events-none">%</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-[var(--text-3)] pb-2">
+              Spetsifikatsiya qatorlaridagi QQS summasi shu stavka bo'yicha hisoblanadi (narx ichidan ajratiladi).
+            </p>
           </div>
         </div>
 

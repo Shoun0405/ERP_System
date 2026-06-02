@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   companyPhone: '', companyBank: '', companyMfo: '', companyAccount: '',
   companyDirector: '',
   sellers: [],
+  autoContractNumbering: true,
+  vatRate: 0.12,
 };
 
 router.get('/', async (req, res, next) => {

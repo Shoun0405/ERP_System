@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import api, { API } from '../lib/api';
 import { downloadFile, openFile } from '../lib/download';
 import { fmt, fmtDate } from '../lib/format';
-import { calcRowTotal, calcVat } from '../lib/vat';
+import { calcRowTotal, calcVat, VAT_RATE } from '../lib/vat';
 import { useInlineForm } from '../hooks/useInlineForm';
 import { useModalKeys } from '../hooks/useModalKeys';
 import { useDateFilter } from '../context/DateFilterContext';
@@ -71,9 +71,9 @@ function QuickAddClientModal({ onSaved, onClose }) {
 }
 
 // ─── SpecProductRow ─────────────────────────────────────────────────────────
-function SpecProductRow({ row, products, onChange, onRemove }) {
+function SpecProductRow({ row, products, vatRate = VAT_RATE, onChange, onRemove }) {
   const rowTotal = calcRowTotal(Number(row.quantity) || 0, Number(row.unitPriceVat) || 0);
-  const vatAmt   = calcVat(rowTotal);
+  const vatAmt   = calcVat(rowTotal, vatRate);
 
   const update = (field, val) => onChange({ ...row, [field]: val });
 
@@ -124,7 +124,7 @@ function SpecProductRow({ row, products, onChange, onRemove }) {
 }
 
 // ─── SpecForm (inline — shartnoma ichida) ──────────────────────────────────
-function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, products, contractTotalValue = 0, otherSpecsTotal = 0, onSaved, onCancel }) {
+function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, products, vatRate = VAT_RATE, contractTotalValue = 0, otherSpecsTotal = 0, onSaved, onCancel }) {
   const editing = Boolean(spec);
   const [date, setDate]   = useState(spec?.date?.slice(0, 10) || TODAY);
   const [notes, setNotes] = useState(spec?.notes || '');
@@ -225,6 +225,7 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
               <SpecProductRow key={r._key}
                 row={r}
                 products={products}
+                vatRate={vatRate}
                 onChange={val => updateRow(r._key, val)}
                 onRemove={() => removeRow(r._key)}
               />
@@ -263,7 +264,7 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
 }
 
 // ─── ContractRow (ro'yxat qatori + expand) ─────────────────────────────────
-function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDeleted, user }) {
+function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onSpecSaved, onSpecDeleted, user }) {
   const canUpdate = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
   const navigate = useNavigate();
@@ -474,6 +475,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                       spec={spec}
                       copiedSpec={null}
                       products={products}
+                      vatRate={vatRate}
                       contractTotalValue={c.totalValue}
                       otherSpecsTotal={specsSum - (spec.totalValue || 0)}
                       onSaved={handleSpecSaved}
@@ -597,6 +599,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                     nextNumber={specs ? (Math.max(0, ...specs.map(s => s.number)) + 1) : 1}
                     contractNumber={c.number}
                     products={products}
+                    vatRate={vatRate}
                     contractTotalValue={c.totalValue}
                     otherSpecsTotal={specsSum}
                     onSaved={handleSpecSaved}
@@ -613,7 +616,7 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
 }
 
 // ─── ContractForm (inline accordion) ───────────────────────────────────────
-function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
+function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate = VAT_RATE }) {
   const editing = Boolean(editContract);
   const [clients, setClients]       = useState([]);
   const [clientSearch, setClientSearch] = useState(editContract?.client?.name || '');
@@ -947,6 +950,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
                         <SpecProductRow key={r._key}
                           row={r}
                           products={products}
+                          vatRate={vatRate}
                           onChange={val => updateSpecRow(r._key, val)}
                           onRemove={() => removeSpecRow(r._key)}
                         />
@@ -1011,6 +1015,7 @@ export default function Contracts({ user }) {
   const [sortBy, setSortBy]       = useState('createdAt');
   const [sortDir, setSortDir]     = useState('desc');
   const [products, setProducts]   = useState([]);
+  const [vatRate, setVatRate]     = useState(VAT_RATE);
   const [editContract, setEditContract] = useState(null);
   const [delContract, setDelContract]  = useState(null);
   const form = useInlineForm();
@@ -1027,6 +1032,13 @@ export default function Contracts({ user }) {
   // Mahsulotlar ro'yxati (spec forma uchun)
   useEffect(() => {
     api.get('/api/products?limit=200').then(r => setProducts(r.data.data || [])).catch(() => {});
+  }, []);
+
+  // QQS stavkasi — global Sozlamalardan (spec qatorlari hisobi backend bilan bir xil bo'lishi uchun)
+  useEffect(() => {
+    api.get('/api/settings')
+      .then(r => { if (typeof r.data?.vatRate === 'number') setVatRate(r.data.vatRate); })
+      .catch(() => {});
   }, []);
 
   const load = useCallback(async (p = page) => {
@@ -1151,6 +1163,7 @@ export default function Contracts({ user }) {
             onCancel={form.close}
             editContract={null}
             products={products}
+            vatRate={vatRate}
           />
         </div>
       )}
@@ -1165,6 +1178,7 @@ export default function Contracts({ user }) {
                 onCancel={() => setEditContract(null)}
                 editContract={editContract}
                 products={products}
+                vatRate={vatRate}
               />
             </div>
           </div>
@@ -1253,6 +1267,7 @@ export default function Contracts({ user }) {
                     c={c}
                     idx={(page - 1) * LIMIT + i + 1}
                     products={products}
+                    vatRate={vatRate}
                     onEdit={(c) => { setEditContract(c); form.close(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     onDelete={setDelContract}
                     onSpecSaved={() => load(page)}

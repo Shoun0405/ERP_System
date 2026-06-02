@@ -1,9 +1,22 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { specSchema } = require('./_schemas');
-const { calcVat, calcRowTotal } = require('../lib/vat');
+const { calcVat, calcRowTotal, VAT_RATE } = require('../lib/vat');
 const { requireRole, requirePermission } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
+
+// Global Sozlamalardan QQS stavkasini o'qiydi; yo'q/buzilgan bo'lsa default VAT_RATE.
+// `tx` — tranzaksiya klienti (bo'lmasa shared prisma).
+async function getVatRate(tx = prisma) {
+  const setting = await tx.setting.findUnique({ where: { id: 'global' } });
+  if (!setting) return VAT_RATE;
+  try {
+    const rate = JSON.parse(setting.data)?.vatRate;
+    return typeof rate === 'number' && rate >= 0 && rate <= 1 ? rate : VAT_RATE;
+  } catch {
+    return VAT_RATE;
+  }
+}
 
 // GET /api/specs?contractId=
 router.get('/', requirePermission('contracts', 'read'), async (req, res, next) => {
@@ -42,6 +55,9 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
     const body = specSchema.parse(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
+      // QQS stavkasi — global Sozlamalardan (bir marta o'qiladi, har qator uchun emas)
+      const vatRate = await getVatRate(tx);
+
       // MAX(spec.number) + 1 — o'chirilgan raqam qayta ishlatilmaydi
       const last = await tx.specification.aggregate({
         where: { contractId: body.contractId },
@@ -51,7 +67,7 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
 
       const productsData = body.products.map(p => {
         const rowTotal  = calcRowTotal(p.quantity, p.unitPriceVat);
-        const vatAmount = calcVat(rowTotal);
+        const vatAmount = calcVat(rowTotal, vatRate);
         return {
           productId:    p.productId,
           unit:         p.unit,
@@ -93,10 +109,12 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
 
     const updated = await prisma.$transaction(async (tx) => {
       if (body.products) {
+        // QQS stavkasi — global Sozlamalardan (bir marta o'qiladi, har qator uchun emas)
+        const vatRate = await getVatRate(tx);
         await tx.specProduct.deleteMany({ where: { specId: req.params.id } });
         const productsData = body.products.map(p => {
           const rowTotal  = calcRowTotal(p.quantity, p.unitPriceVat);
-          const vatAmount = calcVat(rowTotal);
+          const vatAmount = calcVat(rowTotal, vatRate);
           return {
             specId:       req.params.id,
             productId:    p.productId,
