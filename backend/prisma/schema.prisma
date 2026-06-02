@@ -18,6 +18,7 @@ model Client {
   address   String?
   account   String?
   mfo       String?
+  bank      String?
   seller    String?
   createdAt DateTime @default(now())
   contracts    Contract[]
@@ -56,7 +57,6 @@ model Contract {
   totalValue   Float
   notes        String?
   status       String          @default("yangi")
-  specCounter  Int             @default(0)
   clientId     String
   client       Client          @relation(fields: [clientId], references: [id])
   sales        Sale[]

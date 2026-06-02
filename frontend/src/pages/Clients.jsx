@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 import { fmt } from '../lib/format';
 import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
 
-const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', seller:'' };
+const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', bank:'', seller:'' };
 const SC = {
   'Faol': 'bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] border-[oklch(0.88_0.06_155)]',
   "Muddati o'tgan": 'bg-[oklch(0.96_0.04_25)] text-[oklch(0.42_0.13_25)] border-[oklch(0.88_0.07_25)]',
@@ -196,12 +196,12 @@ export default function Clients({ user }) {
 
   const openAdd = () => { setForm(EMPTY); setPhoneInput(''); setEditId(null); setErrors({}); setModal('add'); };
   const openEdit = c => {
-    setForm({ name:c.name||'', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', seller:c.seller||'' });
+    setForm({ name:c.name||'', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', bank:c.bank||'', seller:c.seller||'' });
     setPhoneInput(fmtPhone(c.phone||''));
     setEditId(c.id); setErrors({}); setModal('edit');
   };
   const handleCopy = c => {
-    setForm({ name:(c.name||'') + ' - KOPYA', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', seller:c.seller||'' });
+    setForm({ name:(c.name||'') + ' - KOPYA', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', bank:c.bank||'', seller:c.seller||'' });
     setPhoneInput(fmtPhone(c.phone||''));
     setEditId(null); setErrors({}); setModal('add');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -420,6 +420,10 @@ export default function Clients({ user }) {
                 {errors.mfo&&<p className="text-[10px] text-red-500 mt-0.5">{errors.mfo}</p>}
               </div>
               <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Bank nomi</label>
+                <input type="text" value={form.bank} onChange={e=>setForm(f=>({...f,bank:e.target.value}))} className={inp('bank')} placeholder="Bank nomi (shartnoma rekvizitlarida)"/>
+              </div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Mas'ul sotuvchi</label>
                 <MultiSellerSelect sellers={sellers} value={form.seller} onChange={v=>setForm(f=>({...f,seller:v}))}/>
               </div>
@@ -633,6 +637,10 @@ export default function Clients({ user }) {
                   <label className="block text-sm font-medium text-[var(--text-2)] mb-1">MFO <span className="text-[var(--text-3)] font-normal">— 5 xona</span></label>
                   <input type="text" value={form.mfo} onChange={e=>setForm(f=>({...f,mfo:e.target.value.replace(/\D/g,'').slice(0,5)}))} className={inp('mfo')} placeholder="01234"/>
                   {errors.mfo&&<p className="text-xs text-red-500 mt-1">{errors.mfo}</p>}
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Bank nomi</label>
+                  <input type="text" value={form.bank} onChange={e=>setForm(f=>({...f,bank:e.target.value}))} className={inp('bank')} placeholder="Bank nomi (shartnoma rekvizitlarida)"/>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Mas'ul sotuvchi</label>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Times New Roman', 'Liberation Serif', 'DejaVu Serif', serif;
+    font-size: 11pt;
+    color: #000;
+    margin: 0;
+  }
+  .top { margin-bottom: 6px; }
+  .top .row { display: flex; justify-content: space-between; }
+  h1 { font-size: 14pt; text-align: center; margin: 12px 0; }
+  .parties { margin: 8px 0; }
+  .parties div { margin: 2px 0; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 9.5pt; }
+  table.items th, table.items td { border: 1px solid #000; padding: 4px 5px; text-align: center; }
+  table.items th { font-weight: bold; vertical-align: middle; }
+  table.items td.name { text-align: left; }
+  table.items td.num, table.items td.money { text-align: right; }
+  .total { margin-top: 10px; font-weight: bold; font-size: 11pt; }
+  .stamps { margin-top: 30px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="row">
+      <span>Приложение к договору</span>
+    </div>
+    <div class="row">
+      <span>г. Ангрен</span>
+      <span>№ {{contractNumber}} от {{contractDate}}</span>
+    </div>
+  </div>
+
+  <h1>СПЕЦИФИКАЦИЯ № {{specNumber}}</h1>
+
+  <div class="parties">
+    <div>Поставщик: {{companyName}}</div>
+    <div>Покупатель: {{buyerName}}{{#buyerInn}} (ИНН: {{buyerInn}}){{/buyerInn}}</div>
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th rowspan="2">Наименование</th>
+        <th>Плотность</th>
+        <th>Длина</th>
+        <th>Ширина</th>
+        <th>Толщина</th>
+        <th rowspan="2">Ед.изм.</th>
+        <th>Цена за 1 ед.<br>без учета НДС</th>
+        <th>НДС 12%</th>
+        <th>Цена за 1 ед.<br>с учетом НДС</th>
+        <th rowspan="2">Кол-во</th>
+        <th>Сумма<br>с учетом НДС</th>
+      </tr>
+      <tr>
+        <th>кг/м3</th>
+        <th>мм</th>
+        <th>мм</th>
+        <th>мм</th>
+        <th>сум</th>
+        <th>сум</th>
+        <th>сум</th>
+        <th>сум</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#products}}
+      <tr>
+        <td class="name">{{name}}</td>
+        <td class="num">{{density}}</td>
+        <td class="num">{{length}}</td>
+        <td class="num">{{width}}</td>
+        <td class="num">{{thickness}}</td>
+        <td>{{unit}}</td>
+        <td class="money">{{priceNoVat}}</td>
+        <td class="money">{{vat}}</td>
+        <td class="money">{{priceVat}}</td>
+        <td class="num">{{quantity}}</td>
+        <td class="money">{{rowTotal}}</td>
+      </tr>
+      {{/products}}
+    </tbody>
+  </table>
+
+  <div class="total">ИТОГО: {{totalDigits}} ({{totalWords}}) сум</div>
+
+  <div class="stamps">
+    <span>Поставщик _______________ М.П.</span>
+    <span>Покупатель _______________ М.П.</span>
+  </div>
+</body>
+</html>

@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, ChevronDown, ChevronRight, MoreVertical, Pencil, Trash2,
-  FileText, FileSpreadsheet, X, Check, AlertTriangle,
+  FileText, FileType, FileDown, FileSpreadsheet, X, Check, AlertTriangle,
   ShoppingCart, RefreshCw, Search, Printer, Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { API } from '../lib/api';
+import { downloadFile, openFile } from '../lib/download';
 import { fmt, fmtDate } from '../lib/format';
 import { calcRowTotal, calcVat } from '../lib/vat';
 import { useInlineForm } from '../hooks/useInlineForm';
@@ -123,7 +124,7 @@ function SpecProductRow({ row, products, onChange, onRemove }) {
 }
 
 // ─── SpecForm (inline — shartnoma ichida) ──────────────────────────────────
-function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, products, onSaved, onCancel }) {
+function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, products, contractTotalValue = 0, otherSpecsTotal = 0, onSaved, onCancel }) {
   const editing = Boolean(spec);
   const [date, setDate]   = useState(spec?.date?.slice(0, 10) || TODAY);
   const [notes, setNotes] = useState(spec?.notes || '');
@@ -147,6 +148,12 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
   const save = async () => {
     if (rows.length === 0) return toast.error('Kamida 1 ta mahsulot kerak');
     if (rows.some(r => !r.productId)) return toast.error('Mahsulotni tanlang');
+    // Spetslar yig'indisi shartnoma summasidan oshsa — ogohlantirish (bloklamaydi)
+    const projected = otherSpecsTotal + totalValue;
+    if (contractTotalValue > 0 && projected > contractTotalValue) {
+      toast(`Diqqat: spetslar yig'indisi (${fmt(projected)}) shartnoma summasidan (${fmt(contractTotalValue)}) oshib ketdi`,
+        { icon: '⚠️', duration: 5000 });
+    }
     setSaving(true);
     try {
       const payload = {
@@ -330,6 +337,8 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
     setDelSpecId(null);
   };
 
+  const specsSum = (specs || []).reduce((s, x) => s + (x.totalValue || 0), 0);
+
   return (
     <>
       <tr className="hover:bg-[var(--surface-2)] transition-colors cursor-pointer" onClick={toggleExpand}>
@@ -358,7 +367,16 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
             {c.specCount} spets
           </button>
         </td>
-        <td className="px-4 py-3 text-sm text-right text-[var(--text-2)] font-medium">{fmt(c.invoiceAmount || 0)}</td>
+        <td className="px-4 py-3 text-sm text-right font-medium">
+          {c.invoiceAmount > c.totalValue && c.totalValue > 0 ? (
+            <span title="Spetslar yig'indisi shartnoma summasidan oshib ketgan"
+              className="inline-flex items-center justify-end gap-1 text-amber-600 font-semibold">
+              <AlertTriangle size={13} /> {fmt(c.invoiceAmount)}
+            </span>
+          ) : (
+            <span className="text-[var(--text-2)]">{fmt(c.invoiceAmount || 0)}</span>
+          )}
+        </td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || STATUS_COLORS.yangi}`}>
             {STATUS_LABELS[c.status] || c.status}
@@ -387,15 +405,25 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                   <Trash2 size={15} strokeWidth={1.8} /> O'chirish
                 </button>
               )}
-              <a href={`${API}/api/export/contracts/${c.id}/pdf`} target="_blank" rel="noreferrer"
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
-                onClick={() => setMenuOpen(false)}>
-                <FileText size={15} strokeWidth={1.8} /> PDF yuklab olish
-              </a>
+              <button
+                onClick={() => { setMenuOpen(false); openFile(`${API}/api/export/contracts/${c.id}/pdf`); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)] text-left">
+                <FileText size={15} strokeWidth={1.8} className="text-red-500" /> PDF yuklab olish
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); downloadFile(`${API}/api/export/contracts/${c.id}/word`, `shartnoma-${c.number}.docx`); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)] text-left">
+                <FileType size={15} strokeWidth={1.8} className="text-blue-500" /> Word (.docx) yuklash
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); openFile(`${API}/api/export/contracts/${c.id}/pdf-with-specs`); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)] text-left">
+                <FileDown size={15} strokeWidth={1.8} className="text-[var(--accent)]" /> Barcha spetsifikatsiyalar bilan PDF
+              </button>
               <a href={`${API}/api/export/contracts/${c.id}/excel`}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>
-                <FileSpreadsheet size={15} strokeWidth={1.8} /> Excel yuklab olish
+                <FileSpreadsheet size={15} strokeWidth={1.8} className="text-emerald-600" /> Excel yuklab olish
               </a>
             </div>
           )}
@@ -446,6 +474,8 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                       spec={spec}
                       copiedSpec={null}
                       products={products}
+                      contractTotalValue={c.totalValue}
+                      otherSpecsTotal={specsSum - (spec.totalValue || 0)}
                       onSaved={handleSpecSaved}
                       onCancel={() => setEditSpec(null)}
                     />
@@ -475,13 +505,16 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                           </button>
                           
                           {/* Export / Print Icons */}
-                          <a href={`${API}/api/export/specs/${spec.id}/pdf`} target="_blank" rel="noreferrer" title="PDF yuklash" className="p-1 text-[var(--text-3)] hover:text-red-500 rounded hover:bg-[var(--surface-2)] transition">
+                          <button onClick={() => openFile(`${API}/api/export/specs/${spec.id}/pdf`)} title="PDF ko'rish/yuklash" className="p-1 text-[var(--text-3)] hover:text-red-500 rounded hover:bg-[var(--surface-2)] transition">
                             <FileText size={13} />
-                          </a>
+                          </button>
+                          <button onClick={() => downloadFile(`${API}/api/export/specs/${spec.id}/word`, `spetsifikatsiya-${spec.number}.docx`)} title="Word (.docx) yuklash" className="p-1 text-[var(--text-3)] hover:text-blue-500 rounded hover:bg-[var(--surface-2)] transition">
+                            <FileType size={13} />
+                          </button>
                           <a href={`${API}/api/export/specs/${spec.id}/excel`} title="Excel yuklash" className="p-1 text-[var(--text-3)] hover:text-emerald-600 rounded hover:bg-[var(--surface-2)] transition">
                             <FileSpreadsheet size={13} />
                           </a>
-                          <button onClick={() => window.open(`${API}/api/export/specs/${spec.id}/pdf`, '_blank')} title="Chop etish" className="p-1 text-[var(--text-3)] hover:text-[var(--text)] rounded hover:bg-[var(--surface-2)] transition">
+                          <button onClick={() => openFile(`${API}/api/export/specs/${spec.id}/pdf`)} title="Chop etish" className="p-1 text-[var(--text-3)] hover:text-[var(--text)] rounded hover:bg-[var(--surface-2)] transition">
                             <Printer size={13} />
                           </button>
                           <button onClick={() => { setCopiedSpec(spec); setAddingSpec(true); }} title="Nusxalash" className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] rounded hover:bg-[var(--surface-2)] transition">
@@ -564,6 +597,8 @@ function ContractRow({ c, idx, products, onEdit, onDelete, onSpecSaved, onSpecDe
                     nextNumber={specs ? (Math.max(0, ...specs.map(s => s.number)) + 1) : 1}
                     contractNumber={c.number}
                     products={products}
+                    contractTotalValue={c.totalValue}
+                    otherSpecsTotal={specsSum}
                     onSaved={handleSpecSaved}
                     onCancel={() => { setAddingSpec(false); setCopiedSpec(null); }}
                   />
@@ -633,6 +668,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
   }, []);
 
   const selectClient = (cl) => {
+    if (cl.id !== clientId) setSeller('');  // sotuvchilar ro'yxati mijozga bog'liq
     setClientId(cl.id);
     setClientSearch(cl.name);
     setClientDropOpen(false);
@@ -646,12 +682,32 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
 
   const save = async () => {
     if (!clientId) return toast.error('Mijozni tanlang');
+    if (!seller)  return toast.error('Sotuvchini tanlang');
     if (!date)    return toast.error('Sanani kiriting');
+    // Tahrirda biznes ogohlantirishlari (bloklamaydi)
+    if (editing) {
+      const tv        = Number(totalValue) || 0;
+      const delivered = editContract.deliveredAmount || 0;
+      const paid      = editContract.paidAmount || 0;
+      if (tv > 0 && tv < delivered) {
+        toast(`Diqqat: shartnoma summasi (${fmt(tv)}) yetkazilgan summadan (${fmt(delivered)}) past`,
+          { icon: '⚠️', duration: 5000 });
+      }
+      if (status === 'yopilgan' && delivered - paid > 0) {
+        toast(`Diqqat: shartnomada qarz qolgan (${fmt(delivered - paid)}), lekin 'Yopilgan' qilinmoqda`,
+          { icon: '⚠️', duration: 5000 });
+      }
+    }
     // Spets tekshiruvi — agar bo'lim ochiq va qatorlar bor bo'lsa
     if (showSpec && specRows.length > 0) {
       if (specRows.some(r => !r.productId))   return toast.error('Barcha qatorlarda mahsulot tanlang');
       if (specRows.some(r => !Number(r.quantity)))      return toast.error('Soni kiritilmagan');
       if (specRows.some(r => !Number(r.unitPriceVat)))  return toast.error('Narx kiritilmagan');
+      const tv = Number(totalValue) || 0;
+      if (tv > 0 && specTotal > tv) {
+        toast(`Diqqat: spetsifikatsiya summasi (${fmt(specTotal)}) shartnoma summasidan (${fmt(tv)}) oshib ketdi`,
+          { icon: '⚠️', duration: 5000 });
+      }
     }
     const payload = {
       clientId,
@@ -714,7 +770,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [] }) {
             <div className="relative">
               <input
                 value={clientSearch}
-                onChange={e => { setClientSearch(e.target.value); setClientDropOpen(true); setClientId(''); }}
+                onChange={e => { setClientSearch(e.target.value); setClientDropOpen(true); setClientId(''); setSeller(''); }}
                 onFocus={() => setClientDropOpen(true)}
                 placeholder="Mijoz qidiring..."
                 className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]"

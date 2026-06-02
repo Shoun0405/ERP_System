@@ -3,7 +3,14 @@ const prisma   = require('../prisma');
 const PDFDocument = require('pdfkit');
 const ExcelJS  = require('exceljs');
 const fs       = require('fs');
+const { PDFDocument: PDFLibDocument } = require('pdf-lib');
 const { requirePermission } = require('../middleware/rbac');
+const {
+  fillDocx,
+  htmlToPdf, renderHtmlTemplate, contractHtmlData, specHtmlData,
+} = require('../lib/docExport');
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 // Windows sistemasida Arial (Cyrillic qo'llab-quvvatlaydi), yo'q bo'lsa Helvetica
 const WIN_ARIAL      = 'C:/Windows/Fonts/arial.ttf';
@@ -37,120 +44,86 @@ async function loadContract(id) {
   });
 }
 
-// GET /api/export/contracts/:id/pdf
+function loadSpec(id) {
+  return prisma.specification.findUnique({
+    where: { id },
+    include: {
+      contract: { include: { client: true } },
+      products: { include: { product: true } },
+    },
+  });
+}
+
+async function loadConfig() {
+  const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+  return settings ? JSON.parse(settings.data) : {};
+}
+
+// HTML shablon → PDF Buffer (Puppeteer/Chromium) — reuse
+async function contractPdfBuffer(contract, cfg) {
+  const html = renderHtmlTemplate('contract_template.html', contractHtmlData(contract, cfg));
+  return htmlToPdf(html);
+}
+async function specPdfBuffer(spec, cfg) {
+  const html = renderHtmlTemplate('spec_template.html', specHtmlData(spec, cfg));
+  return htmlToPdf(html);
+}
+
+// GET /api/export/contracts/:id/word — shablon asosidagi .docx
+router.get('/contracts/:id/word', requirePermission('contracts', 'read'), async (req, res, next) => {
+  try {
+    const contract = await loadContract(req.params.id);
+    if (!contract) return res.status(404).json({ error: 'Topilmadi' });
+    const cfg = await loadConfig();
+
+    const buf = fillDocx('contract_template.docx', contractHtmlData(contract, cfg));
+    res.setHeader('Content-Type', DOCX_MIME);
+    res.setHeader('Content-Disposition', `attachment; filename="shartnoma-${contract.number}.docx"`);
+    res.send(buf);
+  } catch (e) { next(e); }
+});
+
+// GET /api/export/contracts/:id/pdf — shablon .docx → PDF (LibreOffice)
 router.get('/contracts/:id/pdf', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
     const contract = await loadContract(req.params.id);
     if (!contract) return res.status(404).json({ error: 'Topilmadi' });
+    const cfg = await loadConfig();
 
-    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-    const cfg = settings ? JSON.parse(settings.data) : {};
-
+    const pdf = await contractPdfBuffer(contract, cfg);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition',
-      `inline; filename="shartnoma-${contract.number}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="shartnoma-${contract.number}.pdf"`);
+    res.send(pdf);
+  } catch (e) { next(e); }
+});
 
-    const doc = makePdfDoc();
-    doc.pipe(res);
+// GET /api/export/contracts/:id/pdf-with-specs — shartnoma + barcha spetslar bitta PDF da
+router.get('/contracts/:id/pdf-with-specs', requirePermission('contracts', 'read'), async (req, res, next) => {
+  try {
+    const contract = await loadContract(req.params.id);
+    if (!contract) return res.status(404).json({ error: 'Topilmadi' });
+    const cfg = await loadConfig();
 
-    // SAHIFA 1 — Shartnoma
-    doc.font(FB).fontSize(18)
-       .text(`SHARTNOMA № ${contract.number}`, { align: 'center' });
-    doc.moveDown(0.5);
-    doc.font(F).fontSize(10)
-       .text(`Sana: ${new Date(contract.date).toLocaleDateString('ru-RU')}`, { align: 'center' });
-    doc.moveDown(1.5);
+    const merged = await PDFLibDocument.create();
 
-    doc.font(FB).fontSize(11).text('Sotuvchi:');
-    doc.font(F).fontSize(10);
-    doc.text(`Kompaniya: ${cfg.companyName || '—'}`);
-    doc.text(`INN: ${cfg.companyInn || '—'}`);
-    doc.text(`Manzil: ${cfg.companyAddress || '—'}`);
-    doc.text(`Telefon: ${cfg.companyPhone || '—'}`);
-    doc.moveDown();
+    const appendPdf = async (buffer) => {
+      const src = await PDFLibDocument.load(buffer);
+      const pages = await merged.copyPages(src, src.getPageIndices());
+      pages.forEach(p => merged.addPage(p));
+    };
 
-    doc.font(FB).fontSize(11).text('Xaridor (Mijoz):');
-    doc.font(F).fontSize(10);
-    doc.text(`Kompaniya: ${contract.client.name}`);
-    doc.text(`INN: ${contract.client.inn || '—'}`);
-    doc.text(`Manzil: ${contract.client.address || '—'}`);
-    doc.text(`Telefon: ${contract.client.phone || '—'}`);
-    doc.moveDown();
+    await appendPdf(await contractPdfBuffer(contract, cfg));
 
-    doc.font(FB).fontSize(11)
-       .text(`Umumiy shartnoma summasi: ${Math.round(contract.totalValue).toLocaleString('ru-RU')} so'm`);
-    doc.moveDown();
-
-    if (contract.notes) {
-      doc.font(FB).fontSize(11).text('Izoh:');
-      doc.font(F).fontSize(10).text(contract.notes);
-      doc.moveDown();
+    for (const spec of contract.specifications) {
+      // mapSpecData contract.client kutadi — list query da bu yo'q, shu sababli to'ldiramiz
+      const specForMap = { ...spec, contract: { ...contract, client: contract.client } };
+      await appendPdf(await specPdfBuffer(specForMap, cfg));
     }
 
-    doc.font(FB).fontSize(10)
-       .text(`Status: ${contract.status}`, { align: 'right' });
-
-    // Imzo joyi
-    doc.moveDown(3);
-    doc.font(F).fontSize(10);
-    const y = doc.y;
-    doc.text('Sotuvchi: ____________________', 50, y);
-    doc.text('Xaridor: ____________________', 300, y);
-
-    // SAHIFA 2 — Spetsifikatsiyalar
-    if (contract.specifications.length > 0) {
-      doc.addPage();
-      doc.font(FB).fontSize(16)
-         .text('SPETSIFIKATSIYALAR', { align: 'center' });
-      doc.moveDown();
-
-      for (const spec of contract.specifications) {
-        doc.font(FB).fontSize(12)
-           .text(`Spets № ${spec.number} — ${new Date(spec.date).toLocaleDateString('ru-RU')}`);
-        if (spec.notes) {
-          doc.font(F).fontSize(9).text(`Izoh: ${spec.notes}`);
-        }
-        doc.font(F).fontSize(8);
-
-        const colW = [140, 45, 45, 80, 70, 80];
-        const headers = ['Mahsulot (artikul)', 'Birlik', 'Soni', 'Narx (QQS bilan)', 'QQS summasi', 'Jami summa'];
-        const startX = 50;
-        let x = startX;
-        const headerY = doc.y + 5;
-
-        doc.font(FB).fontSize(8);
-        headers.forEach((h, i) => {
-          doc.text(h, x, headerY, { width: colW[i], align: 'left' });
-          x += colW[i];
-        });
-        doc.moveDown(1.5);
-
-        doc.font(F).fontSize(8);
-        for (const p of spec.products) {
-          x = startX;
-          const rowY = doc.y;
-          const cols = [
-            p.product.article,
-            p.unit,
-            String(p.quantity),
-            Math.round(p.unitPriceVat).toLocaleString('ru-RU'),
-            Math.round(p.vatAmount).toLocaleString('ru-RU'),
-            Math.round(p.rowTotal).toLocaleString('ru-RU'),
-          ];
-          cols.forEach((c, i) => {
-            doc.text(c, x, rowY, { width: colW[i] });
-            x += colW[i];
-          });
-          doc.moveDown(1);
-        }
-
-        doc.font(FB).fontSize(9)
-           .text(`Spets jami: ${Math.round(spec.totalValue).toLocaleString('ru-RU')} so'm`);
-        doc.moveDown(1.5);
-      }
-    }
-
-    doc.end();
+    const out = Buffer.from(await merged.save());
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="contract-and-specs-${contract.number}.pdf"`);
+    res.send(out);
   } catch (e) { next(e); }
 });
 
@@ -216,100 +189,31 @@ router.get('/contracts/:id/excel', requirePermission('contracts', 'read'), async
   } catch (e) { next(e); }
 });
 
-// GET /api/export/specs/:id/pdf
+// GET /api/export/specs/:id/word — shablon asosidagi .docx
+router.get('/specs/:id/word', requirePermission('contracts', 'read'), async (req, res, next) => {
+  try {
+    const spec = await loadSpec(req.params.id);
+    if (!spec) return res.status(404).json({ error: 'Topilmadi' });
+    const cfg = await loadConfig();
+
+    const buf = fillDocx('spec_template.docx', specHtmlData(spec, cfg));
+    res.setHeader('Content-Type', DOCX_MIME);
+    res.setHeader('Content-Disposition', `attachment; filename="spetsifikatsiya-${spec.number}.docx"`);
+    res.send(buf);
+  } catch (e) { next(e); }
+});
+
+// GET /api/export/specs/:id/pdf — shablon .docx → PDF (LibreOffice)
 router.get('/specs/:id/pdf', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
-    const spec = await prisma.specification.findUnique({
-      where: { id: req.params.id },
-      include: {
-        contract: { include: { client: true } },
-        products: { include: { product: true } },
-      },
-    });
+    const spec = await loadSpec(req.params.id);
     if (!spec) return res.status(404).json({ error: 'Topilmadi' });
+    const cfg = await loadConfig();
 
-    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-    const cfg = settings ? JSON.parse(settings.data) : {};
-
+    const pdf = await specPdfBuffer(spec, cfg);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition',
-      `inline; filename="spetsifikatsiya-${spec.number}.pdf"`);
-
-    const doc = makePdfDoc();
-    doc.pipe(res);
-
-    doc.font(FB).fontSize(16)
-       .text(`SPETSIFIKATSIYA № ${spec.number}`, { align: 'center' });
-    doc.moveDown(0.5);
-    doc.font(F).fontSize(10)
-       .text(`Shartnoma № ${spec.contract.number} bo'yicha`, { align: 'center' });
-    doc.text(`Sana: ${new Date(spec.date).toLocaleDateString('ru-RU')}`, { align: 'center' });
-    doc.moveDown(1.5);
-
-    doc.font(FB).fontSize(11).text('Sotuvchi:');
-    doc.font(F).fontSize(10);
-    doc.text(`Kompaniya: ${cfg.companyName || '—'}`);
-    doc.text(`INN: ${cfg.companyInn || '—'}`);
-    doc.text(`Manzil: ${cfg.companyAddress || '—'}`);
-    doc.text(`Telefon: ${cfg.companyPhone || '—'}`);
-    doc.moveDown();
-
-    doc.font(FB).fontSize(11).text('Xaridor (Mijoz):');
-    doc.font(F).fontSize(10);
-    doc.text(`Kompaniya: ${spec.contract.client.name}`);
-    doc.text(`INN: ${spec.contract.client.inn || '—'}`);
-    doc.text(`Manzil: ${spec.contract.client.address || '—'}`);
-    doc.text(`Telefon: ${spec.contract.client.phone || '—'}`);
-    doc.moveDown();
-
-    if (spec.notes) {
-      doc.font(FB).fontSize(10).text(`Izoh: ${spec.notes}`);
-      doc.moveDown(0.5);
-    }
-
-    const colW = [140, 45, 45, 80, 70, 80];
-    const headers = ['Mahsulot (artikul)', 'Birlik', 'Soni', 'Narx (QQS bilan)', 'QQS summasi', 'Jami summa'];
-    const startX = 50;
-    let x = startX;
-    const headerY = doc.y + 5;
-
-    doc.font(FB).fontSize(8);
-    headers.forEach((h, i) => {
-      doc.text(h, x, headerY, { width: colW[i], align: 'left' });
-      x += colW[i];
-    });
-    doc.moveDown(1.5);
-
-    doc.font(F).fontSize(8);
-    for (const p of spec.products) {
-      x = startX;
-      const rowY = doc.y;
-      const cols = [
-        p.product.article,
-        p.unit,
-        String(p.quantity),
-        Math.round(p.unitPriceVat).toLocaleString('ru-RU'),
-        Math.round(p.vatAmount).toLocaleString('ru-RU'),
-        Math.round(p.rowTotal).toLocaleString('ru-RU'),
-      ];
-      cols.forEach((c, i) => {
-        doc.text(c, x, rowY, { width: colW[i] });
-        x += colW[i];
-      });
-      doc.moveDown(1);
-    }
-    doc.moveDown(1);
-
-    doc.font(FB).fontSize(10)
-       .text(`Jami: ${Math.round(spec.totalValue).toLocaleString('ru-RU')} so'm`, { align: 'right' });
-
-    doc.moveDown(3);
-    doc.font(F).fontSize(10);
-    const y = doc.y;
-    doc.text('Sotuvchi: ____________________', 50, y);
-    doc.text('Xaridor: ____________________', 300, y);
-
-    doc.end();
+    res.setHeader('Content-Disposition', `inline; filename="spetsifikatsiya-${spec.number}.pdf"`);
+    res.send(pdf);
   } catch (e) { next(e); }
 });
 

@@ -7,6 +7,7 @@ import { Save, Plus, Trash2, Building2, Users, Database } from 'lucide-react';
 const EMPTY = {
   companyName: '', companyAddress: '', companyInn: '',
   companyPhone: '', companyBank: '', companyMfo: '', companyAccount: '',
+  companyDirector: '',
   sellers: [],
 };
 
@@ -113,9 +114,13 @@ export default function Settings() {
               <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">MFO</label>
               <input type="text" value={data.companyMfo} onChange={e => setData(d => ({ ...d, companyMfo: e.target.value }))} className={inp} placeholder="01234" />
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Hisob raqam</label>
               <input type="text" value={data.companyAccount} onChange={e => setData(d => ({ ...d, companyAccount: e.target.value }))} className={inp} placeholder="2020..." />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Direktor (rahbar)</label>
+              <input type="text" value={data.companyDirector} onChange={e => setData(d => ({ ...d, companyDirector: e.target.value }))} className={inp} placeholder="F.I.O. — shartnomada «в лице директора»" />
             </div>
           </div>
         </div>

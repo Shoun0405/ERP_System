@@ -4,6 +4,7 @@ const { Prisma } = require('@prisma/client');
 const { contractSchema } = require('./_schemas');
 const { requireRole, requirePermission } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
+const { countContractLinks } = require('../lib/contractGuards');
 
 const SORT_FIELDS = new Set(['date', 'number', 'totalValue', 'status', 'createdAt', 'client']);
 
@@ -229,23 +230,49 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
 router.put('/:id', requirePermission('contracts', 'update'), async (req, res, next) => {
   try {
     const body     = contractSchema.partial().parse(req.body);
+    const existing = await prisma.contract.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Shartnoma topilmadi' });
+
+    // Mijoz (contragent) o'zgarsa — bog'langan sotuv/to'lov bo'lmasligi shart.
+    // Aks holda eski mijozning sotuv/to'lovlari shartnomadan uzilib qoladi.
+    let clientChanged = false;
+    if (body.clientId !== undefined && body.clientId !== existing.clientId) {
+      const { hasAny } = await countContractLinks(existing.id);
+      if (hasAny) {
+        return res.status(409).json({
+          error: "Mijozni o'zgartirib bo'lmaydi: avval bog'langan sotuv/to'lovlarni bekor qiling",
+        });
+      }
+      clientChanged = true;
+    }
+
+    // Eslatma: contractSchema.partial() ham `.default()` qiymatlarni saqlaydi
+    // (notes → '', seller → null), shuning uchun parse natijasidagi `!== undefined`
+    // tekshiruvi maydonni "berilgan" deb hisoblab notes/seller'ni o'chirib yuboradi.
+    // Faqat so'rovda haqiqatan yuborilgan kalitlarni yangilaymiz.
+    const sent = (k) => Object.prototype.hasOwnProperty.call(req.body, k);
+
     const contract = await prisma.contract.update({
       where: { id: req.params.id },
       data: {
-        ...(body.date       !== undefined ? { date: new Date(body.date) } : {}),
-        ...(body.totalValue !== undefined ? { totalValue: body.totalValue } : {}),
-        ...(body.notes      !== undefined ? { notes: body.notes || null } : {}),
-        ...(body.status     !== undefined ? { status: body.status } : {}),
-        ...(body.seller     !== undefined ? { seller: body.seller || null } : {}),
+        ...(sent('date')       ? { date: new Date(body.date) } : {}),
+        ...(sent('totalValue') ? { totalValue: body.totalValue } : {}),
+        ...(sent('notes')      ? { notes: body.notes || null } : {}),
+        ...(sent('status')     ? { status: body.status } : {}),
+        ...(sent('seller')     ? { seller: body.seller || null } : {}),
+        ...(clientChanged      ? { clientId: body.clientId } : {}),
         // number o'zgartirilmaydi — audit izi
       },
       include: { client: { select: { id: true, name: true, inn: true } } },
     });
-    
+
     await logAudit(req.user.id, 'update', 'contract', contract.id, body, req);
 
     res.json(contract);
-  } catch (e) { next(e); }
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(409).json({ error: 'Bu raqam yangi mijozda allaqachon mavjud' });
+    next(e);
+  }
 });
 
 // DELETE /api/contracts/:id (Admin-only delete)
@@ -257,11 +284,8 @@ router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res,
       return res.status(404).json({ error: 'Shartnoma topilmadi' });
     }
 
-    const [linkedSales, linkedPayments] = await Promise.all([
-      prisma.sale.count({ where: { contractId } }),
-      prisma.payment.count({ where: { contractId } }),
-    ]);
-    if (linkedSales > 0 || linkedPayments > 0) {
+    const { hasAny } = await countContractLinks(contractId);
+    if (hasAny) {
       return res.status(409).json({ error: "Bog'langan savdo yoki to'lov mavjud" });
     }
     await prisma.contract.delete({ where: { id: contractId } });

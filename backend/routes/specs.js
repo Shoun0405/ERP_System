@@ -75,11 +75,6 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
         include: { products: { include: { product: true } } },
       });
 
-      await tx.contract.update({
-        where: { id: body.contractId },
-        data:  { specCounter: { increment: 1 } },
-      });
-
       return spec;
     });
 
@@ -93,6 +88,8 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
 router.put('/:id', requirePermission('contracts', 'update'), async (req, res, next) => {
   try {
     const body = specSchema.partial({ contractId: true, products: true }).parse(req.body);
+    // partial() default'larni saqlaydi (notes → ''); faqat yuborilgan kalitlarni yangilaymiz
+    const sent = (k) => Object.prototype.hasOwnProperty.call(req.body, k);
 
     const updated = await prisma.$transaction(async (tx) => {
       if (body.products) {
@@ -116,16 +113,16 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
           where: { id: req.params.id },
           data: {
             totalValue,
-            ...(body.notes !== undefined ? { notes: body.notes || null } : {}),
-            ...(body.date  !== undefined ? { date: new Date(body.date) } : {}),
+            ...(sent('notes') ? { notes: body.notes || null } : {}),
+            ...(sent('date')  ? { date: new Date(body.date) } : {}),
           },
         });
       } else {
         await tx.specification.update({
           where: { id: req.params.id },
           data: {
-            ...(body.notes !== undefined ? { notes: body.notes || null } : {}),
-            ...(body.date  !== undefined ? { date: new Date(body.date) } : {}),
+            ...(sent('notes') ? { notes: body.notes || null } : {}),
+            ...(sent('date')  ? { date: new Date(body.date) } : {}),
           },
         });
       }
@@ -148,6 +145,12 @@ router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res,
     const spec = await prisma.specification.findUnique({ where: { id } });
     if (!spec) {
       return res.status(404).json({ error: 'Spetsifikatsiya topilmadi' });
+    }
+    // Sale.specId FK = SET NULL — bog'langan savdo bo'lsa Prisma xato bermaydi,
+    // balki savdoni jimgina uzib qo'yadi. Shuning uchun app darajasida bloklaymiz.
+    const saleCount = await prisma.sale.count({ where: { specId: id } });
+    if (saleCount > 0) {
+      return res.status(409).json({ error: "Bu spetsifikatsiya bo'yicha savdo mavjud, avval savdoni o'chiring" });
     }
     await prisma.specification.delete({ where: { id } });
     

@@ -7,6 +7,7 @@ const { logAudit } = require('../lib/audit');
 const DEFAULT_SETTINGS = {
   companyName: '', companyAddress: '', companyInn: '',
   companyPhone: '', companyBank: '', companyMfo: '', companyAccount: '',
+  companyDirector: '',
   sellers: [],
 };
 

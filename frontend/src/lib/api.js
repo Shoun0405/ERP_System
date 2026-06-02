@@ -21,7 +21,9 @@ api.interceptors.response.use(
         }
         window.location.href = '/login';
       }
-    } else {
+    } else if (!err.config?.skipErrorToast) {
+      // Blob yuklab olishlar xatoni o'zi parse qiladi (lib/download.js) —
+      // bu yerda umumiy toast ko'rsatmaymiz (ikki marta chiqmasligi uchun).
       const msg = err.response?.data?.error || err.message || 'Server xatosi';
       toast.error(msg);
     }

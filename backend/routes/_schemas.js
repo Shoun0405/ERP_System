@@ -10,6 +10,7 @@ const clientSchema = z.object({
   status:   z.enum(['Yangi', 'Faol', 'Kutilmoqda', "Muddati o'tgan"]).default('Yangi'),
   account:  z.string().max(20).default(''),
   mfo:      z.string().max(5).default(''),
+  bank:     z.string().max(200).default(''),
   seller:   z.string().max(200).default(''),
 });
 
@@ -70,6 +71,7 @@ const settingSchema = z.object({
   companyBank:           z.string().max(200).default(''),
   companyMfo:            z.string().max(5).default(''),
   companyAccount:        z.string().max(20).default(''),
+  companyDirector:       z.string().max(200).default(''),
   sellers:               z.array(z.string().max(200)).default([]),
   autoContractNumbering: z.boolean().default(true),
   vatRate:               z.coerce.number().min(0).max(1).default(0.12),
