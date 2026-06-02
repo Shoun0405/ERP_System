@@ -8,19 +8,19 @@ generator client {
 }
 
 model Client {
-  id        String   @id @default(uuid())
-  name      String
-  inn       String?  @unique
-  category  String?
-  status    String?
-  director  String?
-  phone     String?
-  address   String?
-  account   String?
-  mfo       String?
-  bank      String?
-  seller    String?
-  createdAt DateTime @default(now())
+  id           String        @id @default(uuid())
+  name         String
+  inn          String?       @unique
+  category     String?
+  status       String?
+  director     String?
+  phone        String?
+  address      String?
+  account      String?
+  mfo          String?
+  bank         String?
+  seller       String?
+  createdAt    DateTime      @default(now())
   contracts    Contract[]
   sales        Sale[]
   payments     Payment[]
@@ -31,40 +31,40 @@ model Client {
 }
 
 model Product {
-  id        String   @id @default(uuid())
-  article   String   @unique
-  density   Float
-  length    Float
-  width     Float
-  thickness Float
-  sqmPerPce Float
-  cbmPerPce Float
-  kgPerPce  Float
-  priceTon  Float    @default(0)
-  priceCbm  Float    @default(0)
-  priceSqm  Float    @default(0)
-  createdAt DateTime @default(now())
+  id           String        @id @default(uuid())
+  article      String        @unique
+  density      Float
+  length       Float
+  width        Float
+  thickness    Float
+  sqmPerPce    Float
+  cbmPerPce    Float
+  kgPerPce     Float
+  priceTon     Decimal       @default(0) @db.Decimal(18, 2)
+  priceCbm     Decimal       @default(0) @db.Decimal(18, 2)
+  priceSqm     Decimal       @default(0) @db.Decimal(18, 2)
+  createdAt    DateTime      @default(now())
   saleProducts SaleProduct[]
   specProducts SpecProduct[]
 }
 
 model Contract {
-  id           String          @id @default(uuid())
-  number       String
-  numericPart  Int             @default(0)
-  yearPart     Int             @default(0)
-  date         DateTime
-  totalValue   Float
-  notes        String?
-  status       String          @default("yangi")
-  clientId     String
-  client       Client          @relation(fields: [clientId], references: [id])
-  sales        Sale[]
-  payments     Payment[]
+  id             String          @id @default(uuid())
+  number         String
+  numericPart    Int             @default(0)
+  yearPart       Int             @default(0)
+  date           DateTime
+  totalValue     Decimal         @db.Decimal(18, 2)
+  notes          String?
+  status         String          @default("yangi")
+  clientId       String
+  client         Client          @relation(fields: [clientId], references: [id])
+  sales          Sale[]
+  payments       Payment[]
   specifications Specification[]
-  seller       String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  seller         String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([number, clientId])
   @@index([clientId])
@@ -73,17 +73,17 @@ model Contract {
 }
 
 model Specification {
-  id          String        @id @default(uuid())
-  number      Int
-  date        DateTime      @default(now())
-  totalValue  Float         @default(0)
-  notes       String?
-  contractId  String
-  contract    Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  products    SpecProduct[]
-  sales       Sale[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id         String        @id @default(uuid())
+  number     Int
+  date       DateTime      @default(now())
+  totalValue Decimal       @default(0) @db.Decimal(18, 2)
+  notes      String?
+  contractId String
+  contract   Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  products   SpecProduct[]
+  sales      Sale[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   @@unique([contractId, number])
   @@index([contractId])
@@ -96,9 +96,9 @@ model SpecProduct {
   productId    String
   unit         String
   quantity     Float
-  unitPriceVat Float
-  vatAmount    Float
-  rowTotal     Float
+  unitPriceVat Decimal       @db.Decimal(18, 2)
+  vatAmount    Decimal       @db.Decimal(18, 2)
+  rowTotal     Decimal       @db.Decimal(18, 2)
   spec         Specification @relation(fields: [specId], references: [id], onDelete: Cascade)
   product      Product       @relation(fields: [productId], references: [id])
   createdAt    DateTime      @default(now())
@@ -108,21 +108,21 @@ model SpecProduct {
 }
 
 model Sale {
-  id           String         @id @default(uuid())
-  date         DateTime
-  nakladnoy    String
-  sellerName   String
-  transportNum String?
-  totalAmount  Float
-  clientId     String
-  contractId   String?
-  specId       String?
-  client       Client         @relation(fields: [clientId], references: [id])
-  contract     Contract?      @relation(fields: [contractId], references: [id])
-  spec         Specification? @relation(fields: [specId], references: [id])
-  products     SaleProduct[]
-  facturaStatus String        @default("yuborilmagan")
-  createdAt    DateTime       @default(now())
+  id            String         @id @default(uuid())
+  date          DateTime
+  nakladnoy     String
+  sellerName    String
+  transportNum  String?
+  totalAmount   Decimal        @db.Decimal(18, 2)
+  clientId      String
+  contractId    String?
+  specId        String?
+  client        Client         @relation(fields: [clientId], references: [id])
+  contract      Contract?      @relation(fields: [contractId], references: [id])
+  spec          Specification? @relation(fields: [specId], references: [id])
+  products      SaleProduct[]
+  facturaStatus String         @default("yuborilmagan")
+  createdAt     DateTime       @default(now())
 
   @@index([clientId, date])
   @@index([contractId])
@@ -130,18 +130,18 @@ model Sale {
 }
 
 model SaleProduct {
-  id           String  @id @default(uuid())
-  saleId       String
-  productId    String
-  packType     Int
-  totalPieces  Int
-  totalCbm     Float
-  totalKg      Float
-  totalSqm     Float
-  priceCbm     Float
-  rowAmount    Float
-  sale         Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product      Product @relation(fields: [productId], references: [id])
+  id          String  @id @default(uuid())
+  saleId      String
+  productId   String
+  packType    Int
+  totalPieces Int
+  totalCbm    Float
+  totalKg     Float
+  totalSqm    Float
+  priceCbm    Decimal @db.Decimal(18, 2)
+  rowAmount   Decimal @db.Decimal(18, 2)
+  sale        Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
 
   @@index([saleId])
   @@index([productId])
@@ -150,7 +150,7 @@ model SaleProduct {
 model Payment {
   id          String    @id @default(uuid())
   date        DateTime
-  amount      Float
+  amount      Decimal   @db.Decimal(18, 2)
   note        String?
   isFromExcel Boolean   @default(false)
   clientId    String
@@ -184,24 +184,24 @@ model Setting {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  username  String     @unique
-  password  String     // hashed password
-  fullName  String     @default("Sotuvchi")
-  role      String     @default("user") // admin, user
-  isActive  Boolean    @default(true)
+  id          String     @id @default(uuid())
+  username    String     @unique
+  password    String // hashed password
+  fullName    String     @default("Sotuvchi")
+  role        String     @default("user") // admin, user
+  isActive    Boolean    @default(true)
   permissions Json?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @default(now()) @updatedAt
-  auditLogs AuditLog[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now()) @updatedAt
+  auditLogs   AuditLog[]
 }
 
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action     String   // "create" | "update" | "delete"
-  entityType String   // "client" | "product" | "sale" | "payment" | "contract" | "specification" | "interaction" | "setting"
+  action     String // "create" | "update" | "delete"
+  entityType String // "client" | "product" | "sale" | "payment" | "contract" | "specification" | "interaction" | "setting"
   entityId   String?
   payload    Json?
   ipAddress  String?

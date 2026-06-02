@@ -16,7 +16,12 @@ qattiqlashtirish), H-7 (test crash tuzatildi). Test suite: **50/50 o'tdi**. Tafs
 **Bajarildi (2026-06-02, 2-tur):** H-4 (in-memory token revocation blocklist) + Playwright E2E
 autentifikatsiya integratsiyasi (storageState pattern). Backend **53/53**, E2E **4/4** (barqaror).
 
-**Keyingi qadam:** Bosqich 15 (ombor + C-2 moliyaviy butunlik) → Bosqich 16 (audit UI + Decimal + hisobot).
+**Bajarildi (2026-06-02, 3-tur):** Bosqich 16 — **Decimal pul migratsiyasi (M-2)**. 12 ta pul maydoni
+`Float`→`Decimal(18,2)`; `prisma.js` da Decimal→Number client extension; xom SQL `SUM` endi `numeric`da
+aniq. Frontend o'zgarmadi (API-chegarada Number). Backend **56/56** (yangi `tests/decimal.test.mjs` 3 test).
+*(Bosqich 15 ombor bog'liq emasligi sababli o'tkazib yuborildi — foydalanuvchi so'rovi.)*
+
+**Keyingi qadam:** Bosqich 16 ning qolgan qismi (QQS H-1, hisobot H-5, Audit UI) yoki Bosqich 15 (ombor + C-2).
 
 **Bosqich 1–13 HAMMASI BAJARILDI. Bosqich 14 (JWT) — C-1/C-3/H-3/M-1/H-4 BAJARILDI (CSRF ixtiyoriy qoldi).**
 
@@ -503,17 +508,21 @@ Hozir **ombor qoldig'i umuman yo'q** — savdo qancha bo'lsa ham mahsulot cheksi
 ---
 
 ## Bosqich 16 — Audit Trail UI + Enterprise Hisobot + Decimal pul
-**Holat: TODO**
+**Holat: PARTIAL (Decimal M-2 bajarildi 2026-06-02; qolgani TODO)**
 
-`AuditLog` jadvali yoziladi, lekin **ko'rish UI yo'q** (yarim feature). Pul `Float` (M-2). Hisobotlar to'liq jadval yuklaydi (H-5).
+> Eslatma: Bosqich 15 (ombor) bog'liq emasligi sababli foydalanuvchi so'rovi bilan
+> Bosqich 16 ning Decimal qismidan boshlandi.
+
+`AuditLog` jadvali yoziladi, lekin **ko'rish UI yo'q** (yarim feature). Hisobotlar to'liq jadval yuklaydi (H-5).
 
 - [ ] **Audit UI:** `GET /api/audit?entityType=&userId=&from=&to=&page=` (admin-only, pagination, filtr). Frontend: filtrlanadigan jadval, diff ko'rinishi. Payload diff-only saqlash (M-7) + retention (eski auditlarni arxivlash/o'chirish skripti).
-- [ ] **Decimal migratsiya (M-2):** Pul maydonlarini `Decimal(18,2)` ga; backend Prisma `Decimal`, frontend string-decimal formatlash (`fmt` ni moslash).
+- [x] **Decimal migratsiya (M-2):** 12 ta pul maydoni (`Product.price{Ton,Cbm,Sqm}`, `Contract.totalValue`, `Specification.totalValue`, `SpecProduct.{unitPriceVat,vatAmount,rowTotal}`, `Sale.totalAmount`, `SaleProduct.{priceCbm,rowAmount}`, `Payment.amount`) `Float` → `Decimal @db.Decimal(18,2)`. Fizik o'lcham/miqdor maydonlari (`density`, `cbmPerPce`, `quantity`, `totalCbm/Kg/Sqm` ...) `Float` qoldi. `prisma.js` ga **client extension** qo'shildi — har model so'rovida `Decimal`→`Number` (chuqur, rekursiv) aylantiradi: shunda routelar/hisobot/eksport va **frontend o'zgarmaydi** (number bilan ishlaydi), `0 + Decimal` string-konkatenatsiya xatosi yo'q. Xom SQL `SUM`lar allaqachon `::float` cast — endi `numeric` ustunda **aniq** hisoblanadi, transport uchun float. Yangi `tests/decimal.test.mjs` (3 test): `0.1+0.2 === 0.3` aniq, API number qaytaradi (string emas), `numeric(18,2)` round-trip. **Test: 56/56 o'tdi.** *(frontend string-decimal o'rniga API-chegarada Number — UZS summalari xavfsiz int oralig'ida; murakkablik kamroq.)*
 - [ ] **QQS konfiguratsiyasi (H-1):** `calcVat(total, rate)`; spec hisoblashda sozlama `vatRate` ishlatish; frontend bilan sinxron.
 - [ ] **Hisobot optimizatsiyasi (H-5):** `client-statement` running-balance ni SQL `SUM() OVER (ORDER BY date)` ga ko'chirish; export `ids` ≤500 cheklash; sana oralig'i majburiy.
 - [ ] **Yangi hisobotlar:** Davr bo'yicha P&L (savdo − xarid), QQS hisoboti (soliq deklaratsiyasi uchun), ombor qoldig'i qiymati, sotuvchi bo'yicha komissiya/oborot.
 - [ ] **Batch invoice eksport:** tanlangan bir nechta shartnoma/savdoni bitta ZIP (PDF/Excel) ga; `xlsx@0.18.5` ni `exceljs` ga almashtirish (H-6).
-- [ ] **Testlar:** audit yozuvi har mutatsiyada yaratiladi; Decimal yaxlitlash (0.1+0.2) testi.
+- [x] **Decimal test (0.1+0.2):** `tests/decimal.test.mjs` qo'shildi — aniqlik, Number tipi, round-trip.
+- [ ] **Testlar:** audit yozuvi har mutatsiyada yaratiladi.
 
 ---
 
