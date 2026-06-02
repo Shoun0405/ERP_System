@@ -4,7 +4,7 @@ import { useModalKeys } from '../hooks/useModalKeys';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
-import * as XLSX from 'xlsx';
+import { downloadFile } from '../lib/download';
 import { fmt } from '../lib/format';
 import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
 
@@ -228,22 +228,11 @@ export default function Clients({ user }) {
     catch { /* interceptor shows toast */ }
   };
 
-  const handleExport = async () => {
-    try {
-      const r = await api.get('/api/clients', {
-        params: { limit: 1000, search: debouncedSearch, sortBy: sort.col, sortDir: sort.dir },
-      });
-      const rows = r.data.data.map(c => ({
-        'Nomi': c.name, 'STIR': c.inn, 'Telefon': c.phone,
-        'Direktor': c.director, 'Manzil': c.address,
-        'Kategoriya': c.category, 'Holati': c.status,
-        'Sotuvchi': c.seller, 'Qarzdorlik (UZS)': Math.round(c.debt),
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Mijozlar');
-      XLSX.writeFile(wb, `mijozlar_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch { /* interceptor shows toast */ }
+  const handleExport = () => {
+    const qs = new URLSearchParams({
+      search: debouncedSearch, sortBy: sort.col, sortDir: sort.dir, debtFilter,
+    }).toString();
+    downloadFile(`/api/export/clients/excel?${qs}`, `mijozlar_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const toggleSort = col => {

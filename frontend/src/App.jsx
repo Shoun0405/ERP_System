@@ -8,9 +8,9 @@ import {
   LogOut, Calendar, Download, Plus, Search, Sun, Moon,
   Shield, Menu, ScrollText
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'react-hot-toast';
 import api from './lib/api';
+import { downloadFile } from './lib/download';
 import { fmt } from './lib/format';
 import { useTheme } from './hooks/useTheme';
 import TrendChart from './components/TrendChart';
@@ -309,11 +309,7 @@ function Dashboard() {
 
   const handleExportMonthly = () => {
     if (!stats?.monthlyData?.length) return;
-    const rows = stats.monthlyData.map(d => ({ Oy: d.month, 'Summa (UZS)': Math.round(d.amount) }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Oylik savdo');
-    XLSX.writeFile(wb, `oylik_savdo_${new Date().toISOString().split('T')[0]}.xlsx`);
+    downloadFile('/api/export/dashboard/monthly-excel', `oylik_savdo_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   useEffect(() => {

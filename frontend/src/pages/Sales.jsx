@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import api, { API } from '../lib/api';
+import api from '../lib/api';
 import toast from 'react-hot-toast';
+import { downloadFile, openFile } from '../lib/download';
 import { useReactToPrint } from 'react-to-print';
 import { useModalKeys } from '../hooks/useModalKeys';
 import { useInlineForm } from '../hooks/useInlineForm';
@@ -12,7 +13,7 @@ import {
   Plus, X, Trash2, Package, Eye, Printer,
   FileText, Truck, User, Calendar, Hash, Search,
   Check, RefreshCw, ChevronDown, CheckCircle2, XCircle,
-  FileSpreadsheet, Download, Pencil
+  FileSpreadsheet, Download, Pencil, FileArchive
 } from 'lucide-react';
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -814,11 +815,12 @@ export default function Sales({ user }) {
 
   const handleBulkExport = (type) => {
     if (selectedSales.length === 0) return;
-    const url = `${API}/api/export/sales/${type}?ids=${selectedSales.join(',')}`;
+    const url = `/api/export/sales/${type}?ids=${selectedSales.join(',')}`;
     if (type === 'pdf') {
-      window.open(url, '_blank');
+      openFile(url);
     } else {
-      window.location.href = url;
+      const ext = type === 'zip' ? 'zip' : 'xlsx';
+      downloadFile(url, `savdolar-hisoboti.${ext}`);
     }
   };
 
@@ -1294,6 +1296,9 @@ export default function Sales({ user }) {
             </button>
             <button onClick={() => handleBulkExport('excel')} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs font-medium transition text-emerald-400">
               <FileSpreadsheet size={13} /> Excel Yuklash
+            </button>
+            <button onClick={() => handleBulkExport('zip')} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs font-medium transition text-amber-400">
+              <FileArchive size={13} /> ZIP (PDF) Yuklash
             </button>
             <button onClick={() => handleBulkFactura('yuborildi')} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 rounded-full text-xs font-medium transition text-emerald-100">
               <CheckCircle2 size={13} /> Faktura: Yuborildi
