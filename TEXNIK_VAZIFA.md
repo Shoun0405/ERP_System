@@ -536,3 +536,17 @@ Hozir **ombor qoldig'i umuman yo'q** — savdo qancha bo'lsa ham mahsulot cheksi
 4. **H-3, H-4, M-1** — auth hardening (Bosqich 14).
 5. **H-1, M-2, H-5** — moliyaviy aniqlik + hisobot (Bosqich 16).
 6. **Bosqich 17** — test ishonchliligi.
+
+---
+
+## Bosqich 18+ — Kelajakka tayyorgarlik (profilaktik arxitektura)
+
+Dastur kattalashib, murakkablashganda yuzaga keladigan muammolarni **oldindan** hisobga
+oluvchi yo'l xaritasi alohida faylga ajratildi: **[`MIQYOSLASH.md`](./MIQYOSLASH.md)**.
+
+Qisqacha (5–50 ichki foydalanuvchi miqyosi uchun):
+- **Bosqich 18** — Migratsiya intizomi (`prisma migrate`) + zaxira/tiklash sinovi (poydevor).
+- **Bosqich 19** — Frontend ma'lumot-qatlami (react-query) + ulkan sahifalarni refaktor.
+- **Bosqich 20** — Observability (pino/Sentry) + CI/CD (GitHub Actions).
+- **Bosqich 21** — Ma'lumot hayot-sikli (audit retention, keyset pagination).
+- **Bosqich 22** — Bir vaqtli tahrir butunligi (optimistik blok) + tip xavfsizligi.
