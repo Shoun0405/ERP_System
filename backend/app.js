@@ -65,6 +65,7 @@ app.use('/api/dashboard',    auth, require('./routes/dashboard'));
 app.use('/api/settings',     auth, require('./routes/settings'));
 app.use('/api/users',        auth, require('./routes/users'));
 app.use('/api/reports',      auth, require('./routes/reports'));
+app.use('/api/audit',        auth, require('./routes/audit'));
 
 // Frontend static serve (production)
 const distPath = path.join(__dirname, '../frontend/dist');

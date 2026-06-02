@@ -6,7 +6,7 @@ import {
   ArrowUpRight, MessageSquare, FileText,
   ChevronLeft, ChevronRight, ChevronDown,
   LogOut, Calendar, Download, Plus, Search, Sun, Moon,
-  Shield, Menu
+  Shield, Menu, ScrollText
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Toaster, toast } from 'react-hot-toast';
@@ -29,6 +29,7 @@ import SettingsPage     from './pages/Settings';
 import InteractionsPage from './pages/Interactions';
 import Login            from './pages/Login';
 import UsersPage        from './pages/Users';
+import AuditPage        from './pages/Audit';
 import Reports          from './pages/Reports';
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
 
   if (user?.role === 'admin') {
     navItems.push({ name: 'Foydalanuvchilar', path: '/users', icon: Shield });
+    navItems.push({ name: 'Audit jurnali', path: '/audit', icon: ScrollText });
   }
 
   return (
@@ -168,6 +170,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
     '/reports':      'Tizim hisobotlari',
     '/settings':     'Tizim sozlamalari',
     '/users':        'Foydalanuvchilar (RBAC)',
+    '/audit':        'Audit jurnali',
   };
 
   useEffect(() => {
@@ -626,6 +629,7 @@ export default function App() {
               {(user?.role === 'admin' || user?.permissions?.settings?.read !== false) && <Route path="/settings"      element={<SettingsPage user={user} />} />}
               {(user?.role === 'admin' || user?.permissions?.reports?.read !== false) && <Route path="/reports"       element={<Reports user={user} />} />}
               {user?.role === 'admin' && <Route path="/users" element={<UsersPage user={user} />} />}
+              {user?.role === 'admin' && <Route path="/audit" element={<AuditPage user={user} />} />}
               <Route path="/login"         element={<Dashboard />} />
               <Route path="*"              element={<Dashboard />} />
             </Routes>
