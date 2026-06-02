@@ -16,12 +16,14 @@ qattiqlashtirish), H-7 (test crash tuzatildi). Test suite: **50/50 o'tdi**. Tafs
 **Bajarildi (2026-06-02, 2-tur):** H-4 (in-memory token revocation blocklist) + Playwright E2E
 autentifikatsiya integratsiyasi (storageState pattern). Backend **53/53**, E2E **4/4** (barqaror).
 
-**Bajarildi (2026-06-02, 3-tur):** Bosqich 16 — **Decimal pul migratsiyasi (M-2)**. 12 ta pul maydoni
-`Float`→`Decimal(18,2)`; `prisma.js` da Decimal→Number client extension; xom SQL `SUM` endi `numeric`da
-aniq. Frontend o'zgarmadi (API-chegarada Number). Backend **56/56** (yangi `tests/decimal.test.mjs` 3 test).
-*(Bosqich 15 ombor bog'liq emasligi sababli o'tkazib yuborildi — foydalanuvchi so'rovi.)*
+**Bajarildi (2026-06-02, 3-tur):** **Bosqich 16 TO'LIQ** (4 ketma-ket agent orqali). (1) Decimal pul
+migratsiyasi M-2 (`Float`→`Decimal(18,2)`, `prisma.js` Decimal→Number extension). (2) QQS konfiguratsiyasi
+H-1 (stavka Settings'dan). (3) Hisobot H-5 (running-balance SQL window, export ids≤500) + yangi hisobotlar
+(QQS deklaratsiyasi, sotuvchi oboroti). (4) Audit UI + payload sanitizatsiya M-7 + retention. (5) Batch ZIP
+eksport + zaif `xlsx` butunlay olib tashlandi (H-6, backend `exceljs` ga ko'chirildi). Backend **81/81 test**.
+*(Bosqich 15 ombor o'tkazib yuborildi. P&L va ombor-qiymat hisobotlari tannarx/ombor modeliga bog'liq — qoldirildi.)*
 
-**Keyingi qadam:** Bosqich 16 ning qolgan qismi (QQS H-1, hisobot H-5, Audit UI) yoki Bosqich 15 (ombor + C-2).
+**Keyingi qadam:** Bosqich 15 (ombor + C-2 race-lock) yoki Bosqich 17 (test qamrovi kengaytirish + CI).
 
 **Bosqich 1–13 HAMMASI BAJARILDI. Bosqich 14 (JWT) — C-1/C-3/H-3/M-1/H-4 BAJARILDI (CSRF ixtiyoriy qoldi).**
 
@@ -508,21 +510,20 @@ Hozir **ombor qoldig'i umuman yo'q** — savdo qancha bo'lsa ham mahsulot cheksi
 ---
 
 ## Bosqich 16 — Audit Trail UI + Enterprise Hisobot + Decimal pul
-**Holat: PARTIAL (Decimal M-2 bajarildi 2026-06-02; qolgani TODO)**
+**Holat: DONE ✅ (2026-06-02; P&L va ombor-qiymat hisobotlari Bosqich 15/tannarx modeliga bog'liq — qoldirildi)**
 
 > Eslatma: Bosqich 15 (ombor) bog'liq emasligi sababli foydalanuvchi so'rovi bilan
-> Bosqich 16 ning Decimal qismidan boshlandi.
+> Bosqich 16 dan boshlandi. Ishlar 4 ta ketma-ket agent orqali bajarildi (umumiy test
+> DB poyga holatidan qochish uchun parallel emas). Yakuniy: **backend 81/81 test o'tdi.**
 
-`AuditLog` jadvali yoziladi, lekin **ko'rish UI yo'q** (yarim feature). Hisobotlar to'liq jadval yuklaydi (H-5).
-
-- [ ] **Audit UI:** `GET /api/audit?entityType=&userId=&from=&to=&page=` (admin-only, pagination, filtr). Frontend: filtrlanadigan jadval, diff ko'rinishi. Payload diff-only saqlash (M-7) + retention (eski auditlarni arxivlash/o'chirish skripti).
+- [x] **Audit UI (M-7):** `routes/audit.js` (yangi) — `GET /api/audit?entityType=&action=&userId=&from=&to=&page=&limit=` admin-only (`requireRole('admin')`), pagination, `user` to-one join. `lib/audit.js` — payload sanitizatsiya (nozik kalitlar `password/token/secret/refreshToken/jwt` rekursiv `[REDACTED]`; >10k belgi truncate). `scripts/audit-retention.js` (yangi, idempotent — N kundan eski auditlarni o'chiradi). Frontend `pages/Audit.jsx` (yangi) — filtrlanadigan jadval + payload modal; `App.jsx` admin-only nav/route. Test `tests/audit.test.mjs` (5). *(Haqiqiy oldin/keyin field-diff har route da eski yozuvni o'qishni talab qiladi — kelajakda.)*
 - [x] **Decimal migratsiya (M-2):** 12 ta pul maydoni (`Product.price{Ton,Cbm,Sqm}`, `Contract.totalValue`, `Specification.totalValue`, `SpecProduct.{unitPriceVat,vatAmount,rowTotal}`, `Sale.totalAmount`, `SaleProduct.{priceCbm,rowAmount}`, `Payment.amount`) `Float` → `Decimal @db.Decimal(18,2)`. Fizik o'lcham/miqdor maydonlari (`density`, `cbmPerPce`, `quantity`, `totalCbm/Kg/Sqm` ...) `Float` qoldi. `prisma.js` ga **client extension** qo'shildi — har model so'rovida `Decimal`→`Number` (chuqur, rekursiv) aylantiradi: shunda routelar/hisobot/eksport va **frontend o'zgarmaydi** (number bilan ishlaydi), `0 + Decimal` string-konkatenatsiya xatosi yo'q. Xom SQL `SUM`lar allaqachon `::float` cast — endi `numeric` ustunda **aniq** hisoblanadi, transport uchun float. Yangi `tests/decimal.test.mjs` (3 test): `0.1+0.2 === 0.3` aniq, API number qaytaradi (string emas), `numeric(18,2)` round-trip. **Test: 56/56 o'tdi.** *(frontend string-decimal o'rniga API-chegarada Number — UZS summalari xavfsiz int oralig'ida; murakkablik kamroq.)*
-- [ ] **QQS konfiguratsiyasi (H-1):** `calcVat(total, rate)`; spec hisoblashda sozlama `vatRate` ishlatish; frontend bilan sinxron.
-- [ ] **Hisobot optimizatsiyasi (H-5):** `client-statement` running-balance ni SQL `SUM() OVER (ORDER BY date)` ga ko'chirish; export `ids` ≤500 cheklash; sana oralig'i majburiy.
-- [ ] **Yangi hisobotlar:** Davr bo'yicha P&L (savdo − xarid), QQS hisoboti (soliq deklaratsiyasi uchun), ombor qoldig'i qiymati, sotuvchi bo'yicha komissiya/oborot.
-- [ ] **Batch invoice eksport:** tanlangan bir nechta shartnoma/savdoni bitta ZIP (PDF/Excel) ga; `xlsx@0.18.5` ni `exceljs` ga almashtirish (H-6).
-- [x] **Decimal test (0.1+0.2):** `tests/decimal.test.mjs` qo'shildi — aniqlik, Number tipi, round-trip.
-- [ ] **Testlar:** audit yozuvi har mutatsiyada yaratiladi.
+- [x] **QQS konfiguratsiyasi (H-1):** `lib/vat.js` `calcVat(total, rate=VAT_RATE)`; `routes/specs.js` `getVatRate(tx)` tranzaksiyada bir marta Settings'dan o'qiydi (validatsiya + 0.12 fallback); `settings.js` `DEFAULT_SETTINGS` ga `vatRate`; frontend `lib/vat.js` + `Contracts.jsx` (vatRate `/api/settings` dan) + `Settings.jsx` tahrirlash inputi. Test `tests/vat.test.mjs` (4).
+- [x] **Hisobot optimizatsiyasi (H-5):** `client-statement` VA `client-by-contracts` running-balance JS-loop o'rniga SQL `SUM(amount) OVER (PARTITION BY ... ORDER BY date, createdAt, id)` (sales debit+/payments credit− `UNION ALL`); ixtiyoriy `?from=&to=` (`parseRange`); `export.js` bulk `ids` >500 → 400.
+- [x] **Yangi hisobotlar (qisman):** `GET /api/reports/vat-report` (QQS deklaratsiyasi — stavka Settings'dan, jami/QQS/QQSsiz + oylik) va `GET /api/reports/sales-by-seller` (sotuvchi oboroti) + `Reports.jsx` tablari. ⚠️ **P&L (savdo−xarid)** va **ombor qoldig'i qiymati** QILINMADI — tizimda tannarx/xarid modeli va ombor (Bosqich 15) yo'q. *(Kelajak: `Product.costPrice`/`Purchase` modeli + `StockMovement`.)*
+- [x] **Batch invoice eksport + xlsx olib tashlash (H-6):** `GET /api/export/{sales,contracts}/zip?ids=` (har hujjat alohida PDF, bitta ZIP — `archiver@7`, `streamZip()` helper, ids ≤500); `Sales.jsx` bulk "ZIP" tugmasi. Frontend zaif `xlsx@0.18.5` **butunlay olib tashlandi** — `clients/excel` va `dashboard/monthly-excel` backend `exceljs` endpointlariga ko'chirildi (`App.jsx`, `Clients.jsx`); bundleda xlsx yo'q. Test `tests/export.test.mjs` (8).
+- [x] **Decimal test (0.1+0.2):** `tests/decimal.test.mjs` — aniqlik, Number tipi, round-trip.
+- [x] **Testlar:** audit yozuvi har mutatsiyada yaratiladi (`tests/audit.test.mjs`). Backend jami **81/81**.
 
 ---
 
