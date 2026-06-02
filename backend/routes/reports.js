@@ -2,10 +2,34 @@ const router = require('express').Router();
 const prisma = require('../prisma');
 const authMiddleware = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const { VAT_RATE } = require('../lib/vat');
 
 // Require authentication and read permission for all reports
 router.use(authMiddleware);
 router.use(requirePermission('reports', 'read'));
+
+// Ixtiyoriy from/to ni Date ga aylantiradi (yaroqsiz sana → null = filtrsiz).
+// `to` shu kun oxirigacha (23:59:59.999) qamrab oladi.
+function parseRange(query) {
+  let from = query.from ? new Date(query.from) : null;
+  let to   = query.to   ? new Date(query.to)   : null;
+  if (from && isNaN(from)) from = null;
+  if (to && isNaN(to)) to = null;
+  if (to) to.setHours(23, 59, 59, 999);
+  return { from, to };
+}
+
+// Global Sozlamalardan QQS stavkasi (specs.js bilan bir xil pattern); default VAT_RATE.
+async function getVatRate() {
+  const setting = await prisma.setting.findUnique({ where: { id: 'global' } });
+  if (!setting) return VAT_RATE;
+  try {
+    const rate = JSON.parse(setting.data)?.vatRate;
+    return typeof rate === 'number' && rate >= 0 && rate <= 1 ? rate : VAT_RATE;
+  } catch {
+    return VAT_RATE;
+  }
+}
 
 // GET /api/reports/sales-by-period?from=&to=
 router.get('/sales-by-period', async (req, res, next) => {
@@ -56,89 +80,97 @@ router.get('/sales-by-period', async (req, res, next) => {
   }
 });
 
-// GET /api/reports/client-by-contracts/:clientId
-// Har bir shartnoma bo'yicha alohida saldo
+// GET /api/reports/client-by-contracts/:clientId?from=&to=
+// Har bir shartnoma bo'yicha alohida saldo. Running balance SQL window funksiyada
+// (SUM(signed) OVER ...) — butun harakatlar JS ga yuklanmaydi.
 router.get('/client-by-contracts/:clientId', async (req, res, next) => {
   try {
     const { clientId } = req.params;
+    const { from, to } = parseRange(req.query);
+    // KELAJAK: from/to berilmasa to'liq tarix qaytadi. Agar harakatlar soni juda
+    // ko'paysa, default oraliq (masalan oxirgi 12 oy) qo'yib, "to'liq tarix" tugmasi
+    // qo'shilishi mumkin (frontend hozir oraliqsiz to'liq kartani kutadi).
 
     const client = await prisma.client.findUnique({ where: { id: clientId } });
     if (!client) return res.status(404).json({ error: 'Mijoz topilmadi' });
 
-    const [contracts, sales, payments] = await Promise.all([
-      prisma.contract.findMany({
-        where: { clientId },
-        select: { id: true, number: true, date: true, status: true },
-        orderBy: { date: 'asc' }
-      }),
-      prisma.sale.findMany({
-        where: { clientId },
-        select: { id: true, date: true, nakladnoy: true, totalAmount: true, contractId: true }
-      }),
-      prisma.payment.findMany({
-        where: { clientId },
-        select: { id: true, date: true, amount: true, note: true, contractId: true }
-      })
-    ]);
+    // Savdo (debit +) va to'lov (credit −) ni bitta signed-amount jadvalga birlashtirib,
+    // shartnoma bo'yicha (contractId; NULL = shartnomasiz) running balance hisoblanadi.
+    // Deterministik tartib: date, keyin createdAt, keyin id (bir xil sanada barqaror).
+    const rows = await prisma.$queryRaw`
+      SELECT
+        id, "contractId", date, type, debit, credit, amount, "desc",
+        SUM(amount) OVER (
+          PARTITION BY "contractId"
+          ORDER BY date, "createdAt", id
+          ROWS UNBOUNDED PRECEDING
+        )::float AS balance
+      FROM (
+        SELECT
+          s.id, s."contractId", s.date, s."createdAt",
+          'sale'::text AS type,
+          s."totalAmount"::float AS debit,
+          0::float               AS credit,
+          s."totalAmount"::float AS amount,
+          'Savdo (Nakladnoy № ' || s.nakladnoy || ')' AS "desc"
+        FROM "Sale" s
+        WHERE s."clientId" = ${clientId}
+          AND (${from}::timestamp IS NULL OR s.date >= ${from})
+          AND (${to}::timestamp   IS NULL OR s.date <= ${to})
+        UNION ALL
+        SELECT
+          p.id, p."contractId", p.date, p."createdAt",
+          'payment'::text AS type,
+          0::float            AS debit,
+          p.amount::float     AS credit,
+          (-p.amount)::float  AS amount,
+          'To''lov' || COALESCE(' (' || p.note || ')', '') AS "desc"
+        FROM "Payment" p
+        WHERE p."clientId" = ${clientId}
+          AND (${from}::timestamp IS NULL OR p.date >= ${from})
+          AND (${to}::timestamp   IS NULL OR p.date <= ${to})
+      ) movements
+      ORDER BY "contractId" NULLS LAST, date, "createdAt", id
+    `;
 
-    // Build map: contractId (null = no contract) -> raw items
-    const itemsMap = new Map();
-    itemsMap.set(null, []);
-    contracts.forEach(c => itemsMap.set(c.id, []));
-
-    sales.forEach(s => {
-      const key = s.contractId || null;
-      if (!itemsMap.has(key)) itemsMap.set(key, []);
-      itemsMap.get(key).push({
-        id: s.id, date: s.date, type: 'sale',
-        debit: s.totalAmount, credit: 0, amount: s.totalAmount,
-        desc: `Savdo (Nakladnoy № ${s.nakladnoy})`
-      });
+    // Shartnoma meta (number, date, status) — guruh sarlavhasi va tartibi uchun.
+    const contracts = await prisma.contract.findMany({
+      where: { clientId },
+      select: { id: true, number: true, date: true, status: true },
+      orderBy: { date: 'asc' }
     });
+    const contractMeta = new Map(contracts.map(c => [c.id, c]));
+    const contractOrder = new Map(contracts.map((c, i) => [c.id, i]));
 
-    payments.forEach(p => {
-      const key = p.contractId || null;
-      if (!itemsMap.has(key)) itemsMap.set(key, []);
-      itemsMap.get(key).push({
-        id: p.id, date: p.date, type: 'payment',
-        debit: 0, credit: p.amount, amount: -p.amount,
-        desc: `To'lov` + (p.note ? ` (${p.note})` : '')
+    // Harakatlarni contractId bo'yicha guruhlash (qator tartibi SQL dan kelgan).
+    const byContract = new Map();
+    for (const r of rows) {
+      const key = r.contractId || null;
+      if (!byContract.has(key)) byContract.set(key, []);
+      byContract.get(key).push({
+        id: r.id, date: r.date, type: r.type,
+        debit: r.debit, credit: r.credit, amount: r.amount,
+        desc: r.desc, balance: r.balance
       });
-    });
-
-    const buildStatement = (items) => {
-      items.sort((a, b) => new Date(a.date) - new Date(b.date));
-      let balance = 0;
-      return items.map(item => {
-        balance += item.amount;
-        return { ...item, balance };
-      });
-    };
+    }
 
     const groups = [];
-
-    // Contracts in order
-    contracts.forEach(c => {
-      const items = itemsMap.get(c.id) || [];
-      if (items.length === 0) return;
-      const statement = buildStatement(items);
+    for (const [key, statement] of byContract) {
+      if (statement.length === 0) continue;
+      const meta = key ? contractMeta.get(key) : null;
       groups.push({
-        contract: { id: c.id, number: c.number, date: c.date, status: c.status },
-        statement,
-        finalBalance: statement.at(-1)?.balance ?? 0
-      });
-    });
-
-    // Items without a contract
-    const noContractItems = itemsMap.get(null) || [];
-    if (noContractItems.length > 0) {
-      const statement = buildStatement(noContractItems);
-      groups.push({
-        contract: null,
+        contract: meta ? { id: meta.id, number: meta.number, date: meta.date, status: meta.status } : null,
         statement,
         finalBalance: statement.at(-1)?.balance ?? 0
       });
     }
+
+    // Shartnomalar sana bo'yicha, shartnomasiz guruh oxirida.
+    groups.sort((a, b) => {
+      const oa = a.contract ? contractOrder.get(a.contract.id) : Infinity;
+      const ob = b.contract ? contractOrder.get(b.contract.id) : Infinity;
+      return oa - ob;
+    });
 
     res.json({
       client: { id: client.id, name: client.name, phone: client.phone },
@@ -150,85 +182,64 @@ router.get('/client-by-contracts/:clientId', async (req, res, next) => {
   }
 });
 
-// GET /api/reports/client-statement/:clientId
+// GET /api/reports/client-statement/:clientId?from=&to=
+// Xronologik aylanma karta. Running balance SQL window funksiyada
+// (SUM(signed) OVER ORDER BY date,createdAt,id) — JS da hisoblanmaydi.
 router.get('/client-statement/:clientId', async (req, res, next) => {
   try {
     const { clientId } = req.params;
+    const { from, to } = parseRange(req.query);
+    // KELAJAK: from/to berilmasa to'liq tarix qaytadi (frontend hozir shuni kutadi).
+    // Aylanmalar juda ko'paysa default oraliq (oxirgi 12 oy) qo'shilishi mumkin.
 
-    const client = await prisma.client.findUnique({
-      where: { id: clientId }
-    });
-
+    const client = await prisma.client.findUnique({ where: { id: clientId } });
     if (!client) {
       return res.status(404).json({ error: 'Mijoz topilmadi' });
     }
 
-    const sales = await prisma.sale.findMany({
-      where: { clientId },
-      select: {
-        id: true,
-        date: true,
-        nakladnoy: true,
-        totalAmount: true,
-      }
-    });
-
-    const payments = await prisma.payment.findMany({
-      where: { clientId },
-      select: {
-        id: true,
-        date: true,
-        amount: true,
-        note: true,
-      }
-    });
-
-    const ledger = [];
-    sales.forEach(s => {
-      ledger.push({
-        id: s.id,
-        date: s.date,
-        type: 'sale',
-        doc: s.nakladnoy,
-        debit: s.totalAmount,
-        credit: 0,
-        amount: s.totalAmount,
-        desc: `Savdo (Nakladnoy № ${s.nakladnoy})`
-      });
-    });
-
-    payments.forEach(p => {
-      ledger.push({
-        id: p.id,
-        date: p.date,
-        type: 'payment',
-        doc: '',
-        debit: 0,
-        credit: p.amount,
-        amount: -p.amount,
-        desc: `To'lov` + (p.note ? ` (${p.note})` : '')
-      });
-    });
-
-    ledger.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    let runningBalance = 0;
-    const ledgerWithBalance = ledger.map(item => {
-      runningBalance += item.amount;
-      return {
-        ...item,
-        balance: runningBalance
-      };
-    });
+    // Savdo (debit +) va to'lov (credit −) signed-amount jadvalga UNION ALL bilan
+    // birlashtirilib, deterministik tartibda (date, createdAt, id) running balance.
+    const statement = await prisma.$queryRaw`
+      SELECT
+        id, date, type, doc, debit, credit, amount, "desc",
+        SUM(amount) OVER (
+          ORDER BY date, "createdAt", id
+          ROWS UNBOUNDED PRECEDING
+        )::float AS balance
+      FROM (
+        SELECT
+          s.id, s.date, s."createdAt",
+          'sale'::text AS type,
+          s.nakladnoy  AS doc,
+          s."totalAmount"::float AS debit,
+          0::float               AS credit,
+          s."totalAmount"::float AS amount,
+          'Savdo (Nakladnoy № ' || s.nakladnoy || ')' AS "desc"
+        FROM "Sale" s
+        WHERE s."clientId" = ${clientId}
+          AND (${from}::timestamp IS NULL OR s.date >= ${from})
+          AND (${to}::timestamp   IS NULL OR s.date <= ${to})
+        UNION ALL
+        SELECT
+          p.id, p.date, p."createdAt",
+          'payment'::text AS type,
+          ''::text        AS doc,
+          0::float            AS debit,
+          p.amount::float     AS credit,
+          (-p.amount)::float  AS amount,
+          'To''lov' || COALESCE(' (' || p.note || ')', '') AS "desc"
+        FROM "Payment" p
+        WHERE p."clientId" = ${clientId}
+          AND (${from}::timestamp IS NULL OR p.date >= ${from})
+          AND (${to}::timestamp   IS NULL OR p.date <= ${to})
+      ) movements
+      ORDER BY date, "createdAt", id
+    `;
 
     res.json({
-      client: {
-        id: client.id,
-        name: client.name,
-        phone: client.phone
-      },
-      statement: ledgerWithBalance,
-      finalBalance: runningBalance
+      client: { id: client.id, name: client.name, phone: client.phone },
+      statement,
+      finalBalance: statement.at(-1)?.balance ?? 0
     });
   } catch (err) {
     next(err);
@@ -394,6 +405,99 @@ router.get('/payments-by-period', async (req, res, next) => {
         count: parseInt(r.count || 0)
       }))
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/vat-report?from=&to=
+// QQS (soliq deklaratsiyasi) hisoboti. Savdo totalAmount QQS-ichida deb hisoblanadi:
+//   QQS = total / (1 + rate) * rate;  QQS siz = total − QQS.
+// Stavka global Sozlamalardan (vatRate, default VAT_RATE). Oylik breakdown ham qaytadi.
+router.get('/vat-report', async (req, res, next) => {
+  try {
+    const { from, to } = parseRange(req.query);
+    const rate = await getVatRate();
+
+    // Jami va oylik summalar SQL da (SUM), QQS hisoblash JS da — bitta stavka uchun
+    // aniqligi muhim (Math.round 2 kasr, spec.js calcVat bilan bir xil mantiq).
+    const [totalRow, byMonth] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT
+          COALESCE(SUM("totalAmount"), 0)::float AS total,
+          COUNT(id)::int                         AS count
+        FROM "Sale"
+        WHERE (${from}::timestamp IS NULL OR date >= ${from})
+          AND (${to}::timestamp   IS NULL OR date <= ${to})
+      `,
+      prisma.$queryRaw`
+        SELECT
+          TO_CHAR(date, 'YYYY-MM')      AS month,
+          SUM("totalAmount")::float     AS total,
+          COUNT(id)::int                AS count
+        FROM "Sale"
+        WHERE (${from}::timestamp IS NULL OR date >= ${from})
+          AND (${to}::timestamp   IS NULL OR date <= ${to})
+        GROUP BY month
+        ORDER BY month ASC
+      `,
+    ]);
+
+    const splitVat = (total) => {
+      const vatAmount = Math.round(total / (1 + rate) * rate * 100) / 100;
+      return { vatAmount, netAmount: Math.round((total - vatAmount) * 100) / 100 };
+    };
+
+    const total = parseFloat(totalRow[0]?.total || 0);
+    const { vatAmount, netAmount } = splitVat(total);
+
+    res.json({
+      vatRate: rate,
+      totalAmount: total,
+      vatAmount,
+      netAmount,
+      salesCount: parseInt(totalRow[0]?.count || 0),
+      byMonth: byMonth.map(r => {
+        const mTotal = parseFloat(r.total || 0);
+        const split = splitVat(mTotal);
+        return {
+          month: r.month,
+          totalAmount: mTotal,
+          vatAmount: split.vatAmount,
+          netAmount: split.netAmount,
+          count: parseInt(r.count || 0),
+        };
+      }),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/sales-by-seller?from=&to=
+// Sotuvchi (Sale.sellerName) bo'yicha oborot: savdolar soni va jami summa,
+// oborot kamayish tartibida.
+router.get('/sales-by-seller', async (req, res, next) => {
+  try {
+    const { from, to } = parseRange(req.query);
+
+    const rows = await prisma.$queryRaw`
+      SELECT
+        "sellerName"               AS seller,
+        COUNT(id)::int             AS sales_count,
+        SUM("totalAmount")::float  AS total_amount
+      FROM "Sale"
+      WHERE (${from}::timestamp IS NULL OR date >= ${from})
+        AND (${to}::timestamp   IS NULL OR date <= ${to})
+      GROUP BY "sellerName"
+      ORDER BY total_amount DESC
+    `;
+
+    res.json(rows.map(r => ({
+      sellerName: r.seller || '',
+      salesCount: parseInt(r.sales_count || 0),
+      totalAmount: parseFloat(r.total_amount || 0),
+    })));
   } catch (err) {
     next(err);
   }

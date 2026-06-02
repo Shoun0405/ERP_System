@@ -6,7 +6,8 @@ import { useDateFilter } from '../context/DateFilterContext';
 import {
   LayoutDashboard, TrendingUp, Wallet, Settings2,
   ChevronDown, ChevronRight, Users, Package,
-  FileText, BarChart3, ShoppingBag, AlertTriangle, CreditCard
+  FileText, BarChart3, ShoppingBag, AlertTriangle, CreditCard,
+  Percent, UserCheck
 } from 'lucide-react';
 
 // ── Widget config (localStorage) ─────────────────────────────────────────────
@@ -40,6 +41,7 @@ const MENU = [
       { id: 'sales_period',     label: 'Davriy savdo',          Icon: BarChart3 },
       { id: 'sales_by_client',  label: "Mijozlar bo'yicha",      Icon: Users },
       { id: 'sales_by_product', label: "Mahsulotlar bo'yicha",   Icon: Package },
+      { id: 'sales_by_seller',  label: "Sotuvchilar bo'yicha",   Icon: UserCheck },
     ]
   },
   {
@@ -48,6 +50,7 @@ const MENU = [
       { id: 'debtors',          label: 'Qarzdorlar',             Icon: AlertTriangle },
       { id: 'client_statement', label: 'Mijoz kartasi',          Icon: FileText },
       { id: 'payments',         label: "To'lovlar hisoboti",     Icon: CreditCard },
+      { id: 'vat_report',       label: 'QQS hisoboti',           Icon: Percent },
     ]
   },
   { id: 'widget_settings', label: 'Bosh sahifa sozlamalari', Icon: Settings2 },
@@ -994,6 +997,181 @@ function PaymentsSummarySection({ fromDate, toDate }) {
   );
 }
 
+// ── SOTUVCHILAR BO'YICHA ──────────────────────────────────────────────────────
+function SalesBySellerSection({ fromDate, toDate }) {
+  const [data, setData]     = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/sales-by-seller', { params: { from: fromDate, to: toDate } });
+        setData(r.data);
+      } catch { /* xato api interceptor da ko'rsatiladi */ } finally { setLoading(false); }
+    })();
+  }, [fromDate, toDate]);
+
+  const maxAmount = data[0]?.totalAmount || 1;
+  const total = data.reduce((s, d) => s + d.totalAmount, 0);
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Sotuvchilar bo'yicha oborot" subtitle="Tanlangan davrda har bir sotuvchining savdo soni va aylanmasi" />
+
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center">
+          <h3 className="text-xs font-semibold text-[var(--text)]">Sotuvchilar reytingi</h3>
+          <div className="flex items-center gap-4">
+            {!loading && total > 0 && (
+              <span className="text-[11px] font-bold font-mono text-[var(--text-2)]">Jami: {fmt(total)} UZS</span>
+            )}
+            <span className="text-[11px] text-[var(--text-3)]">{data.length} ta sotuvchi</span>
+          </div>
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+        ) : data.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda savdolar topilmadi</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2 w-8">#</th>
+                  <th className="px-5 py-2">Sotuvchi</th>
+                  <th className="px-5 py-2 text-right">Savdolar</th>
+                  <th className="px-5 py-2 text-right">Jami oborot</th>
+                  <th className="px-5 py-2 w-32">Ulush</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.map((row, i) => (
+                  <tr key={row.sellerName || i} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-3)]">{i + 1}</td>
+                    <td className="px-5 py-2.5 text-xs font-medium text-[var(--text)]">{row.sellerName || '—'}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.salesCount} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
+                    <td className="px-5 py-2.5">
+                      <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
+                        <div className="h-full bg-indigo-500 opacity-80" style={{ width: `${(row.totalAmount / maxAmount) * 100}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {total > 0 && (
+                <tfoot>
+                  <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
+                    <td colSpan="3" className="px-5 py-2.5 text-[var(--text)]">Jami:</td>
+                    <td className="px-5 py-2.5 text-right font-mono font-extrabold text-[var(--text)]">{fmt(total)} UZS</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── QQS HISOBOTI ──────────────────────────────────────────────────────────────
+function VatReportSection({ fromDate, toDate }) {
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await api.get('/api/reports/vat-report', { params: { from: fromDate, to: toDate } });
+        setData(r.data);
+      } catch { /* xato api interceptor da ko'rsatiladi */ } finally { setLoading(false); }
+    })();
+  }, [fromDate, toDate]);
+
+  const ratePct = data ? Math.round(data.vatRate * 100) : 12;
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="QQS hisoboti" subtitle={`Soliq deklaratsiyasi uchun — joriy stavka ${ratePct}% (Sozlamalardan)`} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami (QQS bilan)</p>
+          <p className="text-lg font-extrabold font-mono text-[var(--text)]">
+            {loading ? '...' : fmt(data?.totalAmount || 0)} <span className="text-[10px] font-semibold text-[var(--text-3)]">UZS</span>
+          </p>
+        </div>
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">QQS siz summa</p>
+          <p className="text-lg font-extrabold font-mono text-[var(--text-2)]">
+            {loading ? '...' : fmt(data?.netAmount || 0)} <span className="text-[10px] font-semibold text-[var(--text-3)]">UZS</span>
+          </p>
+        </div>
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">QQS summasi ({ratePct}%)</p>
+          <p className="text-lg font-extrabold font-mono text-indigo-600">
+            {loading ? '...' : fmt(data?.vatAmount || 0)} <span className="text-[10px] font-semibold text-[var(--text-3)]">UZS</span>
+          </p>
+        </div>
+        <div className="card p-4 border border-[var(--border)]">
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Hujjatlar soni</p>
+          <p className="text-lg font-extrabold font-mono text-[var(--text)]">
+            {loading ? '...' : data?.salesCount || 0} <span className="text-[10px] font-semibold text-[var(--text-3)]">ta</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
+          <h3 className="text-xs font-semibold text-[var(--text)]">Oylik QQS taqsimoti</h3>
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+        ) : !data?.byMonth?.length ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda savdolar topilmadi</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2">Oy</th>
+                  <th className="px-5 py-2 text-right">Hujjatlar</th>
+                  <th className="px-5 py-2 text-right">Jami (QQS bilan)</th>
+                  <th className="px-5 py-2 text-right">QQS siz</th>
+                  <th className="px-5 py-2 text-right">QQS summasi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.byMonth.map((row) => (
+                  <tr key={row.month} className="hover:bg-[var(--surface-2)]">
+                    <td className="px-5 py-2.5 text-xs font-mono text-[var(--text-2)]">{row.month}</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.count} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{fmt(row.netAmount)} UZS</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-indigo-600">{fmt(row.vatAmount)} UZS</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
+                  <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">Jami:</td>
+                  <td className="px-5 py-2.5 text-right font-mono font-extrabold text-[var(--text)]">{fmt(data.totalAmount)} UZS</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-[var(--text-2)]">{fmt(data.netAmount)} UZS</td>
+                  <td className="px-5 py-2.5 text-right font-mono font-extrabold text-indigo-600">{fmt(data.vatAmount)} UZS</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── SOZLAMALAR ────────────────────────────────────────────────────────────────
 function WidgetSettingsSection({ widgets, onToggle }) {
   return (
@@ -1122,9 +1300,11 @@ export default function Reports() {
         {active === 'sales_period'     && <SalesPeriodSection fromDate={fromDate} toDate={toDate} />}
         {active === 'sales_by_client'  && <SalesByClientSection fromDate={fromDate} toDate={toDate} />}
         {active === 'sales_by_product' && <SalesByProductSection fromDate={fromDate} toDate={toDate} />}
+        {active === 'sales_by_seller'  && <SalesBySellerSection fromDate={fromDate} toDate={toDate} />}
         {active === 'debtors'          && <DebtorsSection />}
         {active === 'client_statement' && <ClientStatementSection />}
         {active === 'payments'         && <PaymentsSummarySection fromDate={fromDate} toDate={toDate} />}
+        {active === 'vat_report'       && <VatReportSection fromDate={fromDate} toDate={toDate} />}
         {active === 'widget_settings'  && <WidgetSettingsSection widgets={widgets} onToggle={toggleWidget} />}
       </main>
     </div>

@@ -268,6 +268,7 @@ router.get('/sales/pdf', requirePermission('sales', 'read'), async (req, res, ne
   try {
     const ids = (req.query.ids || '').split(',').filter(Boolean);
     if (ids.length === 0) return res.status(400).json({ error: 'ids param majburiy' });
+    if (ids.length > 500) return res.status(400).json({ error: 'Bir vaqtda 500 tagacha hujjat eksport qilish mumkin' });
 
     const sales = await prisma.sale.findMany({
       where: { id: { in: ids } },
@@ -334,6 +335,7 @@ router.get('/sales/excel', requirePermission('sales', 'read'), async (req, res, 
   try {
     const ids = (req.query.ids || '').split(',').filter(Boolean);
     if (ids.length === 0) return res.status(400).json({ error: 'ids param majburiy' });
+    if (ids.length > 500) return res.status(400).json({ error: 'Bir vaqtda 500 tagacha hujjat eksport qilish mumkin' });
 
     const sales = await prisma.sale.findMany({
       where: { id: { in: ids } },
