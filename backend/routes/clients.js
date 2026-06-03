@@ -51,7 +51,7 @@ router.get('/', requirePermission('clients', 'read'), async (req, res, next) => 
           SELECT
             c.id, c.name, c.inn, c.phone, c.director, c.address,
             c.category, c.status, c.account, c.mfo, c.seller,
-            c."createdAt", c."deletedAt",
+            c."createdAt", c."deletedAt", c."createdById", c."updatedById", c."updatedAt",
             COALESCE(s_agg.total, 0)::float                               AS "totalSales",
             COALESCE(p_agg.total, 0)::float                               AS "totalPayments",
             (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0))::float  AS debt

@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
 import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import Pagination from '../components/Pagination';
+import AuditCell from '../components/AuditCell';
+import { useUsersLookup } from '../hooks/useUsersLookup';
 import { Plus, X, MessageSquare, Phone, Users, Mail, Calendar, Edit2, Trash2, Search, Copy } from 'lucide-react';
 
 function today() { return new Date().toISOString().split('T')[0]; }
@@ -27,6 +29,7 @@ const EMPTY = { date: today(), type: "Qo'ng'iroq", note: '', nextDate: '', clien
 
 export default function InteractionsPage({ user }) {
   const canHardDelete = user?.role === 'superAdmin';
+  const auditUsers = useUsersLookup();
   const [interactions, setInteractions] = useState([]);
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
@@ -247,6 +250,7 @@ export default function InteractionsPage({ user }) {
                       <Calendar size={13} strokeWidth={2}/> Keyingi: {new Date(it.nextDate).toLocaleDateString('uz-UZ')}
                     </p>
                   )}
+                  <div className="mt-1.5"><AuditCell record={it} users={auditUsers} /></div>
                 </div>
                 {it.deletedAt ? (
                   <div className="flex items-center gap-2 shrink-0">

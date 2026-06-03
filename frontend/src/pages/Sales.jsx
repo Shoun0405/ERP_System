@@ -9,6 +9,8 @@ import { useInlineForm } from '../hooks/useInlineForm';
 import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import { useDateFilter } from '../context/DateFilterContext';
 import Pagination from '../components/Pagination';
+import AuditCell from '../components/AuditCell';
+import { useUsersLookup } from '../hooks/useUsersLookup';
 import { fmt, fmtDate } from '../lib/format';
 import {
   Plus, X, Trash2, Package, Eye, Printer,
@@ -599,6 +601,8 @@ export default function Sales({ user }) {
   const location = useLocation();
   const navigate  = useNavigate();
 
+  const auditUsers = useUsersLookup();
+
   const [sales,   setSales]   = useState([]);
   const [total,   setTotal]   = useState(0);
   const [page,    setPage]    = useState(1);
@@ -1102,6 +1106,7 @@ export default function Sales({ user }) {
                     </span>
                   </th>
                 ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kim / Qachon</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
@@ -1109,7 +1114,7 @@ export default function Sales({ user }) {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(12)].map((_, j) => (
+                    {[...Array(13)].map((_, j) => (
                       <td key={j} className="px-4 py-4">
                         <div className="h-4 bg-[var(--surface-2)] animate-pulse rounded" />
                       </td>
@@ -1118,7 +1123,7 @@ export default function Sales({ user }) {
                 ))
               ) : sales.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
+                  <td colSpan={13} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
                     {hasFilter ? 'Topilmadi' : 'Hozircha yuk xatlari yo\'q'}
                   </td>
                 </tr>
@@ -1253,6 +1258,7 @@ export default function Sales({ user }) {
                       );
                     })()}
                   </td>
+                  <td className="px-4 py-3.5"><AuditCell record={s} users={auditUsers}/></td>
                   <td className="px-4 py-3.5">
                     {s.deletedAt ? (
                       <div className="flex items-center justify-end gap-2">

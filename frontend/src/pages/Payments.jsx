@@ -5,6 +5,8 @@ import { useDateFilter } from '../context/DateFilterContext';
 import { useModalKeys } from '../hooks/useModalKeys';
 import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import Pagination from '../components/Pagination';
+import AuditCell from '../components/AuditCell';
+import { useUsersLookup } from '../hooks/useUsersLookup';
 import { fmt, fmtDate } from '../lib/format';
 import { Plus, X, Trash2, AlertCircle, Search, Copy } from 'lucide-react';
 
@@ -14,6 +16,7 @@ export default function Payments({ user }) {
   const canCreate = user?.role === 'admin' || user?.permissions?.payments?.create !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.payments?.delete === true;
   const canHardDelete = user?.role === 'superAdmin';
+  const auditUsers = useUsersLookup();
   const [payments,  setPayments]  = useState([]);
   const [total,     setTotal]     = useState(0);
   const [page,      setPage]      = useState(1);
@@ -232,16 +235,17 @@ export default function Payments({ user }) {
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnoma</th>
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Izoh</th>
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider text-right">Summa</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kim / Qachon</th>
                 <th className="px-6 py-3 w-16"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i}>{[...Array(6)].map((_, j) => <td key={j} className="px-6 py-4"><div className="h-4 bg-[var(--surface-2)] animate-pulse rounded"/></td>)}</tr>
+                  <tr key={i}>{[...Array(7)].map((_, j) => <td key={j} className="px-6 py-4"><div className="h-4 bg-[var(--surface-2)] animate-pulse rounded"/></td>)}</tr>
                 ))
               ) : payments.length === 0 ? (
-                <tr><td colSpan="6" className="px-6 py-12 text-center text-[var(--text-3)] text-sm">
+                <tr><td colSpan="7" className="px-6 py-12 text-center text-[var(--text-3)] text-sm">
                   {hasFilter ? 'Topilmadi' : 'Hozircha to\'lovlar yo\'q'}
                 </td></tr>
               ) : payments.map(p => (
@@ -251,6 +255,7 @@ export default function Payments({ user }) {
                   <td className="px-6 py-4 text-sm text-[var(--text-3)]">{p.contract ? `№${p.contract.number}` : '—'}</td>
                   <td className="px-6 py-4 text-sm text-[var(--text-3)]">{p.note || '—'}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{fmt(p.amount)} UZS</td>
+                  <td className="px-6 py-4"><AuditCell record={p} users={auditUsers} /></td>
                   <td className="px-6 py-4">
                     {p.deletedAt ? (
                       <div className="flex justify-end items-center gap-2">

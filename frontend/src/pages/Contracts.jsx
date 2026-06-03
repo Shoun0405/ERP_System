@@ -15,6 +15,8 @@ import { useModalKeys } from '../hooks/useModalKeys';
 import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import { useDateFilter } from '../context/DateFilterContext';
 import Pagination from '../components/Pagination';
+import AuditCell from '../components/AuditCell';
+import { useUsersLookup } from '../hooks/useUsersLookup';
 
 const STATUS_LABELS = { yangi: 'Yangi', amalda: 'Amalda', yopilgan: 'Yopilgan' };
 const STATUS_COLORS = {
@@ -265,7 +267,7 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
 }
 
 // ─── ContractRow (ro'yxat qatori + expand) ─────────────────────────────────
-function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, onHardDelete, onSpecSaved, onSpecDeleted, user }) {
+function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, onHardDelete, onSpecSaved, onSpecDeleted, user, auditUsers }) {
   const canUpdate = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
   const canHardDelete = user?.role === 'superAdmin';
@@ -385,6 +387,7 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
             {STATUS_LABELS[c.status] || c.status}
           </span>
         </td>
+        <td className="px-4 py-3" onClick={e => e.stopPropagation()}><AuditCell record={c} users={auditUsers}/></td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           {c.deletedAt ? (
             <div className="flex items-center justify-end gap-2">
@@ -450,7 +453,7 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
       {/* Expand panel — spetslar */}
       {expanded && (
         <tr>
-          <td colSpan={12} className="px-6 pb-4 bg-[var(--surface-2)]/60">
+          <td colSpan={13} className="px-6 pb-4 bg-[var(--surface-2)]/60">
             <div className="border border-[var(--border)] rounded-lg bg-[var(--surface)]">
               <div className="flex items-center gap-4 px-4 py-2.5 border-b border-[var(--border)]">
                 <button onClick={() => { setAddingSpec(true); setEditSpec(null); setCopiedSpec(null); }}
@@ -1021,6 +1024,7 @@ const fmtInn = (inn) => {
 export default function Contracts({ user }) {
   // Mijoz/tahrirlash/o'chirish ruxsatlari ContractRow ichida tekshiriladi
   const canCreate = user?.role === 'admin' || user?.permissions?.contracts?.create !== false;
+  const auditUsers = useUsersLookup();
   const [contracts, setContracts] = useState([]);
   const [total, setTotal]         = useState(0);
   const [page, setPage]           = useState(1);
@@ -1259,6 +1263,7 @@ export default function Contracts({ user }) {
                     </span>
                   </th>
                 ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] whitespace-nowrap">Kim / Qachon</th>
                 <th className="px-4 py-3 w-10"></th>
               </tr>
             </thead>
@@ -1266,7 +1271,7 @@ export default function Contracts({ user }) {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(12)].map((_, j) => (
+                    {[...Array(13)].map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 bg-[var(--surface-2)] animate-pulse rounded" />
                       </td>
@@ -1275,7 +1280,7 @@ export default function Contracts({ user }) {
                 ))
               ) : contracts.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
+                  <td colSpan={13} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
                     Shartnomalar topilmadi
                   </td>
                 </tr>
@@ -1294,6 +1299,7 @@ export default function Contracts({ user }) {
                     onSpecSaved={() => load(page)}
                     onSpecDeleted={() => load(page)}
                     user={user}
+                    auditUsers={auditUsers}
                   />
                 ))
               )}

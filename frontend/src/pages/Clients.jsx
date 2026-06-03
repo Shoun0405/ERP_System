@@ -5,6 +5,8 @@ import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
+import AuditCell from '../components/AuditCell';
+import { useUsersLookup } from '../hooks/useUsersLookup';
 import { downloadFile } from '../lib/download';
 import { fmt } from '../lib/format';
 import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
@@ -119,6 +121,8 @@ export default function Clients({ user }) {
   const canCreateContract = user?.role === 'admin' || user?.permissions?.contracts?.create !== false;
   const canUpdateContract = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
   const canDeleteContract = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
+
+  const auditUsers = useUsersLookup();
 
   const [clients,  setClients]  = useState([]);
   const [total,    setTotal]    = useState(0);
@@ -305,7 +309,7 @@ export default function Clients({ user }) {
   useModalKeys(!!contractModal, handleContractSave, closeContractModal);
 
   const inp = (field) => `w-full px-3 py-2 bg-[var(--surface)] border ${errors[field]?'border-red-400':'border-[var(--border)]'} rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)]`;
-  const COLS = 8;
+  const COLS = 9;
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
@@ -451,6 +455,7 @@ export default function Clients({ user }) {
                     {label}<SortIcon col={col} sort={sort}/>
                   </th>
                 ))}
+                <th className="px-5 py-3 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider whitespace-nowrap">Kim / Qachon</th>
                 <th className="px-5 py-3 w-24 bg-[var(--surface-2)]"/>
               </tr>
             </thead>
@@ -498,6 +503,7 @@ export default function Clients({ user }) {
                     <td className="px-5 py-2.5 text-xs text-right font-semibold font-mono">
                       {c.debt>0?<span className="text-red-500">{fmt(c.debt)} UZS</span>:c.debt<0?<span className="text-emerald-600">+{fmt(Math.abs(c.debt))} UZS</span>:<span className="text-[var(--text-3)]">0</span>}
                     </td>
+                    <td className="px-5 py-2.5"><AuditCell record={c} users={auditUsers} /></td>
                     <td className="px-5 py-2.5" onClick={e=>e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {c.deletedAt ? (

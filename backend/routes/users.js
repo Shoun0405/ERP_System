@@ -18,6 +18,20 @@ const DEFAULT_PERMISSIONS = {
   settings:     { read: false, create: false, update: false, delete: false },
 };
 
+// Audit ustuni uchun: har avtorizatsiyalangan foydalanuvchi id→nom yecha oladi.
+// Admin guard'idan OLDIN — oddiy foydalanuvchilar ham nom ko'rsata olishi uchun.
+// (app.js darajasidagi `auth` middleware req.user'ni ta'minlaydi.)
+router.get('/lookup', async (req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, fullName: true, role: true },
+    });
+    res.json(users);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Enforce auth and admin role on all user routes
 router.use(authMiddleware);
 router.use(requireRole('admin'));

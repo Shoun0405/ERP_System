@@ -9,7 +9,7 @@
 
 ## 🌐 Umumiy (cross-cutting — barcha/ko'p modulга)
 
-- 🔄 **#3 — Ko'rinadigan amal izi + soft-delete + superAdmin** 🆕🐛 _(KATTA — 3a/3b ga bo'lindi)_
+- ✅ **#3 — Ko'rinadigan amal izi + soft-delete + superAdmin** 🆕🐛 _(KATTA — 3a/3b bajarildi)_
 
   - ✅ **3a — Soft-delete + superAdmin** _(2026-06-03)_
     - Sxema: 6 modelga (Client/Contract/Sale/Payment/Specification/Interaction)
@@ -23,9 +23,15 @@
     - Testlar: `softdelete.test` (soft, agregat chiqarish, superAdmin hard/restore 403/200).
       **Backend 99/99, lint 0 error, build OK, E2E 4/4; jonli bazada tekshirildi (debt 10000→0).**
 
-  - ⬜ **3b — Ko'rinadigan "kim/qachon" ustuni + foydalanuvchi ranglari** _(keyingi)_
-    Har modulda yaratgan/oxirgi tahrirlovchi + vaqt ustuni; id'dan avtomatik rang;
-    `GET /api/users/lookup` (id→fullName). Ma'lumot 3a'da yig'ila boshladi.
+  - ✅ **3b — "Kim/Qachon" ustuni + foydalanuvchi ranglari** _(2026-06-03)_
+    - Backend: `GET /api/users/lookup` (har auth user, admin-guard'dan oldin); `clients.js`
+      raw SELECT'ga createdById/updatedById/updatedAt.
+    - Frontend: `fmtDateTime` + `userColor(id)` (lib/format), `useUsersLookup` hook,
+      `AuditCell` komponent. 5 ro'yxatga "Kim / Qachon" ustuni — oxirgi tegingan foydalanuvchi
+      (rangli) + vaqt (`updatedBy/At ?? createdBy/At`).
+    - Testlar: `users-lookup.test` (non-admin lookup 200, admin endpoint 403).
+      **Backend 101/101, lint 0 error, build OK, E2E 4/4.**
+    - Eslatma: eski (3a'dan oldingi) yozuvlar "—" ko'rsatadi (createdById yo'q).
 
 - ✅ **#4 — Vaqt bo'yicha saralashda SOAT ham hisobga olinsin** 🐛 _(2026-06-03)_
   List endpointlarda `date` saralashga ikkilamchi `createdAt` tiebreaker qo'shildi —
