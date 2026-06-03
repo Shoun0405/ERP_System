@@ -22,10 +22,10 @@ router.get('/', async (req, res, next) => {
       recentSales,
       monthlySalesRaw,
     ] = await Promise.all([
-      prisma.sale.aggregate({ _sum: { totalAmount: true } }),
-      prisma.payment.aggregate({ _sum: { amount: true } }),
+      prisma.sale.aggregate({ where: { deletedAt: null }, _sum: { totalAmount: true } }),
+      prisma.payment.aggregate({ where: { deletedAt: null }, _sum: { amount: true } }),
       prisma.sale.aggregate({
-        where: { date: { gte: todayStart, lte: todayEnd } },
+        where: { deletedAt: null, date: { gte: todayStart, lte: todayEnd } },
         _sum: { totalAmount: true },
       }),
       prisma.client.count(),
@@ -36,16 +36,17 @@ router.get('/', async (req, res, next) => {
           (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0))::float AS debt
         FROM "Client" c
         LEFT JOIN (
-          SELECT "clientId", SUM("totalAmount") AS total FROM "Sale" GROUP BY "clientId"
+          SELECT "clientId", SUM("totalAmount") AS total FROM "Sale" WHERE "deletedAt" IS NULL GROUP BY "clientId"
         ) s_agg ON s_agg."clientId" = c.id
         LEFT JOIN (
-          SELECT "clientId", SUM(amount) AS total FROM "Payment" GROUP BY "clientId"
+          SELECT "clientId", SUM(amount) AS total FROM "Payment" WHERE "deletedAt" IS NULL GROUP BY "clientId"
         ) p_agg ON p_agg."clientId" = c.id
         WHERE (COALESCE(s_agg.total, 0) - COALESCE(p_agg.total, 0)) > 0
         ORDER BY debt DESC
         LIMIT 5
       `,
       prisma.sale.findMany({
+        where: { deletedAt: null },
         take: 5,
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         include: { client: { select: { id: true, name: true } } },
@@ -55,7 +56,7 @@ router.get('/', async (req, res, next) => {
           TO_CHAR(date, 'YYYY-MM') AS month_key,
           SUM("totalAmount") AS amount
         FROM "Sale"
-        WHERE date >= ${sixMonthsAgo}
+        WHERE date >= ${sixMonthsAgo} AND "deletedAt" IS NULL
         GROUP BY month_key
         ORDER BY month_key
       `,

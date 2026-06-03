@@ -25,7 +25,8 @@ const TYPE_COLORS = {
 
 const EMPTY = { date: today(), type: "Qo'ng'iroq", note: '', nextDate: '', clientId: '' };
 
-export default function InteractionsPage() {
+export default function InteractionsPage({ user }) {
+  const canHardDelete = user?.role === 'superAdmin';
   const [interactions, setInteractions] = useState([]);
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
@@ -108,6 +109,16 @@ export default function InteractionsPage() {
       fetchInteractions();
       toast.success("O'chirildi");
     } catch { /* interceptor shows toast */ }
+  };
+
+  const handleRestore = async (rec) => {
+    try { await api.post(`/api/interactions/${rec.id}/restore`); toast.success('Tiklandi'); fetchInteractions(); }
+    catch { /* interceptor toast */ }
+  };
+  const handleHardDelete = async (rec) => {
+    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
+    try { await api.delete(`/api/interactions/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); fetchInteractions(); }
+    catch { /* interceptor toast */ }
   };
 
   useModalKeys(!!modal, handleSave, closeModal);
@@ -220,7 +231,7 @@ export default function InteractionsPage() {
           ) : interactions.map(it => {
             const Icon = TYPE_ICONS[it.type] || MessageSquare;
             return (
-              <div key={it.id} className="px-5 py-3 flex gap-4 hover:bg-[var(--surface-2)] transition-colors group border-b border-[var(--border)] last:border-none">
+              <div key={it.id} className={`px-5 py-3 flex gap-4 hover:bg-[var(--surface-2)] transition-colors group border-b border-[var(--border)] last:border-none${it.deletedAt?' opacity-60 bg-red-50 dark:bg-red-950/20':''}`}>
                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${TYPE_COLORS[it.type] || TYPE_COLORS['Boshqa']}`}>
                   <Icon size={18} strokeWidth={2}/>
                 </div>
@@ -237,11 +248,23 @@ export default function InteractionsPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button onClick={() => handleCopy(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={15} strokeWidth={1.8}/></button>
-                  <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
-                  <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
-                </div>
+                {it.deletedAt ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+                    {canHardDelete && (
+                      <>
+                        <button onClick={() => handleRestore(it)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
+                        <button onClick={() => handleHardDelete(it)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title="Butunlay o'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button onClick={() => handleCopy(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Nusxalash"><Copy size={15} strokeWidth={1.8}/></button>
+                    <button onClick={() => openEdit(it)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
+                    <button onClick={() => setDelId(it.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -9,19 +9,23 @@
 
 ## 🌐 Umumiy (cross-cutting — barcha/ko'p modulга)
 
-- ⬜💬 **#3 — Ko'rinadigan amal izi (audit) + soft-delete + superAdmin** 🆕🐛 _(KATTA — sxema + barcha modul + rol)_
-  Mahsulotlardan tashqari har modulda (Shartnoma, Savdo, Mijoz, To'lov, Spets, Aloqa)
-  har yozuvda **kim qilgani** ko'rinib tursin:
-  - Bitta ustun: **yaratgan/oxirgi tahrirlagan foydalanuvchi** + ostida **vaqti**.
-  - Tahrirlanганда — oxirgi tahrirlovchi ko'rsatiladi; **oxirgi tahrir vaqti** ham.
-  - **Soft-delete:** o'chirilganda butunlay o'chmaydi, "o'chirilgan" holatiga o'tadi
-    (qizil bo'yalgan). **Faqat superAdmin** butunlay (hard) o'chira oladi.
-  - Har foydalanuvchiga **alohida rang** (UI).
-  *Sxema ta'siri:* ko'p modelga `createdById`, `updatedById`, `updatedAt`, `deletedAt`
-  qo'shiladi; yangi **superAdmin** roli (hozir: admin/seller/user); soft-delete barcha
-  list so'rovlarga `deletedAt IS NULL` filtri talab qiladi (arxitekturaviy).
-  *Mavjud:* `AuditLog` modeli bor (tarix uchun) — bu esa **qatorga bog'langan ko'rinadigan
-  atribut** + soft-delete (boshqa narsa).
+- 🔄 **#3 — Ko'rinadigan amal izi + soft-delete + superAdmin** 🆕🐛 _(KATTA — 3a/3b ga bo'lindi)_
+
+  - ✅ **3a — Soft-delete + superAdmin** _(2026-06-03)_
+    - Sxema: 6 modelga (Client/Contract/Sale/Payment/Specification/Interaction)
+      `deletedAt, deletedById, createdById, updatedById` (+ yo'qlariga `updatedAt`). 1 migratsiya.
+    - superAdmin roli: `rbac.js` bypass + `requireSuperAdmin`; `_schemas` enum; Users.jsx opsiya+badge.
+    - DELETE → **soft** (admin); `/:id/hard` + `/:id/restore` → **superAdmin** (har modul).
+      Create/update'da `createdById`/`updatedById` yoziladi (3b uchun).
+    - **Agregatlardan chiqarish:** barcha Sale/Payment SUM'ga `deletedAt IS NULL`
+      (clients, dashboard, contracts, reports) — o'chirilgan void, qarz/oborotga kirmaydi.
+    - Frontend: 5 ro'yxatda o'chirilgan qator **qizil** + superAdmin **Tiklash/Butunlay o'chirish**.
+    - Testlar: `softdelete.test` (soft, agregat chiqarish, superAdmin hard/restore 403/200).
+      **Backend 99/99, lint 0 error, build OK, E2E 4/4; jonli bazada tekshirildi (debt 10000→0).**
+
+  - ⬜ **3b — Ko'rinadigan "kim/qachon" ustuni + foydalanuvchi ranglari** _(keyingi)_
+    Har modulda yaratgan/oxirgi tahrirlovchi + vaqt ustuni; id'dan avtomatik rang;
+    `GET /api/users/lookup` (id→fullName). Ma'lumot 3a'da yig'ila boshladi.
 
 - ✅ **#4 — Vaqt bo'yicha saralashda SOAT ham hisobga olinsin** 🐛 _(2026-06-03)_
   List endpointlarda `date` saralashga ikkilamchi `createdAt` tiebreaker qo'shildi —

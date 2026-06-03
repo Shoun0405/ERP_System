@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { saleSchema } = require('./_schemas');
-const { requireRole, requirePermission } = require('../middleware/rbac');
+const { requireRole, requirePermission, requireSuperAdmin } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 const { computeSaleRow } = require('../lib/saleCalc');
 
@@ -202,6 +202,7 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
           contractId: contractId || null,
           specId:     specId     || null,
           facturaStatus: facturaStatus || 'yuborilmagan',
+          createdById: req.user.id,
         },
       });
       await tx.saleProduct.createMany({
@@ -314,7 +315,8 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
           ...(finalContractId !== undefined ? { contractId: finalContractId || null } : {}),
           ...(data.specId !== undefined ? { specId: data.specId || null } : {}),
           ...(data.facturaStatus !== undefined ? { facturaStatus: data.facturaStatus } : {}),
-          totalAmount
+          totalAmount,
+          updatedById: req.user.id,
         },
         include: {
           client:   { select: { id: true, name: true } },
@@ -335,13 +337,14 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
   }
 });
 
-// Admin-only bulk delete
+// Bulk soft-delete
 router.post('/bulk-delete', requirePermission('sales', 'delete'), async (req, res, next) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids massiv bo\'lishi kerak' });
-    await prisma.sale.deleteMany({
-      where: { id: { in: ids } },
+    await prisma.sale.updateMany({
+      where: { id: { in: ids }, deletedAt: null },
+      data:  { deletedAt: new Date(), deletedById: req.user.id },
     });
     await logAudit(req.user.id, 'delete', 'sale', null, { ids }, req);
     res.json({ success: true });
@@ -366,7 +369,7 @@ router.post('/bulk-factura', requirePermission('sales', 'update'), async (req, r
   }
 });
 
-// Admin-only single delete
+// Soft-delete (o'chirilgan holatga o'tkazadi — qaytarib bo'ladi)
 router.delete('/:id', requirePermission('sales', 'delete'), async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -374,8 +377,36 @@ router.delete('/:id', requirePermission('sales', 'delete'), async (req, res, nex
     if (!sale) {
       return res.status(404).json({ error: 'Savdo topilmadi' });
     }
-    await prisma.sale.delete({ where: { id } });
+    await prisma.sale.update({ where: { id }, data: { deletedAt: new Date(), deletedById: req.user.id } });
     await logAudit(req.user.id, 'delete', 'sale', id, { nakladnoy: sale.nakladnoy }, req);
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: butunlay (hard) o'chirish
+router.delete('/:id/hard', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const sale = await prisma.sale.findUnique({ where: { id } });
+    if (!sale) return res.status(404).json({ error: 'Savdo topilmadi' });
+    await prisma.sale.delete({ where: { id } });
+    await logAudit(req.user.id, 'hard-delete', 'sale', id, { nakladnoy: sale.nakladnoy }, req);
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: tiklash (restore)
+router.post('/:id/restore', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const sale = await prisma.sale.findUnique({ where: { id } });
+    if (!sale) return res.status(404).json({ error: 'Savdo topilmadi' });
+    await prisma.sale.update({ where: { id }, data: { deletedAt: null, deletedById: null } });
+    await logAudit(req.user.id, 'restore', 'sale', id, { nakladnoy: sale.nakladnoy }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);

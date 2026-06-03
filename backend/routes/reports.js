@@ -42,6 +42,7 @@ router.get('/sales-by-period', async (req, res, next) => {
 
     const aggregate = await prisma.sale.aggregate({
       where: {
+        deletedAt: null,
         date: {
           gte: fromDate,
           lte: toDate
@@ -56,12 +57,12 @@ router.get('/sales-by-period', async (req, res, next) => {
     });
 
     const salesByDay = await prisma.$queryRaw`
-      SELECT 
-        DATE_TRUNC('day', date) as day, 
+      SELECT
+        DATE_TRUNC('day', date) as day,
         SUM("totalAmount")::float as amount,
         COUNT(id)::int as count
       FROM "Sale"
-      WHERE date >= ${fromDate} AND date <= ${toDate}
+      WHERE date >= ${fromDate} AND date <= ${toDate} AND "deletedAt" IS NULL
       GROUP BY day
       ORDER BY day ASC
     `;
@@ -115,6 +116,7 @@ router.get('/client-by-contracts/:clientId', async (req, res, next) => {
           'Savdo (Nakladnoy № ' || s.nakladnoy || ')' AS "desc"
         FROM "Sale" s
         WHERE s."clientId" = ${clientId}
+          AND s."deletedAt" IS NULL
           AND (${from}::timestamp IS NULL OR s.date >= ${from})
           AND (${to}::timestamp   IS NULL OR s.date <= ${to})
         UNION ALL
@@ -127,6 +129,7 @@ router.get('/client-by-contracts/:clientId', async (req, res, next) => {
           'To''lov' || COALESCE(' (' || p.note || ')', '') AS "desc"
         FROM "Payment" p
         WHERE p."clientId" = ${clientId}
+          AND p."deletedAt" IS NULL
           AND (${from}::timestamp IS NULL OR p.date >= ${from})
           AND (${to}::timestamp   IS NULL OR p.date <= ${to})
       ) movements
@@ -217,6 +220,7 @@ router.get('/client-statement/:clientId', async (req, res, next) => {
           'Savdo (Nakladnoy № ' || s.nakladnoy || ')' AS "desc"
         FROM "Sale" s
         WHERE s."clientId" = ${clientId}
+          AND s."deletedAt" IS NULL
           AND (${from}::timestamp IS NULL OR s.date >= ${from})
           AND (${to}::timestamp   IS NULL OR s.date <= ${to})
         UNION ALL
@@ -230,6 +234,7 @@ router.get('/client-statement/:clientId', async (req, res, next) => {
           'To''lov' || COALESCE(' (' || p.note || ')', '') AS "desc"
         FROM "Payment" p
         WHERE p."clientId" = ${clientId}
+          AND p."deletedAt" IS NULL
           AND (${from}::timestamp IS NULL OR p.date >= ${from})
           AND (${to}::timestamp   IS NULL OR p.date <= ${to})
       ) movements
@@ -261,11 +266,13 @@ router.get('/debtors', async (req, res, next) => {
       LEFT JOIN (
         SELECT "clientId", SUM("totalAmount") as total_sales
         FROM "Sale"
+        WHERE "deletedAt" IS NULL
         GROUP BY "clientId"
       ) s ON s."clientId" = c.id
       LEFT JOIN (
         SELECT "clientId", SUM(amount) as total_payments
         FROM "Payment"
+        WHERE "deletedAt" IS NULL
         GROUP BY "clientId"
       ) p ON p."clientId" = c.id
       WHERE (COALESCE(s.total_sales, 0) - COALESCE(p.total_payments, 0)) > 0.01
@@ -304,7 +311,7 @@ router.get('/products-top', async (req, res, next) => {
         FROM "SaleProduct" sp
         JOIN "Product" p ON p.id = sp."productId"
         JOIN "Sale" s    ON s.id = sp."saleId"
-        WHERE s.date >= ${fromDate} AND s.date <= ${toDate}
+        WHERE s.date >= ${fromDate} AND s.date <= ${toDate} AND s."deletedAt" IS NULL
         GROUP BY p.id, p.article
         ORDER BY "totalPieces" DESC
         LIMIT ${limit}
@@ -352,7 +359,7 @@ router.get('/sales-by-client', async (req, res, next) => {
         SUM(s."totalAmount")::float as total_amount
       FROM "Client" c
       JOIN "Sale" s ON s."clientId" = c.id
-      WHERE s.date >= ${fromDate} AND s.date <= ${toDate}
+      WHERE s.date >= ${fromDate} AND s.date <= ${toDate} AND s."deletedAt" IS NULL
       GROUP BY c.id, c.name, c.phone
       ORDER BY total_amount DESC
     `;
@@ -380,7 +387,7 @@ router.get('/payments-by-period', async (req, res, next) => {
 
     const [aggregate, paymentsByDay] = await Promise.all([
       prisma.payment.aggregate({
-        where: { date: { gte: fromDate, lte: toDate } },
+        where: { deletedAt: null, date: { gte: fromDate, lte: toDate } },
         _sum: { amount: true },
         _count: { id: true }
       }),
@@ -390,7 +397,7 @@ router.get('/payments-by-period', async (req, res, next) => {
           SUM(amount)::float      as amount,
           COUNT(id)::int          as count
         FROM "Payment"
-        WHERE date >= ${fromDate} AND date <= ${toDate}
+        WHERE date >= ${fromDate} AND date <= ${toDate} AND "deletedAt" IS NULL
         GROUP BY day
         ORDER BY day ASC
       `
@@ -429,6 +436,7 @@ router.get('/vat-report', async (req, res, next) => {
         FROM "Sale"
         WHERE (${from}::timestamp IS NULL OR date >= ${from})
           AND (${to}::timestamp   IS NULL OR date <= ${to})
+          AND "deletedAt" IS NULL
       `,
       prisma.$queryRaw`
         SELECT
@@ -438,6 +446,7 @@ router.get('/vat-report', async (req, res, next) => {
         FROM "Sale"
         WHERE (${from}::timestamp IS NULL OR date >= ${from})
           AND (${to}::timestamp   IS NULL OR date <= ${to})
+          AND "deletedAt" IS NULL
         GROUP BY month
         ORDER BY month ASC
       `,
@@ -489,6 +498,7 @@ router.get('/sales-by-seller', async (req, res, next) => {
       FROM "Sale"
       WHERE (${from}::timestamp IS NULL OR date >= ${from})
         AND (${to}::timestamp   IS NULL OR date <= ${to})
+        AND "deletedAt" IS NULL
       GROUP BY "sellerName"
       ORDER BY total_amount DESC
     `;
@@ -521,6 +531,7 @@ router.get('/sellers-summary', async (req, res, next) => {
         FROM "Sale"
         WHERE (${from}::timestamp IS NULL OR date >= ${from})
           AND (${to}::timestamp   IS NULL OR date <= ${to})
+          AND "deletedAt" IS NULL
         GROUP BY "contractId"
       ) d ON d."contractId" = ct.id
       LEFT JOIN (
@@ -528,6 +539,7 @@ router.get('/sellers-summary', async (req, res, next) => {
         FROM "Payment"
         WHERE (${from}::timestamp IS NULL OR date >= ${from})
           AND (${to}::timestamp   IS NULL OR date <= ${to})
+          AND "deletedAt" IS NULL
         GROUP BY "contractId"
       ) p ON p."contractId" = ct.id
       WHERE ct.seller IS NOT NULL AND ct.seller <> ''
@@ -571,6 +583,7 @@ router.get('/seller-by-contracts/:seller', async (req, res, next) => {
         FROM "Sale" s
         JOIN "Contract" ct ON ct.id = s."contractId"
         WHERE ct.seller = ${seller}
+          AND s."deletedAt" IS NULL
           AND (${from}::timestamp IS NULL OR s.date >= ${from})
           AND (${to}::timestamp   IS NULL OR s.date <= ${to})
         UNION ALL
@@ -584,6 +597,7 @@ router.get('/seller-by-contracts/:seller', async (req, res, next) => {
         FROM "Payment" p
         JOIN "Contract" ct ON ct.id = p."contractId"
         WHERE ct.seller = ${seller}
+          AND p."deletedAt" IS NULL
           AND (${from}::timestamp IS NULL OR p.date >= ${from})
           AND (${to}::timestamp   IS NULL OR p.date <= ${to})
       ) movements

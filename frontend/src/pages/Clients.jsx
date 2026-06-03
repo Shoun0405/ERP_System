@@ -114,6 +114,7 @@ export default function Clients({ user }) {
   const canCreate = user?.role === 'admin' || user?.permissions?.clients?.create !== false;
   const canUpdate = user?.role === 'admin' || user?.permissions?.clients?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.clients?.delete === true;
+  const canHardDelete = user?.role === 'superAdmin';
 
   const canCreateContract = user?.role === 'admin' || user?.permissions?.contracts?.create !== false;
   const canUpdateContract = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
@@ -220,6 +221,16 @@ export default function Clients({ user }) {
   const handleDelete = async () => {
     try { await api.delete(`/api/clients/${delId}`); setDelId(null); fetchClients(); toast.success('O\'chirildi'); }
     catch { /* interceptor shows toast */ }
+  };
+
+  const handleRestore = async (rec) => {
+    try { await api.post(`/api/clients/${rec.id}/restore`); toast.success('Tiklandi'); fetchClients(); }
+    catch { /* interceptor toast */ }
+  };
+  const handleHardDelete = async (rec) => {
+    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
+    try { await api.delete(`/api/clients/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); fetchClients(); }
+    catch { /* interceptor toast */ }
   };
 
   const handleExport = () => {
@@ -465,7 +476,7 @@ export default function Clients({ user }) {
                 </td></tr>
               ) : clients.map(c=>(
                 <Fragment key={c.id}>
-                  <tr onClick={()=>toggleExpand(c.id)} className={`hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group cursor-pointer ${expanded===c.id?'bg-[var(--surface-2)]':''}`}>
+                  <tr onClick={()=>toggleExpand(c.id)} className={`hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group cursor-pointer ${expanded===c.id?'bg-[var(--surface-2)]':''}${c.deletedAt?' opacity-60 bg-red-50 dark:bg-red-950/20':''}`}>
                     <td className="px-5 py-2.5">
                       <div className="flex items-center gap-3">
                         <span className={`shrink-0 rounded p-0.5 transition-colors ${expanded===c.id ? 'text-[var(--accent)]' : 'text-[var(--text-3)] group-hover:text-[var(--text-2)]'}`}>
@@ -489,12 +500,26 @@ export default function Clients({ user }) {
                     </td>
                     <td className="px-5 py-2.5" onClick={e=>e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={()=>handleCopy(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
-                        {canUpdate && (
-                          <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
-                        )}
-                        {canDelete && (
-                          <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                        {c.deletedAt ? (
+                          <>
+                            <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+                            {canHardDelete && (
+                              <>
+                                <button onClick={()=>handleRestore(c)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
+                                <button onClick={()=>handleHardDelete(c)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title="Butunlay o'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={()=>handleCopy(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
+                            {canUpdate && (
+                              <button onClick={()=>openEdit(c)} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded transition opacity-0 group-hover:opacity-100" title="Tahrirlash"><Edit2 size={15} strokeWidth={1.8}/></button>
+                            )}
+                            {canDelete && (
+                              <button onClick={()=>setDelId(c.id)} className="p-1 text-[var(--text-3)] hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { paymentSchema } = require('./_schemas');
-const { requireRole, requirePermission } = require('../middleware/rbac');
+const { requireRole, requirePermission, requireSuperAdmin } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 
 router.get('/', requirePermission('payments', 'read'), async (req, res, next) => {
@@ -68,7 +68,7 @@ router.post('/', requirePermission('payments', 'create'), async (req, res, next)
     }
 
     const payment = await prisma.payment.create({
-      data: { date: new Date(date), amount, note, clientId, contractId: contractId || null },
+      data: { date: new Date(date), amount, note, clientId, contractId: contractId || null, createdById: req.user.id },
       include: {
         client:   { select: { id: true, name: true } },
         contract: { select: { id: true, number: true } },
@@ -83,7 +83,7 @@ router.post('/', requirePermission('payments', 'create'), async (req, res, next)
   }
 });
 
-// Admin-only delete
+// Soft-delete
 router.delete('/:id', requirePermission('payments', 'delete'), async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -91,8 +91,36 @@ router.delete('/:id', requirePermission('payments', 'delete'), async (req, res, 
     if (!payment) {
       return res.status(404).json({ error: 'To\'lov topilmadi' });
     }
-    await prisma.payment.delete({ where: { id } });
+    await prisma.payment.update({ where: { id }, data: { deletedAt: new Date(), deletedById: req.user.id } });
     await logAudit(req.user.id, 'delete', 'payment', id, { amount: payment.amount }, req);
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: butunlay (hard) o'chirish
+router.delete('/:id/hard', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment) return res.status(404).json({ error: 'To\'lov topilmadi' });
+    await prisma.payment.delete({ where: { id } });
+    await logAudit(req.user.id, 'hard-delete', 'payment', id, { amount: payment.amount }, req);
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: tiklash
+router.post('/:id/restore', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment) return res.status(404).json({ error: 'To\'lov topilmadi' });
+    await prisma.payment.update({ where: { id }, data: { deletedAt: null, deletedById: null } });
+    await logAudit(req.user.id, 'restore', 'payment', id, { amount: payment.amount }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);

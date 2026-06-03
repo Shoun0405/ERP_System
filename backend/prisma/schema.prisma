@@ -21,6 +21,11 @@ model Client {
   bank         String?
   seller       String?
   createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt @default(now())
+  createdById  String?
+  updatedById  String?
+  deletedAt    DateTime?
+  deletedById  String?
   contracts    Contract[]
   sales        Sale[]
   payments     Payment[]
@@ -28,6 +33,7 @@ model Client {
 
   @@index([seller])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model Product {
@@ -65,11 +71,16 @@ model Contract {
   seller         String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+  deletedById    String?
 
   @@unique([number, clientId])
   @@index([clientId])
   @@index([status])
   @@index([date])
+  @@index([deletedAt])
 }
 
 model Specification {
@@ -84,10 +95,15 @@ model Specification {
   sales      Sale[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt  DateTime?
+  deletedById String?
 
   @@unique([contractId, number])
   @@index([contractId])
   @@index([date])
+  @@index([deletedAt])
 }
 
 model SpecProduct {
@@ -123,10 +139,16 @@ model Sale {
   products      SaleProduct[]
   facturaStatus String         @default("yuborilmagan")
   createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt @default(now())
+  createdById   String?
+  updatedById   String?
+  deletedAt     DateTime?
+  deletedById   String?
 
   @@index([clientId, date])
   @@index([contractId])
   @@index([specId])
+  @@index([deletedAt])
 }
 
 model SaleProduct {
@@ -158,9 +180,15 @@ model Payment {
   client      Client    @relation(fields: [clientId], references: [id])
   contract    Contract? @relation(fields: [contractId], references: [id])
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+  deletedById String?
 
   @@index([clientId, date])
   @@index([contractId])
+  @@index([deletedAt])
 }
 
 model Interaction {
@@ -172,9 +200,15 @@ model Interaction {
   clientId  String
   client    Client    @relation(fields: [clientId], references: [id])
   createdAt DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+  deletedById String?
 
   @@index([clientId])
   @@index([nextDate])
+  @@index([deletedAt])
 }
 
 model Setting {

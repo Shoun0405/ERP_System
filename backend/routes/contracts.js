@@ -2,7 +2,7 @@ const router = require('express').Router();
 const prisma = require('../prisma');
 const { Prisma } = require('@prisma/client');
 const { contractSchema } = require('./_schemas');
-const { requireRole, requirePermission } = require('../middleware/rbac');
+const { requireRole, requirePermission, requireSuperAdmin } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 const { countContractLinks } = require('../lib/contractGuards');
 
@@ -66,12 +66,13 @@ router.get('/', requirePermission('contracts', 'read'), async (req, res, next) =
         FROM "Contract" c
         LEFT JOIN (
           SELECT "contractId", SUM(amount) AS paid
-          FROM "Payment" GROUP BY "contractId"
+          FROM "Payment" WHERE "deletedAt" IS NULL GROUP BY "contractId"
         ) p_agg ON p_agg."contractId" = c.id
         LEFT JOIN (
           SELECT s."contractId", SUM(sp."rowAmount") AS delivered
           FROM "Sale" s
           JOIN "SaleProduct" sp ON sp."saleId" = s.id
+          WHERE s."deletedAt" IS NULL
           GROUP BY s."contractId"
         ) d_agg ON d_agg."contractId" = c.id
         WHERE (COALESCE(d_agg.delivered, 0) - COALESCE(p_agg.paid, 0)) ${cmp}
@@ -110,17 +111,18 @@ router.get('/', requirePermission('contracts', 'read'), async (req, res, next) =
         FROM "Contract" c
         LEFT JOIN (
           SELECT "contractId", SUM(amount) AS paid
-          FROM "Payment" GROUP BY "contractId"
+          FROM "Payment" WHERE "deletedAt" IS NULL GROUP BY "contractId"
         ) p_agg ON p_agg."contractId" = c.id
         LEFT JOIN (
           SELECT s."contractId", SUM(sp."rowAmount") AS delivered
           FROM "Sale" s
           JOIN "SaleProduct" sp ON sp."saleId" = s.id
+          WHERE s."deletedAt" IS NULL
           GROUP BY s."contractId"
         ) d_agg ON d_agg."contractId" = c.id
         LEFT JOIN (
           SELECT "contractId", SUM("totalValue") AS invoice
-          FROM "Specification" GROUP BY "contractId"
+          FROM "Specification" WHERE "deletedAt" IS NULL GROUP BY "contractId"
         ) s_agg ON s_agg."contractId" = c.id
         WHERE c.id::text = ANY(${ids})
       `;
@@ -176,7 +178,7 @@ router.get('/:id', requirePermission('contracts', 'read'), async (req, res, next
       SELECT s."specId"::text, COALESCE(SUM(sp."rowAmount"), 0)::float AS delivered
       FROM "Sale" s
       LEFT JOIN "SaleProduct" sp ON sp."saleId" = s.id
-      WHERE s."contractId"::text = ${req.params.id} AND s."specId" IS NOT NULL
+      WHERE s."contractId"::text = ${req.params.id} AND s."specId" IS NOT NULL AND s."deletedAt" IS NULL
       GROUP BY s."specId"
     `;
     const deliveredMap = Object.fromEntries(
@@ -244,6 +246,7 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
           notes:      body.notes || null,
           status:     body.status || 'yangi',
           seller:     body.seller || null,
+          createdById: req.user.id,
         },
         include: { client: { select: { id: true, name: true, inn: true } } },
       });
@@ -301,6 +304,7 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
         ...(sent('status')     ? { status: body.status } : {}),
         ...(sent('seller')     ? { seller: body.seller || null } : {}),
         ...(clientChanged      ? { clientId: body.clientId } : {}),
+        updatedById: req.user.id,
         // number o'zgartirilmaydi — audit izi
       },
       include: { client: { select: { id: true, name: true, inn: true } } },
@@ -316,7 +320,7 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
   }
 });
 
-// DELETE /api/contracts/:id (Admin-only delete)
+// Soft-delete
 router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res, next) => {
   try {
     const contractId = req.params.id;
@@ -329,10 +333,41 @@ router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res,
     if (hasAny) {
       return res.status(409).json({ error: "Bog'langan savdo yoki to'lov mavjud" });
     }
-    await prisma.contract.delete({ where: { id: contractId } });
-    
+    await prisma.contract.update({ where: { id: contractId }, data: { deletedAt: new Date(), deletedById: req.user.id } });
+
     await logAudit(req.user.id, 'delete', 'contract', contractId, { number: contract.number }, req);
 
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: butunlay o'chirish
+router.delete('/:id/hard', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const contractId = req.params.id;
+    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) return res.status(404).json({ error: 'Shartnoma topilmadi' });
+    const { hasAny } = await countContractLinks(contractId);
+    if (hasAny) return res.status(409).json({ error: "Bog'langan savdo yoki to'lov mavjud" });
+    await prisma.contract.delete({ where: { id: contractId } });
+    await logAudit(req.user.id, 'hard-delete', 'contract', contractId, { number: contract.number }, req);
+    res.json({ success: true });
+  } catch (e) {
+    if (e.code === 'P2003') return res.status(409).json({ error: "Bog'langan savdo yoki to'lov mavjud" });
+    next(e);
+  }
+});
+
+// superAdmin: tiklash
+router.post('/:id/restore', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const contractId = req.params.id;
+    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) return res.status(404).json({ error: 'Shartnoma topilmadi' });
+    await prisma.contract.update({ where: { id: contractId }, data: { deletedAt: null, deletedById: null } });
+    await logAudit(req.user.id, 'restore', 'contract', contractId, { number: contract.number }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);

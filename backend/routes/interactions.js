@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { interactionSchema } = require('./_schemas');
-const { requirePermission } = require('../middleware/rbac');
+const { requirePermission, requireSuperAdmin } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 
 router.get('/', requirePermission('interactions', 'read'), async (req, res, next) => {
@@ -51,10 +51,11 @@ router.post('/', requirePermission('interactions', 'create'), async (req, res, n
         note,
         nextDate: nextDate ? new Date(nextDate) : null,
         clientId,
+        createdById: req.user.id,
       },
       include: { client: true },
     });
-    
+
     await logAudit(req.user.id, 'create', 'interaction', interaction.id, data, req);
 
     res.json(interaction);
@@ -75,10 +76,11 @@ router.put('/:id', requirePermission('interactions', 'update'), async (req, res,
         ...(note     !== undefined ? { note }                           : {}),
         ...(nextDate !== undefined ? { nextDate: nextDate ? new Date(nextDate) : null } : {}),
         ...(clientId !== undefined ? { clientId }                       : {}),
+        updatedById: req.user.id,
       },
       include: { client: true },
     });
-    
+
     await logAudit(req.user.id, 'update', 'interaction', req.params.id, data, req);
 
     res.json(interaction);
@@ -87,6 +89,7 @@ router.put('/:id', requirePermission('interactions', 'update'), async (req, res,
   }
 });
 
+// Soft-delete
 router.delete('/:id', requirePermission('interactions', 'delete'), async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -94,10 +97,38 @@ router.delete('/:id', requirePermission('interactions', 'delete'), async (req, r
     if (!interaction) {
       return res.status(404).json({ error: 'Muloqot topilmadi' });
     }
-    await prisma.interaction.delete({ where: { id } });
-    
+    await prisma.interaction.update({ where: { id }, data: { deletedAt: new Date(), deletedById: req.user.id } });
+
     await logAudit(req.user.id, 'delete', 'interaction', id, { type: interaction.type }, req);
 
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: butunlay o'chirish
+router.delete('/:id/hard', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const interaction = await prisma.interaction.findUnique({ where: { id } });
+    if (!interaction) return res.status(404).json({ error: 'Muloqot topilmadi' });
+    await prisma.interaction.delete({ where: { id } });
+    await logAudit(req.user.id, 'hard-delete', 'interaction', id, { type: interaction.type }, req);
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: tiklash
+router.post('/:id/restore', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const interaction = await prisma.interaction.findUnique({ where: { id } });
+    if (!interaction) return res.status(404).json({ error: 'Muloqot topilmadi' });
+    await prisma.interaction.update({ where: { id }, data: { deletedAt: null, deletedById: null } });
+    await logAudit(req.user.id, 'restore', 'interaction', id, { type: interaction.type }, req);
     res.json({ success: true });
   } catch (e) {
     next(e);

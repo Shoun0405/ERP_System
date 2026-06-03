@@ -28,8 +28,8 @@ function requirePermission(module, action) {
       return next();
     }
 
-    // Admins have full access to everything
-    if (req.user.role === 'admin') {
+    // Admins (va superAdmin) have full access to everything
+    if (req.user.role === 'admin' || req.user.role === 'superAdmin') {
       return next();
     }
 
@@ -47,4 +47,7 @@ function requirePermission(module, action) {
   };
 }
 
-module.exports = { requireRole, requirePermission };
+// Faqat superAdmin (admin EMAS) — hard-delete / restore uchun
+const requireSuperAdmin = requireRole('superAdmin');
+
+module.exports = { requireRole, requirePermission, requireSuperAdmin };

@@ -216,14 +216,16 @@ export default function UsersPage() {
                     <td className="px-5 py-3 text-xs font-mono text-[var(--text-2)]">{u.username}</td>
                     <td className="px-5 py-3 text-xs">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${
-                        u.role === 'admin' 
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' 
-                          : u.role === 'seller'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
+                        u.role === 'superAdmin'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400'
+                          : u.role === 'admin'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                            : u.role === 'seller'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                              : 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
                       }`}>
                         <Shield size={11} strokeWidth={2.5} />
-                        {u.role === 'admin' ? 'Admin' : u.role === 'seller' ? 'Sotuvchi' : 'Foydalanuvchi'}
+                        {u.role === 'superAdmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : u.role === 'seller' ? 'Sotuvchi' : 'Foydalanuvchi'}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-xs">
@@ -357,6 +359,7 @@ export default function UsersPage() {
                     >
                       <option value="seller">Sotuvchi (Seller)</option>
                       <option value="admin">Administrator (Admin)</option>
+                      <option value="superAdmin">Super Admin (butunlay o'chirish)</option>
                       <option value="user">Oddiy foydalanuvchi (User)</option>
                     </select>
                   </div>

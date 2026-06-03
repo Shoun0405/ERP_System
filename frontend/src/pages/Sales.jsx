@@ -595,6 +595,7 @@ export default function Sales({ user }) {
   const canCreate = user?.role === 'admin' || user?.permissions?.sales?.create !== false;
   const canUpdate = user?.role === 'admin' || user?.permissions?.sales?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.sales?.delete === true;
+  const canHardDelete = user?.role === 'superAdmin';
   const location = useLocation();
   const navigate  = useNavigate();
 
@@ -742,6 +743,16 @@ export default function Sales({ user }) {
       fetchSales();
       toast.success('Yuk xati o\'chirildi');
     } catch { /* Toast handled by interceptor */ }
+  };
+
+  const handleRestore = async (rec) => {
+    try { await api.post(`/api/sales/${rec.id}/restore`); toast.success('Tiklandi'); fetchSales(); }
+    catch { /* interceptor toast */ }
+  };
+  const handleHardDelete = async (rec) => {
+    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
+    try { await api.delete(`/api/sales/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); fetchSales(); }
+    catch { /* interceptor toast */ }
   };
 
   // Toggle single row factura status
@@ -1112,7 +1123,7 @@ export default function Sales({ user }) {
                   </td>
                 </tr>
               ) : sales.map((s, idx) => (
-                <tr key={s.id} className="hover:bg-[var(--surface-2)] transition-colors group">
+                <tr key={s.id} className={`hover:bg-[var(--surface-2)] transition-colors group${s.deletedAt?' opacity-60 bg-red-50 dark:bg-red-950/20':''}`}>
                   <td className="px-4 py-3.5 text-center">
                     <input
                       type="checkbox"
@@ -1243,30 +1254,44 @@ export default function Sales({ user }) {
                     })()}
                   </td>
                   <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openDetail(s)}
-                        className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Ko'rish">
-                        <Eye size={15} strokeWidth={1.8} />
-                      </button>
-                      {canUpdate && (
-                        <button onClick={() => setEditSale(s)}
-                          className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Tahrirlash">
-                          <Pencil size={15} strokeWidth={1.8} />
+                    {s.deletedAt ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+                        {canHardDelete && (
+                          <>
+                            <button onClick={() => handleRestore(s)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
+                            <button onClick={() => handleHardDelete(s)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition" title="Butunlay o'chirish">
+                              <Trash2 size={15} strokeWidth={1.8} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => openDetail(s)}
+                          className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Ko'rish">
+                          <Eye size={15} strokeWidth={1.8} />
                         </button>
-                      )}
-                      {canCreate && (
-                        <button onClick={() => handleCopyAndAdd(s)}
-                          className="p-1.5 text-[var(--text-3)] hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition" title="Nusxa olib qo'shish">
-                          <Download size={15} strokeWidth={1.8} className="rotate-180" />
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button onClick={() => setDelId(s.id)}
-                          className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish">
-                          <Trash2 size={15} strokeWidth={1.8} />
-                        </button>
-                      )}
-                    </div>
+                        {canUpdate && (
+                          <button onClick={() => setEditSale(s)}
+                            className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Tahrirlash">
+                            <Pencil size={15} strokeWidth={1.8} />
+                          </button>
+                        )}
+                        {canCreate && (
+                          <button onClick={() => handleCopyAndAdd(s)}
+                            className="p-1.5 text-[var(--text-3)] hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition" title="Nusxa olib qo'shish">
+                            <Download size={15} strokeWidth={1.8} className="rotate-180" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => setDelId(s.id)}
+                            className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish">
+                            <Trash2 size={15} strokeWidth={1.8} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -2,7 +2,7 @@ const router = require('express').Router();
 const prisma = require('../prisma');
 const { specSchema } = require('./_schemas');
 const { calcVat, calcRowTotal, VAT_RATE } = require('../lib/vat');
-const { requireRole, requirePermission } = require('../middleware/rbac');
+const { requireRole, requirePermission, requireSuperAdmin } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
 
 // Global Sozlamalardan QQS stavkasini o'qiydi; yo'q/buzilgan bo'lsa default VAT_RATE.
@@ -38,7 +38,7 @@ router.get('/', requirePermission('contracts', 'read'), async (req, res, next) =
         SELECT s."specId"::text, COALESCE(SUM(sp."rowAmount"), 0)::float AS delivered
         FROM "Sale" s
         LEFT JOIN "SaleProduct" sp ON sp."saleId" = s.id
-        WHERE s."specId"::text = ANY(${ids})
+        WHERE s."specId"::text = ANY(${ids}) AND s."deletedAt" IS NULL
         GROUP BY s."specId"
       `;
       deliveredMap = Object.fromEntries(rows.map(r => [r.specId, Number(r.delivered)]));
@@ -90,6 +90,7 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
           date:       body.date ? new Date(body.date) : new Date(),
           notes:      body.notes || null,
           totalValue,
+          createdById: req.user.id,
           products:   { create: productsData },
         },
         include: { products: { include: { product: true } } },
@@ -140,6 +141,7 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
             totalValue,
             ...(sent('notes') ? { notes: body.notes || null } : {}),
             ...(sent('date')  ? { date: new Date(body.date) } : {}),
+            updatedById: req.user.id,
           },
         });
       } else {
@@ -148,6 +150,7 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
           data: {
             ...(sent('notes') ? { notes: body.notes || null } : {}),
             ...(sent('date')  ? { date: new Date(body.date) } : {}),
+            updatedById: req.user.id,
           },
         });
       }
@@ -171,19 +174,46 @@ router.delete('/:id', requirePermission('contracts', 'delete'), async (req, res,
     if (!spec) {
       return res.status(404).json({ error: 'Spetsifikatsiya topilmadi' });
     }
-    // Sale.specId FK = SET NULL — bog'langan savdo bo'lsa Prisma xato bermaydi,
-    // balki savdoni jimgina uzib qo'yadi. Shuning uchun app darajasida bloklaymiz.
-    const saleCount = await prisma.sale.count({ where: { specId: id } });
+    // Faol (o'chirilmagan) savdo bo'lsa bloklaymiz.
+    const saleCount = await prisma.sale.count({ where: { specId: id, deletedAt: null } });
     if (saleCount > 0) {
       return res.status(409).json({ error: "Bu spetsifikatsiya bo'yicha savdo mavjud, avval savdoni o'chiring" });
     }
-    await prisma.specification.delete({ where: { id } });
-    
+    await prisma.specification.update({ where: { id }, data: { deletedAt: new Date(), deletedById: req.user.id } });
+
     await logAudit(req.user.id, 'delete', 'specification', id, { number: spec.number }, req);
 
     res.json({ success: true });
   } catch (e) {
+    next(e);
+  }
+});
+
+// superAdmin: butunlay o'chirish
+router.delete('/:id/hard', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const spec = await prisma.specification.findUnique({ where: { id } });
+    if (!spec) return res.status(404).json({ error: 'Spetsifikatsiya topilmadi' });
+    await prisma.specification.delete({ where: { id } });
+    await logAudit(req.user.id, 'hard-delete', 'specification', id, { number: spec.number }, req);
+    res.json({ success: true });
+  } catch (e) {
     if (e.code === 'P2003') return res.status(409).json({ error: "Bu spets bo'yicha savdo mavjud, avval savdoni o'chiring" });
+    next(e);
+  }
+});
+
+// superAdmin: tiklash
+router.post('/:id/restore', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const spec = await prisma.specification.findUnique({ where: { id } });
+    if (!spec) return res.status(404).json({ error: 'Spetsifikatsiya topilmadi' });
+    await prisma.specification.update({ where: { id }, data: { deletedAt: null, deletedById: null } });
+    await logAudit(req.user.id, 'restore', 'specification', id, { number: spec.number }, req);
+    res.json({ success: true });
+  } catch (e) {
     next(e);
   }
 });

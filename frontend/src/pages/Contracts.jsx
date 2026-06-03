@@ -265,9 +265,10 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
 }
 
 // ─── ContractRow (ro'yxat qatori + expand) ─────────────────────────────────
-function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onSpecSaved, onSpecDeleted, user }) {
+function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, onHardDelete, onSpecSaved, onSpecDeleted, user }) {
   const canUpdate = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
+  const canHardDelete = user?.role === 'superAdmin';
   const navigate = useNavigate();
   const [expanded, setExpanded]  = useState(false);
   const [specs, setSpecs]        = useState(null);
@@ -343,7 +344,7 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onSpecSaved,
 
   return (
     <>
-      <tr className="hover:bg-[var(--surface-2)] transition-colors cursor-pointer" onClick={toggleExpand}>
+      <tr className={`hover:bg-[var(--surface-2)] transition-colors cursor-pointer${c.deletedAt?' opacity-60 bg-red-50 dark:bg-red-950/20':''}`} onClick={toggleExpand}>
         <td className="px-4 py-3 text-sm text-[var(--text-3)]">{idx}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
@@ -385,6 +386,18 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onSpecSaved,
           </span>
         </td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+          {c.deletedAt ? (
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+              {canHardDelete && (
+                <>
+                  <button onClick={() => onRestore(c)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
+                  <button onClick={() => onHardDelete(c)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title="Butunlay o'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                </>
+              )}
+            </div>
+          ) : (
+          <>
           <button onClick={openMenu}
             className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]">
             <MoreVertical size={18} strokeWidth={2} />
@@ -428,6 +441,8 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onSpecSaved,
                 <FileSpreadsheet size={15} strokeWidth={1.8} className="text-emerald-600" /> Excel yuklab olish
               </a>
             </div>
+          )}
+          </>
           )}
         </td>
       </tr>
@@ -1085,6 +1100,16 @@ export default function Contracts({ user }) {
     } catch { /* toast shown by interceptor */ }
   };
 
+  const handleRestore = async (rec) => {
+    try { await api.post(`/api/contracts/${rec.id}/restore`); toast.success('Tiklandi'); load(page); }
+    catch { /* interceptor toast */ }
+  };
+  const handleHardDelete = async (rec) => {
+    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
+    try { await api.delete(`/api/contracts/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); load(page); }
+    catch { /* interceptor toast */ }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       {/* Delete confirm modal */}
@@ -1264,6 +1289,8 @@ export default function Contracts({ user }) {
                     vatRate={vatRate}
                     onEdit={(c) => { setEditContract(c); form.close(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     onDelete={setDelContract}
+                    onRestore={handleRestore}
+                    onHardDelete={handleHardDelete}
                     onSpecSaved={() => load(page)}
                     onSpecDeleted={() => load(page)}
                     user={user}

@@ -13,6 +13,7 @@ function today() { return new Date().toISOString().split('T')[0]; }
 export default function Payments({ user }) {
   const canCreate = user?.role === 'admin' || user?.permissions?.payments?.create !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.payments?.delete === true;
+  const canHardDelete = user?.role === 'superAdmin';
   const [payments,  setPayments]  = useState([]);
   const [total,     setTotal]     = useState(0);
   const [page,      setPage]      = useState(1);
@@ -84,6 +85,16 @@ export default function Payments({ user }) {
       fetchPayments();
       toast.success('O\'chirildi');
     } catch { /* interceptor shows toast */ }
+  };
+
+  const handleRestore = async (rec) => {
+    try { await api.post(`/api/payments/${rec.id}/restore`); toast.success('Tiklandi'); fetchPayments(); }
+    catch { /* interceptor toast */ }
+  };
+  const handleHardDelete = async (rec) => {
+    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
+    try { await api.delete(`/api/payments/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); fetchPayments(); }
+    catch { /* interceptor toast */ }
   };
 
   useModalKeys(modal, handleSave, () => setModal(false));
@@ -234,19 +245,31 @@ export default function Payments({ user }) {
                   {hasFilter ? 'Topilmadi' : 'Hozircha to\'lovlar yo\'q'}
                 </td></tr>
               ) : payments.map(p => (
-                <tr key={p.id} className="hover:bg-[var(--surface-2)] transition-colors group">
+                <tr key={p.id} className={`hover:bg-[var(--surface-2)] transition-colors group${p.deletedAt?' opacity-60 bg-red-50 dark:bg-red-950/20':''}`}>
                   <td className="px-6 py-4 text-sm text-[var(--text-2)]">{fmtDate(p.date)}</td>
                   <td className="px-6 py-4 text-sm font-medium text-[var(--text)]">{p.client?.name}</td>
                   <td className="px-6 py-4 text-sm text-[var(--text-3)]">{p.contract ? `№${p.contract.number}` : '—'}</td>
                   <td className="px-6 py-4 text-sm text-[var(--text-3)]">{p.note || '—'}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">{fmt(p.amount)} UZS</td>
                   <td className="px-6 py-4">
-                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
-                      {canDelete && (
-                        <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
-                      )}
-                    </div>
+                    {p.deletedAt ? (
+                      <div className="flex justify-end items-center gap-2">
+                        <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+                        {canHardDelete && (
+                          <>
+                            <button onClick={() => handleRestore(p)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
+                            <button onClick={() => handleHardDelete(p)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition" title="Butunlay o'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
+                        {canDelete && (
+                          <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
