@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
@@ -126,8 +127,7 @@ export default function Clients({ user }) {
   const [loading,  setLoading]  = useState(true);
   const [sellers,  setSellers]  = useState([]);
   const [searchParams] = useSearchParams();
-  const [search,   setSearch]   = useState(searchParams.get('q') || '');
-  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('q') || '');
+  const { text: search, setText: setSearch, query: debouncedSearch, setQuery: commitSearch, inputProps: searchInput } = useSearchOnEnter(searchParams.get('q') || '', () => setPage(1));
   const [sort,     setSort]     = useState({ col:'createdAt', dir:'desc' });
   const [debtFilter, setDebtFilter] = useState('barchasi');
   const [expanded, setExpanded] = useState(null);
@@ -149,17 +149,11 @@ export default function Clients({ user }) {
   const [contractSaving, setContractSaving] = useState(false);
   const [delContractId,  setDelContractId]  = useState(null);
 
-  // 300ms debounce for search
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  // Sync search from global header ?q= param
+  // Global header ?q= param — qidiruvni darhol qo'llaydi (text + query birga)
   useEffect(() => {
     const q = searchParams.get('q');
-    if (q !== null) setSearch(q);
-  }, [searchParams]);
+    if (q !== null) { setSearch(q); commitSearch(q); }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setPage(1);
@@ -431,7 +425,7 @@ export default function Clients({ user }) {
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
-            <input type="text" placeholder="Mijoz, STIR, telefon, sotuvchi..." value={search} onChange={e=>setSearch(e.target.value)}
+            <input type="text" placeholder="Mijoz, STIR, telefon, sotuvchi (Enter)..." {...searchInput}
               className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-full focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
           {search&&<span className="text-xs text-[var(--text-3)]">{total} natija</span>}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import Pagination from '../components/Pagination';
 import { Plus, X, Trash2, Edit2, RefreshCw, Calculator, Search, Copy } from 'lucide-react';
 import { fmtOrDash as fmtN } from '../lib/format';
@@ -56,8 +57,7 @@ export default function Products({ user }) {
   const LIMIT = 50;
 
   const [loading,   setLoading]   = useState(true);
-  const [search,    setSearch]    = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { text: search, query: debouncedSearch, inputProps: searchInput } = useSearchOnEnter('', () => setPage(1));
   const [modal,     setModal]     = useState(null);
   const [editId,    setEditId]    = useState(null);
   const [form,      setForm]      = useState(EMPTY_FORM);
@@ -70,12 +70,6 @@ export default function Products({ user }) {
 
   const units   = calcUnits(form.length, form.width, form.thickness, form.density);
   const article = makeArticle(form.density, form.length, form.width, form.thickness);
-
-  // 300ms debounce
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
 
   const fetchProducts = useCallback(() => {
     setLoading(true);
@@ -305,7 +299,7 @@ export default function Products({ user }) {
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
-            <input type="text" placeholder="Artikul bo'yicha qidirish..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Artikul bo'yicha qidirish (Enter)..." {...searchInput}
               className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs w-full focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
           {search && <span className="text-xs text-[var(--text-3)]">{total} natija</span>}

@@ -6,6 +6,7 @@ import { downloadFile, openFile } from '../lib/download';
 import { useReactToPrint } from 'react-to-print';
 import { useModalKeys } from '../hooks/useModalKeys';
 import { useInlineForm } from '../hooks/useInlineForm';
+import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import { useDateFilter } from '../context/DateFilterContext';
 import Pagination from '../components/Pagination';
 import { fmt, fmtDate } from '../lib/format';
@@ -410,6 +411,10 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
     if (form.rows.some(r => !r.productId || r.totalPieces <= 0)) {
       return toast.error('Barcha qatorlarni to\'ldiring');
     }
+    const selContract = contracts.find(c => c.id === form.contractId);
+    if (selContract && form.date < selContract.date.slice(0, 10)) {
+      return toast.error('Yuk xati sanasi shartnoma sanasidan oldin bo\'lmasligi kerak');
+    }
     setSaving(true);
     try {
       const payload = {
@@ -498,6 +503,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         <div>
           <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Calendar size={11} className="inline mr-1"/>Sana *</label>
           <input type="date" value={form.date}
+            min={contracts.find(c => c.id === form.contractId)?.date?.slice(0, 10) || undefined}
             onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp} />
         </div>
 
@@ -600,8 +606,7 @@ export default function Sales({ user }) {
   const [settings, setSettings] = useState(null);
   const [loading,  setLoading]  = useState(true);
 
-  const [search,          setSearch]         = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { text: search, query: debouncedSearch, reset: resetSearch, inputProps: searchInput } = useSearchOnEnter('', () => setPage(1));
   const [filterClient,    setFilterClient]   = useState('');
   const [filterContract,  setFilterContract] = useState('');
   const [filterSpec,      setFilterSpec]     = useState('');
@@ -678,12 +683,6 @@ export default function Sales({ user }) {
     inlineForm.open();
     navigate('/sales', { replace: true, state: null });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
 
   useEffect(() => { setPage(1); }, [filterClient, filterContract, filterSpec, dateFrom, dateTo, facturaFilter]);
 
@@ -865,7 +864,7 @@ export default function Sales({ user }) {
     setFilterClient('');
     setFilterContract('');
     setFilterSpec('');
-    setSearch('');
+    resetSearch();
     setFacturaFilter('barchasi');
   };
   const hasFilter = filterClient || filterContract || filterSpec || search || facturaFilter !== 'barchasi';
@@ -910,8 +909,7 @@ export default function Sales({ user }) {
           {/* Search bar */}
           <div className="relative w-full sm:w-48 shrink-0">
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-            <input type="text" placeholder="Qidirish..." value={search}
-              onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Qidirish (Enter)..." {...searchInput}
               className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]" />
           </div>
 

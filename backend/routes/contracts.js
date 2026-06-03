@@ -72,7 +72,11 @@ router.get('/', requirePermission('contracts', 'read'), async (req, res, next) =
           client: { select: { id: true, name: true, inn: true } },
           _count: { select: { specifications: true } },
         },
-        orderBy: sortBy === 'client' ? { client: { name: sortDir } } : { [sortBy]: sortDir },
+        orderBy: sortBy === 'client'
+          ? [{ client: { name: sortDir } }, { createdAt: sortDir }]
+          : sortBy === 'createdAt'
+            ? [{ createdAt: sortDir }]
+            : [{ [sortBy]: sortDir }, { createdAt: sortDir }],
         skip,
         take: limit,
       }),

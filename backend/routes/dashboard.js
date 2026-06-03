@@ -47,7 +47,7 @@ router.get('/', async (req, res, next) => {
       `,
       prisma.sale.findMany({
         take: 5,
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         include: { client: { select: { id: true, name: true } } },
       }),
       prisma.$queryRaw`

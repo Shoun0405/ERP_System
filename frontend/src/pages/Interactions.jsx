@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import Pagination from '../components/Pagination';
 import { Plus, X, MessageSquare, Phone, Users, Mail, Calendar, Edit2, Trash2, Search, Copy } from 'lucide-react';
 
@@ -39,13 +40,7 @@ export default function InteractionsPage() {
   const [form,         setForm]         = useState(EMPTY);
 
   const [filterClient,     setFilterClient]     = useState('');
-  const [search,           setSearch]           = useState('');
-  const [debouncedSearch,  setDebouncedSearch]  = useState('');
-
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  const { text: search, query: debouncedSearch, reset: resetSearch, inputProps: searchInput } = useSearchOnEnter('', () => setPage(1));
 
   useEffect(() => { setPage(1); }, [filterClient]);
 
@@ -196,11 +191,11 @@ export default function InteractionsPage() {
           </select>
           <div className="relative">
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
-            <input type="text" placeholder="Mijoz, izoh, tur..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Mijoz, izoh, tur (Enter)..." {...searchInput}
               className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] outline-none transition w-44 text-[var(--text)] placeholder-[var(--text-3)]"/>
           </div>
           {hasFilter && (
-            <button onClick={() => { setFilterClient(''); setSearch(''); }}
+            <button onClick={() => { setFilterClient(''); resetSearch(); }}
               className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
               <X size={14} strokeWidth={2}/> Tozalash
             </button>

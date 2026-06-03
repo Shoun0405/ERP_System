@@ -37,7 +37,7 @@ router.get('/', requirePermission('payments', 'read'), async (req, res, next) =>
           client:   { select: { id: true, name: true } },
           contract: { select: { id: true, number: true } },
         },
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         skip: offset,
         take: limit,
       }),

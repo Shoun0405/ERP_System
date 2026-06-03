@@ -26,6 +26,22 @@ async function recalcProducts(tx, products) {
   return { rows, totalAmount };
 }
 
+// #7: yuk xati sanasi bog'langan shartnoma sanasidan oldin bo'lishi mumkin emas.
+// Faqat KUN bo'yicha solishtiriladi (soat hisobga olinmaydi) — shartnoma sanasi
+// vaqt komponenti bilan saqlangan bo'lsa ham bir kunlik savdo rad etilmaydi.
+function dayUTC(d) {
+  const x = new Date(d);
+  return Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate());
+}
+function assertSaleDateNotBeforeContract(saleDateStr, contractDate) {
+  if (saleDateStr && contractDate && dayUTC(saleDateStr) < dayUTC(contractDate)) {
+    const err = new Error('Yuk xati sanasi shartnoma sanasidan oldin bo\'lishi mumkin emas');
+    err.status = 400;
+    err.publicMessage = err.message;
+    throw err;
+  }
+}
+
 router.get('/', requirePermission('sales', 'read'), async (req, res, next) => {
   try {
     const page     = Math.max(1, parseInt(req.query.page)  || 1);
@@ -61,17 +77,18 @@ router.get('/', requirePermission('sales', 'read'), async (req, res, next) => {
       } : {}),
     };
 
-    let orderBy = {};
+    // createdAt ikkilamchi tartib — bir kunda yaratilgan yozuvlar soat bo'yicha tartiblanadi
+    let orderBy;
     if (sortBy === 'client') {
-      orderBy = { client: { name: sortDir } };
+      orderBy = [{ client: { name: sortDir } }, { createdAt: sortDir }];
     } else if (sortBy === 'contract') {
-      orderBy = { contract: { number: sortDir } };
+      orderBy = [{ contract: { number: sortDir } }, { createdAt: sortDir }];
     } else if (sortBy === 'spec') {
-      orderBy = { spec: { number: sortDir } };
+      orderBy = [{ spec: { number: sortDir } }, { createdAt: sortDir }];
     } else {
       const allowedCols = ['date', 'nakladnoy', 'sellerName', 'totalAmount', 'facturaStatus'];
       const col = allowedCols.includes(sortBy) ? sortBy : 'date';
-      orderBy = { [col]: sortDir };
+      orderBy = col === 'createdAt' ? [{ createdAt: sortDir }] : [{ [col]: sortDir }, { createdAt: sortDir }];
     }
 
     const [sales, total] = await Promise.all([
@@ -135,7 +152,7 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
       if (contractId) {
         const contract = await tx.contract.findUnique({
           where: { id: contractId },
-          select: { clientId: true }
+          select: { clientId: true, date: true }
         });
         if (!contract) {
           const err = new Error('Shartnoma topilmadi');
@@ -149,13 +166,14 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
           err.publicMessage = 'Kiritilgan shartnoma ushbu mijozga tegishli emas';
           throw err;
         }
+        assertSaleDateNotBeforeContract(date, contract.date);
       }
 
       // specId lookup inside transaction to avoid TOCTOU race
       if (specId) {
         const spec = await tx.specification.findUnique({
           where: { id: specId },
-          select: { contractId: true, contract: { select: { clientId: true } } },
+          select: { contractId: true, contract: { select: { clientId: true, date: true } } },
         });
         if (!spec) {
           const err = new Error('Spetsifikatsiya topilmadi');
@@ -169,6 +187,7 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
           err.publicMessage = 'Kiritilgan spetsifikatsiya ushbu mijozga tegishli emas';
           throw err;
         }
+        assertSaleDateNotBeforeContract(date, spec.contract.date);
         contractId = spec.contractId;
       }
 
@@ -243,6 +262,7 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
       const finalClientId = data.clientId !== undefined ? data.clientId : existingSale.clientId;
       let finalContractId = data.contractId !== undefined ? data.contractId : existingSale.contractId;
       const finalSpecId = data.specId !== undefined ? data.specId : existingSale.specId;
+      const finalDate = data.date !== undefined ? data.date : existingSale.date;
 
       if (finalSpecId) {
         const spec = await tx.specification.findUnique({
@@ -261,11 +281,12 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
           err.publicMessage = 'Kiritilgan spetsifikatsiya ushbu mijozga tegishli emas';
           throw err;
         }
+        assertSaleDateNotBeforeContract(finalDate, spec.contract.date);
         finalContractId = spec.contractId;
       } else if (finalContractId) {
         const contract = await tx.contract.findUnique({
           where: { id: finalContractId },
-          select: { clientId: true }
+          select: { clientId: true, date: true }
         });
         if (!contract) {
           const err = new Error('Shartnoma topilmadi');
@@ -279,6 +300,7 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
           err.publicMessage = 'Kiritilgan shartnoma ushbu mijozga tegishli emas';
           throw err;
         }
+        assertSaleDateNotBeforeContract(finalDate, contract.date);
       }
 
       return tx.sale.update({

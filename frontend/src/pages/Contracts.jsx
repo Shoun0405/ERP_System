@@ -12,6 +12,7 @@ import { fmt, fmtDate } from '../lib/format';
 import { calcRowTotal, calcVat, VAT_RATE } from '../lib/vat';
 import { useInlineForm } from '../hooks/useInlineForm';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { useSearchOnEnter } from '../hooks/useSearchOnEnter';
 import { useDateFilter } from '../context/DateFilterContext';
 import Pagination from '../components/Pagination';
 
@@ -1009,9 +1010,8 @@ export default function Contracts({ user }) {
   const [total, setTotal]         = useState(0);
   const [page, setPage]           = useState(1);
   const [loading, setLoading]     = useState(false);
-  const [search, setSearch]       = useState('');
+  const { query: debouncedSearch, inputProps: searchInput } = useSearchOnEnter('', () => setPage(1));
   const [status, setStatus]       = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy]       = useState('createdAt');
   const [sortDir, setSortDir]     = useState('desc');
   const [products, setProducts]   = useState([]);
@@ -1022,12 +1022,6 @@ export default function Contracts({ user }) {
   const { from: dateFrom, to: dateTo } = useDateFilter();
   const [debtFilter, setDebtFilter] = useState('barchasi');
   const LIMIT = 20;
-
-  // Debounced search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(t);
-  }, [search]);
 
   // Mahsulotlar ro'yxati (spec forma uchun)
   useEffect(() => {
@@ -1191,8 +1185,8 @@ export default function Contracts({ user }) {
           <div className="relative flex-1 min-w-48">
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <input
-              value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Qidirish: mijoz, INN, raqam..."
+              {...searchInput}
+              placeholder="Qidirish: mijoz, INN, raqam (Enter)..."
               className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"
             />
           </div>

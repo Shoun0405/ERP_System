@@ -487,9 +487,11 @@ Asosiy JWT login allaqachon bor (`47b2ad3`). Quyidagilar **xavfsizlik bo'shliqla
 ---
 
 ## Bosqich 15 — Inventar (ombor) + Race-condition Lock + Moliyaviy butunlik
-**Holat: 15a DONE ✅ (2026-06-03) | 15b (ombor) TODO**
+**Holat: 15a DONE ✅ (2026-06-03) | 15b (ombor) — KEYINGA QOLDIRILDI (2026-06-03)**
 
-Foydalanuvchi qarori bilan ikki qismga bo'lindi: **15a** (C-2 + H-2 — kichik, kritik) DONE; **15b** (butun ombor moduli) keyingi.
+Foydalanuvchi qarori bilan ikki qismga bo'lindi: **15a** (C-2 + H-2 — kichik, kritik) DONE.
+**15b (butun ombor moduli) hozircha to'xtatildi** — keyingi rejalarga ko'chirildi (pastdagi
+"Kelajak rejalar" ga qarang). Hozirgi fokus: mavjud modullarni barqarorlashtirish va rivojlantirish.
 
 ### 15a — Moliyaviy butunlik (C-2) + Raqamlash race (H-2) — DONE ✅
 - [x] **Savdo butunligi (C-2):** yangi `lib/saleCalc.js` `computeSaleRow()` — frontend `Sales.jsx` hisobini server tomonga ko'chirdi. `_schemas.js` `saleProductSchema` endi faqat xom kirish (`unit, amount, price, packType`) qabul qiladi; klient `rowAmount/priceCbm/totalCbm...` yubora olmaydi (Zod strip). `sales.js` POST/PUT tranzaksiya ichida `recalcProducts(tx, products)` bilan barcha qiymatni mahsulot o'lchamlaridan qayta hisoblaydi; noma'lum mahsulot → 400. Frontend (`Sales.jsx` save) endi xom kirish yuboradi, server javobi haqiqat manbai.

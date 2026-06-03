@@ -112,6 +112,29 @@ describe('Sales API', () => {
     expect(res.status).toBe(400);
   });
 
+  // #7: yuk xati sanasi shartnoma sanasidan oldin bo'lmasligi
+  it('#7 — savdo sanasi shartnoma sanasidan oldin → 400', async () => {
+    const c = await prisma.contract.create({
+      data: { number: `T-DATE-${Date.now()}`, date: new Date('2026-06-10'), totalValue: 1_000_000, clientId: client.id },
+    });
+    const bad = await request(app).post('/api/sales').send({
+      date: '2026-06-05', nakladnoy: 'T-DT-BAD', sellerName: 'Test',
+      clientId: client.id, contractId: c.id,
+      products: [{ productId: product.id, unit: 'dona', amount: 1, price: 1000 }],
+    });
+    expect(bad.status).toBe(400);
+
+    const ok = await request(app).post('/api/sales').send({
+      date: '2026-06-10', nakladnoy: 'T-DT-OK', sellerName: 'Test',
+      clientId: client.id, contractId: c.id,
+      products: [{ productId: product.id, unit: 'dona', amount: 1, price: 1000 }],
+    });
+    expect(ok.status).toBe(200);
+
+    await request(app).delete(`/api/sales/${ok.body.id}`);
+    await prisma.contract.delete({ where: { id: c.id } });
+  });
+
   it('GET / — ro\'yxat', async () => {
     const res = await request(app).get('/api/sales');
     expect(res.status).toBe(200);

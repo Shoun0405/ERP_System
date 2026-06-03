@@ -27,7 +27,7 @@ router.get('/', requirePermission('interactions', 'read'), async (req, res, next
       prisma.interaction.findMany({
         where,
         include: { client: true },
-        orderBy: { date: 'desc' },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         skip: offset,
         take: limit,
       }),
