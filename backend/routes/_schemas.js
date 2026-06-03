@@ -77,15 +77,14 @@ const settingSchema = z.object({
   vatRate:               z.coerce.number().min(0).max(1).default(0.12),
 });
 
+// C-2: server hosil qiladigan qiymatlar (rowAmount/priceCbm/totalCbm...) endi
+// klientdan QABUL QILINMAYDI. Faqat ishonchli xom kirishlar.
 const saleProductSchema = z.object({
-  productId:   z.string().uuid(),
-  packType:    z.number().int().nonnegative(),
-  totalPieces: z.number().int().nonnegative(),
-  totalCbm:    z.number().nonnegative(),
-  totalKg:     z.number().nonnegative(),
-  totalSqm:    z.number().nonnegative(),
-  priceCbm:    z.number().nonnegative(),
-  rowAmount:   z.number().nonnegative(),
+  productId: z.string().uuid(),
+  unit:      z.enum(['dona', 'kg', 'kv.m', 'kub.m']),
+  amount:    z.coerce.number().positive(),
+  price:     z.coerce.number().nonnegative(),
+  packType:  z.coerce.number().int().nonnegative().default(1),
 });
 
 const saleSchema = z.object({

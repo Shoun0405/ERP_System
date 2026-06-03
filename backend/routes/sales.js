@@ -3,6 +3,28 @@ const prisma = require('../prisma');
 const { saleSchema } = require('./_schemas');
 const { requireRole, requirePermission } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
+const { computeSaleRow } = require('../lib/saleCalc');
+
+// C-2: payloaddagi mahsulotlarni o'qib, har qatorni SERVER tomonda qayta hisoblaydi.
+// Mahsulot topilmasa 400. Qaytaradi: { rows, totalAmount } (klient qiymatlari e'tiborsiz).
+async function recalcProducts(tx, products) {
+  const ids = [...new Set(products.map(p => p.productId))];
+  const found = await tx.product.findMany({ where: { id: { in: ids } } });
+  const map = Object.fromEntries(found.map(p => [p.id, p]));
+
+  const rows = products.map(p => {
+    const product = map[p.productId];
+    if (!product) {
+      const err = new Error('Mahsulot topilmadi');
+      err.status = 400;
+      err.publicMessage = 'Mahsulot topilmadi';
+      throw err;
+    }
+    return computeSaleRow(p, product);
+  });
+  const totalAmount = rows.reduce((sum, r) => sum + r.rowAmount, 0);
+  return { rows, totalAmount };
+}
 
 router.get('/', requirePermission('sales', 'read'), async (req, res, next) => {
   try {
@@ -105,9 +127,10 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
 
     const { date, nakladnoy, sellerName, transportNum, clientId, products, facturaStatus } = parsed.data;
     let { contractId, specId } = parsed.data;
-    const totalAmount = products.reduce((sum, p) => sum + p.rowAmount, 0);
 
     const sale = await prisma.$transaction(async (tx) => {
+      // C-2: summalarni server qayta hisoblaydi — klient yuborgan qiymatlarga ishonmaymiz
+      const { rows, totalAmount } = await recalcProducts(tx, products);
       // 🔒 Data integrity: check contract-client matching
       if (contractId) {
         const contract = await tx.contract.findUnique({
@@ -163,7 +186,7 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
         },
       });
       await tx.saleProduct.createMany({
-        data: products.map(p => ({ ...p, saleId: s.id })),
+        data: rows.map(r => ({ ...r, saleId: s.id })),
       });
       return tx.sale.findUnique({
         where: { id: s.id },
@@ -201,17 +224,18 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
         throw err;
       }
 
-      // If products are provided, rewrite and recalculate
+      // If products are provided, rewrite and recalculate (C-2: server tomonda)
       let totalAmount = existingSale.totalAmount;
       if (data.products !== undefined) {
-        totalAmount = data.products.reduce((sum, p) => sum + p.rowAmount, 0);
-        
+        const recalced = await recalcProducts(tx, data.products);
+        totalAmount = recalced.totalAmount;
+
         // Remove old sale products
         await tx.saleProduct.deleteMany({ where: { saleId } });
-        
-        // Insert new sale products
+
+        // Insert new sale products (server hosil qilgan qiymatlar)
         await tx.saleProduct.createMany({
-          data: data.products.map(p => ({ ...p, saleId }))
+          data: recalced.rows.map(r => ({ ...r, saleId }))
         });
       }
 

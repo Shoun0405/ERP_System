@@ -5,13 +5,18 @@
 
 ---
 
-## Joriy holat (oxirgi yangilanish: 2026-06-02)
+## Joriy holat (oxirgi yangilanish: 2026-06-03)
 
 **To'liq audit o'tkazildi (2026-06-02)** — fayl oxiridagi "🔬 DIAGNOSTIK HISOBOT" bo'limiga qarang.
 3 ta CRITICAL, 6 ta HIGH topildi.
 
 **Bajarildi (2026-06-02):** C-1 (JWT secret), C-3 (GET RBAC), H-3 (login rate-limit), M-1 (test bypass
-qattiqlashtirish), H-7 (test crash tuzatildi). Test suite: **50/50 o'tdi**. Tafsilotlar Bosqich 14 va 17 da.
+qattiqlashtirish), H-7 (test crash tuzatildi). Tafsilotlar Bosqich 14 va 17 da.
+
+**Bajarildi (2026-06-03):** Bosqich 16 `main` ga merge qilindi (H-1, H-5, H-6, M-2, M-7). Pul maydonlari
+DB da `Decimal(18,2)` ga migratsiya qilindi. **Bosqich 15a:** C-2 (savdo summasi server tomonda qayta
+hisoblanadi) + H-2 (raqamlash advisory lock) yopildi. Test suite: **86/86 o'tdi**.
+Qolgan kritik: faqat **15b (ombor)**.
 
 **Bajarildi (2026-06-02, 2-tur):** H-4 (in-memory token revocation blocklist) + Playwright E2E
 autentifikatsiya integratsiyasi (storageState pattern). Backend **53/53**, E2E **4/4** (barqaror).
@@ -482,10 +487,17 @@ Asosiy JWT login allaqachon bor (`47b2ad3`). Quyidagilar **xavfsizlik bo'shliqla
 ---
 
 ## Bosqich 15 — Inventar (ombor) + Race-condition Lock + Moliyaviy butunlik
-**Holat: TODO**
+**Holat: 15a DONE ✅ (2026-06-03) | 15b (ombor) TODO**
 
-Hozir **ombor qoldig'i umuman yo'q** — savdo qancha bo'lsa ham mahsulot cheksiz "sotiladi". ERP uchun kritik bo'shliq. Shu bosqichda C-2 va H-2 ham yopiladi.
+Foydalanuvchi qarori bilan ikki qismga bo'lindi: **15a** (C-2 + H-2 — kichik, kritik) DONE; **15b** (butun ombor moduli) keyingi.
 
+### 15a — Moliyaviy butunlik (C-2) + Raqamlash race (H-2) — DONE ✅
+- [x] **Savdo butunligi (C-2):** yangi `lib/saleCalc.js` `computeSaleRow()` — frontend `Sales.jsx` hisobini server tomonga ko'chirdi. `_schemas.js` `saleProductSchema` endi faqat xom kirish (`unit, amount, price, packType`) qabul qiladi; klient `rowAmount/priceCbm/totalCbm...` yubora olmaydi (Zod strip). `sales.js` POST/PUT tranzaksiya ichida `recalcProducts(tx, products)` bilan barcha qiymatni mahsulot o'lchamlaridan qayta hisoblaydi; noma'lum mahsulot → 400. Frontend (`Sales.jsx` save) endi xom kirish yuboradi, server javobi haqiqat manbai.
+- [x] **Raqamlash race (H-2):** `contracts.js` POST — numbering+create bitta `$transaction` da, `pg_advisory_xact_lock(hashtext('contract:'+year))` bilan ketma-ketlashtirildi. `specs.js` POST — `pg_advisory_xact_lock(hashtext('spec:'+contractId))` + `P2002→409`.
+- [x] **Testlar:** `sales.test.mjs` — C-2 regress (soxta rowAmount e'tiborsiz; manfiy/0 amount, manfiy price, noma'lum productId → 400; ko'p qatorli totalAmount). `contracts.test.mjs` — auto-raqamlash ketma-ketligi. **Backend 86/86 o'tdi.**
+
+### 15b — Inventar (ombor) — TODO
+> Stock-birligi (dona Int vs Decimal m³/kg) qarori 15b boshida olinadi.
 - [ ] **Sxema — inventar:**
   ```prisma
   model Product { ... stockPieces Int @default(0) /* yoki Decimal */ }
@@ -500,12 +512,10 @@ Hozir **ombor qoldig'i umuman yo'q** — savdo qancha bo'lsa ham mahsulot cheksi
     @@index([productId, createdAt])
   }
   ```
-- [ ] **Savdo butunligi (C-2):** `sales.js` POST/PUT da har qator `rowAmount` ni server tomonda mahsulot narxi × miqdoridan **qayta hisoblash**; mijozdan kelganini e'tiborsiz qoldirish yoki tekshirib mos kelmasa 400.
 - [ ] **Stok yetishmasligi + lock:** Savdo `$transaction` ichida `SELECT ... FOR UPDATE` (`$queryRaw` yoki `tx.$executeRaw`) bilan mahsulot qatorini bloklab, `stockPieces >= totalPieces` tekshirish; yetmasa 409 "Ombor yetarli emas". `StockMovement` yozuvi + `stockPieces` dekrement bir tranzaksiyada.
-- [ ] **Raqamlash race (H-2):** Shartnoma/spec raqamlashda `pg_advisory_xact_lock(...)` yoki `Counter` jadvali; spec POST da `P2002`→409 retry.
 - [ ] **API:** `GET /api/products/:id/stock` (harakatlar tarixi), `POST /api/stock/adjustment` (admin qo'lda tuzatish).
 - [ ] **UI:** Mahsulot ro'yxatida "Qoldiq" ustuni (kam bo'lsa qizil); savdo formasida real-time qoldiq ko'rsatish; ombor harakatlari jurnali sahifasi.
-- [ ] **Testlar:** parallel ikki savdo bir mahsulotni sotganda biri 409 (lock); manfiy/buzuq `rowAmount` 400.
+- [ ] **Testlar:** parallel ikki savdo bir mahsulotni sotganda biri 409 (lock).
 
 ---
 

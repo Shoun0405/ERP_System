@@ -184,43 +184,53 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
     const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
     const cfg     = settings ? JSON.parse(settings.data) : {};
     const autoNum = cfg.autoContractNumbering !== false;
+    const year    = new Date(body.date).getFullYear() % 100;
 
-    let { number } = body;
-    const year = new Date(body.date).getFullYear() % 100;
-    let numericPart;
+    // H-2: raqamlash + create bitta tranzaksiyada; advisory lock parallel
+    // so'rovlarni yil bo'yicha ketma-ketlashtiradi (bir xil raqam berilmaydi).
+    const contract = await prisma.$transaction(async (tx) => {
+      let { number } = body;
+      let numericPart;
 
-    if (autoNum || !number) {
-      const maxRow = await prisma.contract.aggregate({
-        where: { yearPart: year },
-        _max:  { numericPart: true },
+      if (autoNum || !number) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'contract:' + year}))`;
+        const maxRow = await tx.contract.aggregate({
+          where: { yearPart: year },
+          _max:  { numericPart: true },
+        });
+        numericPart = (maxRow._max.numericPart || 0) + 1;
+        number = `${String(year).padStart(2, '0')}-${String(numericPart).padStart(2, '0')}`;
+      } else {
+        const m = /^(\d{2})-(\d+)$/.exec(number);
+        if (!m) {
+          const err = new Error('Raqam formati: YY-NN (masalan 26-05)');
+          err.status = 400;
+          throw err;
+        }
+        numericPart = parseInt(m[2], 10);
+      }
+
+      return tx.contract.create({
+        data: {
+          number,
+          yearPart:   year,
+          numericPart,
+          date:       new Date(body.date),
+          totalValue: body.totalValue,
+          clientId:   body.clientId,
+          notes:      body.notes || null,
+          status:     body.status || 'yangi',
+          seller:     body.seller || null,
+        },
+        include: { client: { select: { id: true, name: true, inn: true } } },
       });
-      numericPart = (maxRow._max.numericPart || 0) + 1;
-      number = `${String(year).padStart(2, '0')}-${String(numericPart).padStart(2, '0')}`;
-    } else {
-      const m = /^(\d{2})-(\d+)$/.exec(number);
-      if (!m) return res.status(400).json({ error: 'Raqam formati: YY-NN (masalan 26-05)' });
-      numericPart = parseInt(m[2], 10);
-    }
-
-    const contract = await prisma.contract.create({
-      data: {
-        number,
-        yearPart:   year,
-        numericPart,
-        date:       new Date(body.date),
-        totalValue: body.totalValue,
-        clientId:   body.clientId,
-        notes:      body.notes || null,
-        status:     body.status || 'yangi',
-        seller:     body.seller || null,
-      },
-      include: { client: { select: { id: true, name: true, inn: true } } },
     });
-    
+
     await logAudit(req.user.id, 'create', 'contract', contract.id, body, req);
 
     res.json(contract);
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
     if (e.code === 'P2002') return res.status(409).json({ error: 'Bu raqam allaqachon mavjud' });
     next(e);
   }

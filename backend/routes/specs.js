@@ -58,6 +58,10 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
       // QQS stavkasi — global Sozlamalardan (bir marta o'qiladi, har qator uchun emas)
       const vatRate = await getVatRate(tx);
 
+      // H-2: advisory lock — bir shartnoma ichida parallel spec yaratish
+      // bir xil raqam bermasligi uchun (tranzaksiya oxirida bo'shaydi).
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'spec:' + body.contractId}))`;
+
       // MAX(spec.number) + 1 — o'chirilgan raqam qayta ishlatilmaydi
       const last = await tx.specification.aggregate({
         where: { contractId: body.contractId },
@@ -97,7 +101,10 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
     await logAudit(req.user.id, 'create', 'specification', result.id, body, req);
 
     res.json(result);
-  } catch (e) { next(e); }
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(409).json({ error: 'Bu spetsifikatsiya raqami allaqachon mavjud, qayta urinib ko\'ring' });
+    next(e);
+  }
 });
 
 // PUT /api/specs/:id — mahsulot qatorlari to'liq almashtiriladi

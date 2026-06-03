@@ -838,7 +838,7 @@ function ClientStatementSection() {
         /* ── Shartnomalar bo'yicha view ── */
         contractData?.groups?.length ? (
           <div className="space-y-4">
-            {contractData.groups.map((group, idx) => (
+            {contractData.groups.map((group) => (
               <ContractLedgerTable key={group.contract?.id ?? 'no-contract'} group={group} />
             ))}
 

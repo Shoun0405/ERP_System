@@ -71,4 +71,30 @@ describe('Contracts API', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
+
+  // H-2: auto-raqamlash ketma-ket va takrorlanmas bo'lishi kerak
+  it('H-2 — auto-raqamlash ketma-ket (advisory lock)', async () => {
+    await prisma.setting.upsert({
+      where: { id: 'global' },
+      create: { id: 'global', data: JSON.stringify({ autoContractNumbering: true }) },
+      update: { data: JSON.stringify({ autoContractNumbering: true }) },
+    });
+    const c = await makeClient();
+    const body = { date: '2031-03-10', totalValue: 1_000_000, clientId: c.id };
+
+    const r1 = await request(app).post('/api/contracts').send(body);
+    const r2 = await request(app).post('/api/contracts').send(body);
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+    expect(r2.body.numericPart).toBe(r1.body.numericPart + 1);
+    expect(r1.body.number).not.toBe(r2.body.number);
+
+    // tozalash
+    await prisma.contract.deleteMany({ where: { clientId: c.id } });
+    await prisma.client.delete({ where: { id: c.id } });
+    await prisma.setting.update({
+      where: { id: 'global' },
+      data: { data: JSON.stringify({ autoContractNumbering: false }) },
+    });
+  });
 });

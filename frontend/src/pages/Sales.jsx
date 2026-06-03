@@ -420,15 +420,13 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         clientId:     form.clientId,
         contractId:   form.contractId || null,
         specId:       form.specId     || null,
+        // C-2: faqat xom kirish — summa/fizik qiymatlarni server hosil qiladi
         products:     form.rows.map(r => ({
           productId: r.productId,
-          packType: r.packType,
-          totalPieces: r.totalPieces,
-          totalCbm: r.totalCbm,
-          totalKg: r.totalKg,
-          totalSqm: r.totalSqm,
-          priceCbm: r.priceCbm,
-          rowAmount: r.rowAmount
+          unit:      r.unit,
+          amount:    r.amount,
+          price:     r.price,
+          packType:  r.packType,
         })),
         facturaStatus: editing ? editSale.facturaStatus : 'yuborilmagan'
       };

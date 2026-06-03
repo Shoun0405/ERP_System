@@ -23,7 +23,7 @@ describe('Sales API', () => {
     await prisma.$disconnect();
   });
 
-  it('POST / — savdo yaratish (tranzaksiya)', async () => {
+  it('POST / — savdo yaratish (server summani hisoblaydi)', async () => {
     const res = await request(app).post('/api/sales').send({
       date:         new Date().toISOString().split('T')[0],
       nakladnoy:    'T-001',
@@ -31,20 +31,85 @@ describe('Sales API', () => {
       transportNum: '',
       clientId:     client.id,
       contractId:   contract.id,
-      products:     [{
-        productId:   product.id,
-        packType:    1,
-        totalPieces: 10,
-        totalCbm:    +(10 * product.cbmPerPce).toFixed(6),
-        totalKg:     +(10 * product.kgPerPce).toFixed(3),
-        totalSqm:    +(10 * product.sqmPerPce).toFixed(4),
-        priceCbm:    product.priceCbm,
-        rowAmount:   +(10 * product.cbmPerPce * product.priceCbm).toFixed(0),
-      }],
+      products:     [{ productId: product.id, unit: 'dona', amount: 10, price: 1000, packType: 1 }],
     });
     expect(res.status).toBe(200);
     expect(res.body.clientId).toBe(client.id);
+    // Server: rowAmount = 10 * 1000 = 10000
+    expect(res.body.totalAmount).toBe(10000);
+    expect(res.body.products[0].totalPieces).toBe(10);
+    expect(res.body.products[0].rowAmount).toBe(10000);
     saleId = res.body.id;
+  });
+
+  // ─── C-2: moliyaviy butunlik ──────────────────────────────────────────────
+  it('C-2 — klient soxta rowAmount yuborsa, server e\'tiborsiz qoldiradi', async () => {
+    const res = await request(app).post('/api/sales').send({
+      date:       new Date().toISOString().split('T')[0],
+      nakladnoy:  'T-C2',
+      sellerName: 'Test',
+      clientId:   client.id,
+      contractId: contract.id,
+      // rowAmount/priceCbm/totalCbm — klient soxtalashtirmoqchi; server tashlab yuboradi
+      products:   [{
+        productId: product.id, unit: 'dona', amount: 5, price: 2000, packType: 1,
+        rowAmount: 999999999, priceCbm: 1, totalCbm: 1, totalPieces: 1,
+      }],
+    });
+    expect(res.status).toBe(200);
+    // Server haqiqiy: 5 * 2000 = 10000 (soxta 999999999 emas)
+    expect(res.body.totalAmount).toBe(10000);
+    expect(res.body.products[0].rowAmount).toBe(10000);
+    expect(res.body.products[0].totalPieces).toBe(5);
+    await request(app).delete(`/api/sales/${res.body.id}`);
+  });
+
+  it('C-2 — bir nechta qator: totalAmount = server yig\'indisi', async () => {
+    const res = await request(app).post('/api/sales').send({
+      date:       new Date().toISOString().split('T')[0],
+      nakladnoy:  'T-MULTI',
+      sellerName: 'Test',
+      clientId:   client.id,
+      contractId: contract.id,
+      products:   [
+        { productId: product.id, unit: 'dona', amount: 3, price: 1000, packType: 1 },
+        { productId: product.id, unit: 'dona', amount: 2, price: 5000, packType: 1 },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.totalAmount).toBe(3 * 1000 + 2 * 5000); // 13000
+    await request(app).delete(`/api/sales/${res.body.id}`);
+  });
+
+  it('C-2 — noma\'lum productId → 400', async () => {
+    const res = await request(app).post('/api/sales').send({
+      date:       new Date().toISOString().split('T')[0],
+      nakladnoy:  'T-BADPROD',
+      sellerName: 'Test',
+      clientId:   client.id,
+      products:   [{ productId: '00000000-0000-0000-0000-000000000000', unit: 'dona', amount: 1, price: 100 }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST / — amount<=0 → 400', async () => {
+    const res = await request(app).post('/api/sales').send({
+      date: new Date().toISOString().split('T')[0],
+      nakladnoy: 'T-002', sellerName: 'Test',
+      clientId: client.id, contractId: contract.id,
+      products: [{ productId: product.id, unit: 'dona', amount: 0, price: 100 }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST / — price manfiy → 400', async () => {
+    const res = await request(app).post('/api/sales').send({
+      date: new Date().toISOString().split('T')[0],
+      nakladnoy: 'T-003', sellerName: 'Test',
+      clientId: client.id, contractId: contract.id,
+      products: [{ productId: product.id, unit: 'dona', amount: 1, price: -10 }],
+    });
+    expect(res.status).toBe(400);
   });
 
   it('GET / — ro\'yxat', async () => {
@@ -66,60 +131,28 @@ describe('Sales API', () => {
     expect(res.body.total).toBeGreaterThan(0);
   });
 
-  it('POST / — priceCbm=-10 → 400', async () => {
-    const res = await request(app).post('/api/sales').send({
-      date: new Date().toISOString().split('T')[0],
-      nakladnoy: 'T-002', sellerName: 'Test',
-      clientId: client.id, contractId: contract.id,
-      products: [{ productId: product.id, packType: 1, totalPieces: 1,
-        totalCbm: 0.03, totalKg: 2.76, totalSqm: 2.88, priceCbm: -10, rowAmount: 0 }],
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it('PUT /:id — savdoni tahrirlash (mahsulotlar va jami summani yangilash)', async () => {
-    // 1. Create a sale
+  it('PUT /:id — savdoni tahrirlash (server qayta hisoblaydi)', async () => {
     const createRes = await request(app).post('/api/sales').send({
-      date:         new Date().toISOString().split('T')[0],
-      nakladnoy:    'T-EDIT-TEST',
-      sellerName:   'Test Seller',
-      clientId:     client.id,
-      contractId:   contract.id,
-      products:     [{
-        productId:   product.id,
-        packType:    1,
-        totalPieces: 10,
-        totalCbm:    0.3,
-        totalKg:     10,
-        totalSqm:    10,
-        priceCbm:    1000,
-        rowAmount:   10000,
-      }],
+      date:       new Date().toISOString().split('T')[0],
+      nakladnoy:  'T-EDIT-TEST',
+      sellerName: 'Test Seller',
+      clientId:   client.id,
+      contractId: contract.id,
+      products:   [{ productId: product.id, unit: 'dona', amount: 10, price: 1000, packType: 1 }],
     });
     expect(createRes.status).toBe(200);
     const tempSaleId = createRes.body.id;
 
-    // 2. Edit the sale with new products and new totalAmount
     const editRes = await request(app).put(`/api/sales/${tempSaleId}`).send({
-      nakladnoy:    'T-EDITED',
-      products:     [{
-        productId:   product.id,
-        packType:    2,
-        totalPieces: 20,
-        totalCbm:    0.6,
-        totalKg:     20,
-        totalSqm:    20,
-        priceCbm:    2000,
-        rowAmount:   40000, // Total is now 40,000
-      }],
+      nakladnoy: 'T-EDITED',
+      products:  [{ productId: product.id, unit: 'dona', amount: 20, price: 2000, packType: 2 }],
     });
     expect(editRes.status).toBe(200);
     expect(editRes.body.nakladnoy).toBe('T-EDITED');
-    expect(editRes.body.totalAmount).toBe(40000);
+    expect(editRes.body.totalAmount).toBe(40000); // 20 * 2000
     expect(editRes.body.products.length).toBe(1);
     expect(editRes.body.products[0].packType).toBe(2);
 
-    // 3. Cleanup
     await request(app).delete(`/api/sales/${tempSaleId}`);
   });
 

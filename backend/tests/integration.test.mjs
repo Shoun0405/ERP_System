@@ -42,16 +42,7 @@ describe('ERP System End-to-End Business Integration Suite', () => {
       sellerName: 'System Auditor',
       clientId: clientA.id,
       contractId: contractB.id, // Mismatch!
-      products: [{
-        productId: product.id,
-        packType: 1,
-        totalPieces: 10,
-        totalCbm: 2.5,
-        totalKg: 200,
-        totalSqm: 50,
-        priceCbm: 100_000,
-        rowAmount: 250_000,
-      }],
+      products: [{ productId: product.id, unit: 'dona', amount: 10, price: 25_000, packType: 1 }],
     });
     // Expected behavior: API blocks mismatch
     expect(res.status).toBe(400);
@@ -77,16 +68,8 @@ describe('ERP System End-to-End Business Integration Suite', () => {
       sellerName: 'System Auditor',
       clientId: clientA.id,
       contractId: contractA.id, // Correct alignment
-      products: [{
-        productId: product.id,
-        packType: 1,
-        totalPieces: 10,
-        totalCbm: 2.0,
-        totalKg: 160,
-        totalSqm: 40,
-        priceCbm: 100_000,
-        rowAmount: 200_000, // Valid math: 2.0 * 100,000 = 200,000
-      }],
+      // Server hisoblaydi: 10 * 20000 = 200000
+      products: [{ productId: product.id, unit: 'dona', amount: 10, price: 20_000, packType: 1 }],
     });
     expect(saleRes.status).toBe(200);
 

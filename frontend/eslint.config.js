@@ -14,7 +14,9 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     rules: {
-      'react-hooks/set-state-in-effect': 'off'
+      'react-hooks/set-state-in-effect': 'off',
+      // Bo'sh catch ataylab — xatolar lib/api.js interceptor'da toast qilinadi
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
     languageOptions: {
       globals: globals.browser,
