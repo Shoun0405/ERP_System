@@ -57,10 +57,16 @@
 
 ### Hisobotlar (Reports)
 
-- ⬜ **#2 — Sotuvchi bo'yicha hisobot (mijoz kartasi kabi)** 🆕 _(#1 ga bog'liq)_
-  Mijoz kartasidagi kabi, lekin **sotuvchi kesimida**: sotuvchining qarzi bor-yo'qligi,
-  oboroti. **Shartnoma kesimida** ham (mijoz kartasidagi "shartnomalar bo'yicha saldo" kabi).
-  *Bog'liq:* #1 (sotuvchi tizimi) tayyor bo'lгач mantiqiy.
+- ✅ **#2 — Sotuvchi bo'yicha hisobot (sotuvchi kartasi)** 🆕 _(2026-06-03)_
+  Hisobotlar → **Sotuvchi kartasi**: sotuvchilar ro'yxati (savdo/to'lov/qarz) + tanlangan
+  sotuvchi **shartnoma kesimida** saldo (mijoz nomlari bilan), mijoz kartasi uslubida.
+  - Backend: `reports.js` `GET /sellers-summary` + `GET /seller-by-contracts/:seller`
+    (attribution **Contract.seller** orqali — to'lovda seller yo'q). SQL window running balance.
+  - Frontend: `Reports.jsx` yangi `SellerStatementSection` + `ContractLedgerTable`ga mijoz nomi
+    + MENU "Sotuvchi kartasi".
+  - Testlar: `reports.test` sellers-summary (balance) + seller-by-contracts (saldo+mijoz).
+    **Backend 93/93, lint 0 error, build OK; jonli bazada tekshirildi.**
+  *Eslatma:* shartnomasiz savdolar qarz-ledgerга kirmaydi (ular `sales-by-seller` oborotida).
 
 ### Savdo (Sales)
 

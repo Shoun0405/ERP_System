@@ -503,4 +503,139 @@ router.get('/sales-by-seller', async (req, res, next) => {
   }
 });
 
+// GET /api/reports/sellers-summary?from=&to=
+// Sotuvchi (Contract.seller) bo'yicha qarz/haq: delivered (shartnoma savdolari),
+// paid (shartnoma to'lovlari), balance = delivered − paid. To'lovda sotuvchi maydoni
+// yo'q — shuning uchun attribution shartnoma orqali. Subquery agregatlar (Kartezian yo'q).
+router.get('/sellers-summary', async (req, res, next) => {
+  try {
+    const { from, to } = parseRange(req.query);
+    const rows = await prisma.$queryRaw`
+      SELECT
+        ct.seller AS seller,
+        COALESCE(SUM(d.delivered), 0)::float AS delivered,
+        COALESCE(SUM(p.paid), 0)::float      AS paid
+      FROM "Contract" ct
+      LEFT JOIN (
+        SELECT "contractId", SUM("totalAmount") AS delivered
+        FROM "Sale"
+        WHERE (${from}::timestamp IS NULL OR date >= ${from})
+          AND (${to}::timestamp   IS NULL OR date <= ${to})
+        GROUP BY "contractId"
+      ) d ON d."contractId" = ct.id
+      LEFT JOIN (
+        SELECT "contractId", SUM(amount) AS paid
+        FROM "Payment"
+        WHERE (${from}::timestamp IS NULL OR date >= ${from})
+          AND (${to}::timestamp   IS NULL OR date <= ${to})
+        GROUP BY "contractId"
+      ) p ON p."contractId" = ct.id
+      WHERE ct.seller IS NOT NULL AND ct.seller <> ''
+      GROUP BY ct.seller
+      ORDER BY (COALESCE(SUM(d.delivered), 0) - COALESCE(SUM(p.paid), 0)) DESC
+    `;
+    res.json(rows.map(r => {
+      const delivered = parseFloat(r.delivered || 0);
+      const paid = parseFloat(r.paid || 0);
+      return { seller: r.seller, delivered, paid, balance: delivered - paid };
+    }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/reports/seller-by-contracts/:seller?from=&to=
+// client-by-contracts ko'zgusi, lekin Contract.seller bo'yicha (barcha mijozlar kesimi).
+// Har shartnoma bo'yicha running balance (savdo +, to'lov −), guruh metasida mijoz nomi.
+router.get('/seller-by-contracts/:seller', async (req, res, next) => {
+  try {
+    const { seller } = req.params;
+    const { from, to } = parseRange(req.query);
+
+    const rows = await prisma.$queryRaw`
+      SELECT
+        id, "contractId", date, type, debit, credit, amount, "desc",
+        SUM(amount) OVER (
+          PARTITION BY "contractId"
+          ORDER BY date, "createdAt", id
+          ROWS UNBOUNDED PRECEDING
+        )::float AS balance
+      FROM (
+        SELECT
+          s.id, s."contractId", s.date, s."createdAt",
+          'sale'::text AS type,
+          s."totalAmount"::float AS debit,
+          0::float               AS credit,
+          s."totalAmount"::float AS amount,
+          'Savdo (Nakladnoy № ' || s.nakladnoy || ')' AS "desc"
+        FROM "Sale" s
+        JOIN "Contract" ct ON ct.id = s."contractId"
+        WHERE ct.seller = ${seller}
+          AND (${from}::timestamp IS NULL OR s.date >= ${from})
+          AND (${to}::timestamp   IS NULL OR s.date <= ${to})
+        UNION ALL
+        SELECT
+          p.id, p."contractId", p.date, p."createdAt",
+          'payment'::text AS type,
+          0::float            AS debit,
+          p.amount::float     AS credit,
+          (-p.amount)::float  AS amount,
+          'To''lov' || COALESCE(' (' || p.note || ')', '') AS "desc"
+        FROM "Payment" p
+        JOIN "Contract" ct ON ct.id = p."contractId"
+        WHERE ct.seller = ${seller}
+          AND (${from}::timestamp IS NULL OR p.date >= ${from})
+          AND (${to}::timestamp   IS NULL OR p.date <= ${to})
+      ) movements
+      ORDER BY "contractId" NULLS LAST, date, "createdAt", id
+    `;
+
+    // Shartnoma meta (mijoz nomi bilan) — guruh sarlavhasi va tartibi uchun.
+    const contracts = await prisma.contract.findMany({
+      where: { seller },
+      select: { id: true, number: true, date: true, status: true, client: { select: { name: true } } },
+      orderBy: { date: 'asc' },
+    });
+    const contractMeta = new Map(contracts.map(c => [c.id, c]));
+    const contractOrder = new Map(contracts.map((c, i) => [c.id, i]));
+
+    const byContract = new Map();
+    for (const r of rows) {
+      const key = r.contractId;
+      if (!byContract.has(key)) byContract.set(key, []);
+      byContract.get(key).push({
+        id: r.id, date: r.date, type: r.type,
+        debit: r.debit, credit: r.credit, amount: r.amount,
+        desc: r.desc, balance: r.balance,
+      });
+    }
+
+    const groups = [];
+    for (const [key, statement] of byContract) {
+      if (statement.length === 0) continue;
+      const meta = contractMeta.get(key);
+      groups.push({
+        contract: meta
+          ? { id: meta.id, number: meta.number, date: meta.date, status: meta.status, clientName: meta.client?.name }
+          : null,
+        statement,
+        finalBalance: statement.at(-1)?.balance ?? 0,
+      });
+    }
+    groups.sort((a, b) => {
+      const oa = a.contract ? contractOrder.get(a.contract.id) : Infinity;
+      const ob = b.contract ? contractOrder.get(b.contract.id) : Infinity;
+      return oa - ob;
+    });
+
+    res.json({
+      seller,
+      groups,
+      totalBalance: groups.reduce((s, g) => s + g.finalBalance, 0),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

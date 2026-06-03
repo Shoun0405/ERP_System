@@ -47,6 +47,9 @@ describe('Reports API (H-5)', () => {
       date: new Date('2026-01-25T10:00:00Z'), amount: 600_000,
       clientId: client.id, contractId: contract.id,
     }});
+
+    // #2 sotuvchi kartasi uchun shartnomага sotuvchi biriktiramiz
+    await prisma.contract.update({ where: { id: contract.id }, data: { seller: 'Sotuvchi A' } });
   });
 
   afterAll(async () => {
@@ -155,6 +158,29 @@ describe('Reports API (H-5)', () => {
     const idxA = res.body.findIndex(r => r.sellerName === 'Sotuvchi A');
     const idxB = res.body.findIndex(r => r.sellerName === 'Sotuvchi B');
     expect(idxA).toBeLessThan(idxB);
+  });
+
+  // ── Sotuvchi kartasi (#2) ─────────────────────────────────────────────────────
+  it('sellers-summary — sotuvchi qarz/haq (delivered − paid)', async () => {
+    const res = await request(app).get('/api/reports/sellers-summary');
+    expect(res.status).toBe(200);
+    const s = res.body.find(r => r.seller === 'Sotuvchi A');
+    expect(s).toBeTruthy();
+    expect(s.delivered).toBe(1_500_000); // 1M + 0.5M
+    expect(s.paid).toBe(1_000_000);      // 0.4M + 0.6M
+    expect(s.balance).toBe(500_000);
+  });
+
+  it('seller-by-contracts — shartnoma kesimida saldo + mijoz nomi', async () => {
+    const res = await request(app).get(`/api/reports/seller-by-contracts/${encodeURIComponent('Sotuvchi A')}`);
+    expect(res.status).toBe(200);
+    expect(res.body.seller).toBe('Sotuvchi A');
+    expect(res.body.groups.length).toBe(1);
+    const g = res.body.groups[0];
+    expect(g.contract.number).toBe(contract.number);
+    expect(g.contract.clientName).toBe(client.name);
+    expect(g.finalBalance).toBe(500_000);
+    expect(res.body.totalBalance).toBe(500_000);
   });
 
   // ── Export ids cheklash ─────────────────────────────────────────────────────

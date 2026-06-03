@@ -49,6 +49,7 @@ const MENU = [
     children: [
       { id: 'debtors',          label: 'Qarzdorlar',             Icon: AlertTriangle },
       { id: 'client_statement', label: 'Mijoz kartasi',          Icon: FileText },
+      { id: 'seller_statement', label: 'Sotuvchi kartasi',       Icon: UserCheck },
       { id: 'payments',         label: "To'lovlar hisoboti",     Icon: CreditCard },
       { id: 'vat_report',       label: 'QQS hisoboti',           Icon: Percent },
     ]
@@ -669,6 +670,11 @@ function ContractLedgerTable({ group }) {
           {contract && (
             <span className="text-xs font-semibold text-[var(--text)]">
               № {contract.number}
+              {contract.clientName && (
+                <span className="text-[11px] font-normal text-[var(--text-2)] ml-1.5">
+                  · {contract.clientName}
+                </span>
+              )}
               {contract.date && (
                 <span className="text-[10px] font-normal text-[var(--text-3)] ml-1.5">
                   ({fmtDate(contract.date)})
@@ -910,6 +916,118 @@ function ClientStatementSection() {
               </table>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SOTUVCHI KARTASI ──────────────────────────────────────────────────────────
+function SellerStatementSection() {
+  const [summary, setSummary]   = useState([]);
+  const [selSeller, setSelSeller] = useState('');
+  const [data, setData]         = useState(null);
+  const [loadSum, setLoadSum]   = useState(true);
+  const [loading, setLoading]   = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoadSum(true);
+      try {
+        const r = await api.get('/api/reports/sellers-summary');
+        const list = r.data || [];
+        setSummary(list);
+        if (list.length && !selSeller) setSelSeller(list[0].seller);
+      } catch { /* interceptor toast */ } finally { setLoadSum(false); }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!selSeller) return;
+    setData(null);
+    setLoading(true);
+    (async () => {
+      try {
+        const r = await api.get(`/api/reports/seller-by-contracts/${encodeURIComponent(selSeller)}`);
+        setData(r.data);
+      } catch { /* interceptor toast */ } finally { setLoading(false); }
+    })();
+  }, [selSeller]);
+
+  return (
+    <div className="space-y-6 animate-in">
+      <SectionHeader title="Sotuvchi kartasi" subtitle="Sotuvchi bo'yicha qarz/haq va shartnoma kesimida saldo (shartnoma sotuvchisi bo'yicha)" />
+
+      {/* Sotuvchilar ro'yxati — qarz/haq */}
+      <div className="card border border-[var(--border)] p-0">
+        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
+          <h3 className="text-xs font-semibold text-[var(--text)]">Sotuvchilar bo'yicha saldo</h3>
+        </div>
+        {loadSum ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+        ) : summary.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">Sotuvchili shartnomalar topilmadi</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
+                  <th className="px-5 py-2">Sotuvchi</th>
+                  <th className="px-5 py-2 text-right">Savdo</th>
+                  <th className="px-5 py-2 text-right">To'lov</th>
+                  <th className="px-5 py-2 text-right">Saldo (qarz)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {summary.map((row) => (
+                  <tr
+                    key={row.seller}
+                    onClick={() => setSelSeller(row.seller)}
+                    className={`cursor-pointer hover:bg-[var(--surface-2)] ${selSeller === row.seller ? 'bg-[var(--surface-2)]' : ''}`}
+                  >
+                    <td className="px-5 py-2.5 text-xs font-medium text-[var(--text)]">{row.seller}</td>
+                    <td className="px-5 py-2.5 text-[11px] text-right font-mono text-slate-700 dark:text-slate-300">{fmt(row.delivered)} UZS</td>
+                    <td className="px-5 py-2.5 text-[11px] text-right font-mono text-emerald-600">{fmt(row.paid)} UZS</td>
+                    <td className={`px-5 py-2.5 text-[11px] text-right font-mono font-bold ${row.balance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                      {fmt(row.balance)} UZS
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Tanlangan sotuvchi — shartnoma kesimida */}
+      {selSeller && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[var(--text)]">«{selSeller}» — shartnomalar kesimida</h3>
+            {data && (
+              <span className={`text-xs rounded px-2 py-0.5 font-mono font-bold border ${
+                data.totalBalance > 0
+                  ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/30 dark:border-red-800'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-800'
+              }`}>
+                Jami saldo: {fmt(data.totalBalance)} UZS
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          ) : data?.groups?.length ? (
+            <div className="space-y-4">
+              {data.groups.map((group) => (
+                <ContractLedgerTable key={group.contract?.id ?? 'no-contract'} group={group} />
+              ))}
+            </div>
+          ) : (
+            <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">
+              Bu sotuvchi bo'yicha shartnoma harakatlari topilmadi
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1303,6 +1421,7 @@ export default function Reports() {
         {active === 'sales_by_seller'  && <SalesBySellerSection fromDate={fromDate} toDate={toDate} />}
         {active === 'debtors'          && <DebtorsSection />}
         {active === 'client_statement' && <ClientStatementSection />}
+        {active === 'seller_statement' && <SellerStatementSection />}
         {active === 'payments'         && <PaymentsSummarySection fromDate={fromDate} toDate={toDate} />}
         {active === 'vat_report'       && <VatReportSection fromDate={fromDate} toDate={toDate} />}
         {active === 'widget_settings'  && <WidgetSettingsSection widgets={widgets} onToggle={toggleWidget} />}
