@@ -141,7 +141,7 @@ export default function Clients({ user }) {
   const [phoneInput, setPhoneInput] = useState('');
 
   // Shartnoma CRUD state
-  const EMPTY_CONTRACT = { number: '', date: '', totalValue: '' };
+  const EMPTY_CONTRACT = { number: '', date: '', totalValue: '', seller: '' };
   const [contractModal,  setContractModal]  = useState(null); // 'add' | 'edit' | null
   const [contractForm,   setContractForm]   = useState(EMPTY_CONTRACT);
   const [contractEditId, setContractEditId] = useState(null);
@@ -252,7 +252,7 @@ export default function Clients({ user }) {
     setContractModal('add');
   };
   const openContractEdit = (ct, clientId) => {
-    setContractForm({ number: ct.number, date: ct.date.split('T')[0], totalValue: String(ct.totalValue) });
+    setContractForm({ number: ct.number, date: ct.date.split('T')[0], totalValue: String(ct.totalValue), seller: ct.seller || '' });
     setContractEditId(ct.id);
     setContractClientId(clientId);
     setContractModal('edit');
@@ -264,8 +264,9 @@ export default function Clients({ user }) {
     if (!contractForm.number.trim()) { toast.error('Shartnoma raqami majburiy!'); return; }
     if (!contractForm.date)          { toast.error('Sanani kiriting!'); return; }
     if (!contractForm.totalValue || parseFloat(contractForm.totalValue) < 0) { toast.error('Summani kiriting!'); return; }
+    if (!contractForm.seller)        { toast.error('Sotuvchini tanlang!'); return; }
     setContractSaving(true);
-    const payload = { number: contractForm.number, date: contractForm.date, totalValue: parseFloat(contractForm.totalValue), clientId: contractClientId };
+    const payload = { number: contractForm.number, date: contractForm.date, totalValue: parseFloat(contractForm.totalValue), seller: contractForm.seller, clientId: contractClientId };
     try {
       if (contractModal === 'edit') {
         await api.put(`/api/contracts/${contractEditId}`, payload);
@@ -684,6 +685,19 @@ export default function Clients({ user }) {
                     className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition"
                     placeholder="0"/>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Sotuvchi *</label>
+                <select value={contractForm.seller} onChange={e => setContractForm(f => ({ ...f, seller: e.target.value }))}
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition bg-[var(--surface)]">
+                  <option value="">— Sotuvchini tanlang —</option>
+                  {(clients.find(c => c.id === contractClientId)?.seller || '')
+                    .split(',').map(s => s.trim()).filter(Boolean)
+                    .map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {contractClientId && !(clients.find(c => c.id === contractClientId)?.seller || '').trim() && (
+                  <p className="text-[11px] text-red-500 mt-1">Bu mijozga sotuvchilar biriktirilmagan (mijozni tahrirlab qo'shing)</p>
+                )}
               </div>
               <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-3">
                 <button type="button" onClick={closeContractModal} className="px-4 py-2 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md transition">Bekor</button>

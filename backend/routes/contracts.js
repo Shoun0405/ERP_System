@@ -8,6 +8,20 @@ const { countContractLinks } = require('../lib/contractGuards');
 
 const SORT_FIELDS = new Set(['date', 'number', 'totalValue', 'status', 'createdAt', 'client']);
 
+// #1: shartnoma sotuvchisi shu mijozga biriktirilgan sotuvchilardan biri bo'lishi shart.
+// Mijozning `seller` maydoni vergul bilan ajratilgan nomlar ("Ali, Vali").
+function clientSellerList(sellerStr) {
+  return (sellerStr || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+async function assertSellerInClient(db, clientId, seller) {
+  const client = await db.client.findUnique({ where: { id: clientId }, select: { seller: true } });
+  if (!clientSellerList(client?.seller).includes(seller)) {
+    const err = new Error('Sotuvchi ushbu mijozga biriktirilmagan');
+    err.status = 400;
+    throw err;
+  }
+}
+
 // GET /api/contracts — pagination + aggregate
 router.get('/', requirePermission('contracts', 'read'), async (req, res, next) => {
   try {
@@ -185,6 +199,11 @@ router.get('/:id', requirePermission('contracts', 'read'), async (req, res, next
 router.post('/', requirePermission('contracts', 'create'), async (req, res, next) => {
   try {
     const body    = contractSchema.parse(req.body);
+
+    // #1: sotuvchi majburiy va mijozга biriktirilganlardan biri bo'lishi shart
+    if (!body.seller) return res.status(400).json({ error: 'Sotuvchini tanlang' });
+    await assertSellerInClient(prisma, body.clientId, body.seller);
+
     const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
     const cfg     = settings ? JSON.parse(settings.data) : {};
     const autoNum = cfg.autoContractNumbering !== false;
@@ -266,6 +285,13 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
     // Faqat so'rovda haqiqatan yuborilgan kalitlarni yangilaymiz.
     const sent = (k) => Object.prototype.hasOwnProperty.call(req.body, k);
 
+    // #1: seller yuborilsa — bo'sh bo'lmasligi va (yangi yoki mavjud) mijozга tegishliligi
+    if (sent('seller')) {
+      if (!body.seller) return res.status(400).json({ error: 'Sotuvchini tanlang' });
+      const finalClientId = clientChanged ? body.clientId : existing.clientId;
+      await assertSellerInClient(prisma, finalClientId, body.seller);
+    }
+
     const contract = await prisma.contract.update({
       where: { id: req.params.id },
       data: {
@@ -284,6 +310,7 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
 
     res.json(contract);
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
     if (e.code === 'P2002') return res.status(409).json({ error: 'Bu raqam yangi mijozda allaqachon mavjud' });
     next(e);
   }

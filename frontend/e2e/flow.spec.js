@@ -25,18 +25,19 @@ test.beforeAll(async ({ request }) => {
   const ts = String(Date.now());
   clientName = `E2E Mijoz ${ts.slice(-6)}`;
   const client = await request.post(`${API}/clients`, {
-    data: { name: clientName, inn: ts.slice(-9), status: 'Yangi' },
+    data: { name: clientName, inn: ts.slice(-9), status: 'Yangi', seller: 'E2E Sotuvchi' },
   });
   expect(client.ok()).toBeTruthy();
   const c = await client.json();
   clientId = c.id;
 
-  // 3. Shartnoma yaratish
+  // 3. Shartnoma yaratish (sotuvchi mijozga biriktirilganlardan)
   const contract = await request.post(`${API}/contracts`, {
     data: {
       number:     `E2E-${ts.slice(-5)}`,
       date:       new Date().toISOString().split('T')[0],
       totalValue: 50_000_000,
+      seller:     'E2E Sotuvchi',
       clientId,
     },
   });
@@ -98,9 +99,10 @@ test('2. Savdo yaratganda mijoz qarzdorligi oshadi', async ({ page }) => {
   await expect(contractSel.locator(`option[value="${contractId}"]`)).toBeAttached();
   await contractSel.selectOption({ value: contractId });
 
-  // Yuk xati raqami va sotuvchi (mijoz tanlangach seller maydoni reset bo'ladi)
+  // Yuk xati raqami
   await form.getByTestId('sale-nakladnoy').fill('E2E-001');
-  await form.getByTestId('sale-seller').fill('Test Sotuvchi');
+  // 1c: sotuvchi shartnomadan avtomatik keladi (tahrirlanadi, lekin kiritish shart emas)
+  await expect(form.getByTestId('sale-seller')).toHaveValue('E2E Sotuvchi');
 
   // Mahsulot qatori: mahsulot + miqdor + narx
   await form.getByTestId('row-product').selectOption({ value: productId });

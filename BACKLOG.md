@@ -40,22 +40,20 @@
 
 ### Sotuvchi (seller) tizimi — Mijoz → Shartnoma → Savdo zanjiri
 
-- ⬜ **#1 — Sotuvchini shartnoma orqali biriktirish** ✨🆕🐛 _(katta — sxema + 3 modul)_
-  Yagona oqim: mijozга ko'p sotuvchi → shartnomага 1 ta (mijoznikidan) → savdoга shartnomadan.
-
-  **1a. Mijoz (Clients) — ko'p sotuvchi:** Hozir `Client.seller` bitta satr. Endi bir mijozga
-  **istalgancha sotuvchi** biriktirish mumkin (Sozlamalardagi `sellers` ro'yxatidan).
-  → Sxema (`Client.sellers`); Clients UI multi-select.
-
-  **1b. Shartnoma (Contracts) — majburiy 1 sotuvchi:** Har shartnomага **aniq 1 ta**, faqat
-  **shu mijozга biriktirilgан sotuvchilardan**. → `Contract.seller` majburiy + tegishlilik tekshiruvi.
-
-  **1c. Savdo (Sales):** Shartnoma **optional qoladi**. Shartnoma tanlanса — sotuvchi
-  shartnomadan **default** (tahrirlasa bo'ladi). Tanlanmaса — mijozning sotuvchilaridan.
-
-  *Qarorlar (foydalanuvchi):* (a) tahrirlanadi ✓ · (b) shartnomага 1, mijozга ko'p ✓ ·
-  (c) shartnomага doim 1 majburiy ✓ · savdoда shartnoma optional ✓
-  *Loyiha qarori (keyin):* `Client.sellers` saqlash (Postgres `String[]` vs relation jadval).
+- ✅ **#1 — Sotuvchini shartnoma orqali biriktirish** ✨🆕🐛 _(2026-06-03)_
+  **Storage qarori:** nom asosida qoldirildi (Seller jadval YO'Q) — `Client.seller` vergulli
+  satr, `Contract.seller`/`Sale.sellerName` nom. Talablar (ledger #2, o'chirish cheklovi) nom
+  asosida bajariladi; jadval migratsiyasi ortiqcha.
+  - **1a** ✅ allaqachon bor edi (MultiSellerSelect + vergulli satr).
+  - **1b** Contracts asosiy forma allaqachon; **Clients tezkor-modaliga** majburiy seller
+    dropdown qo'shildi; **backend** (`contracts.js`) seller majburiy + mijoz a'zoligi tekshiruvi
+    (POST 400 sellersiz/notegishli; PUT seller yuborilganda).
+  - **1c** `Sales.jsx`: shartnoma tanlanганда sotuvchi shartnomadan default (tahrirlanadi);
+    tanlanmaганда mijozning birinchisi.
+  - **O'chirish cheklovi:** `settings.js` PUT — nomida shartnoma/savdo bor sotuvchini
+    ro'yxatdan olib tashlash 400.
+  - Testlar: contracts (sellersiz/notegishli → 400), yangi `settings.test` (cheklov). E2E 1c
+    tasdiqlandi. **Backend 91/91, lint 0 error, build OK, E2E 4/4.**
 
 ### Hisobotlar (Reports)
 

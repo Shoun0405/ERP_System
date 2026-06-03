@@ -31,6 +31,21 @@ router.get('/', async (req, res, next) => {
 router.put('/', requirePermission('settings', 'update'), async (req, res, next) => {
   try {
     const validated = settingSchema.parse(req.body);
+
+    // #1: nomida shartnoma yoki savdo bor sotuvchini ro'yxatdan olib tashlab bo'lmaydi
+    const existing = await prisma.setting.findUnique({ where: { id: 'global' } });
+    const oldSellers = existing ? (JSON.parse(existing.data).sellers || []) : [];
+    const removed = oldSellers.filter(s => !validated.sellers.includes(s));
+    for (const name of removed) {
+      const [contracts, sales] = await Promise.all([
+        prisma.contract.count({ where: { seller: name } }),
+        prisma.sale.count({ where: { sellerName: name } }),
+      ]);
+      if (contracts + sales > 0) {
+        return res.status(400).json({ error: `«${name}» nomida shartnoma/savdo bor — o'chirib bo'lmaydi` });
+      }
+    }
+
     const setting = await prisma.setting.upsert({
       where:  { id: 'global' },
       update: { data: JSON.stringify(validated) },

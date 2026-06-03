@@ -363,12 +363,14 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
     if (prevContractId.current === form.contractId) return;
     prevContractId.current = form.contractId;
     setSpecs([]);
-    setForm(f => ({ ...f, specId: '' }));
+    // Sotuvchi shartnomadan default keladi (tahrirlanadi); shartnoma tozalansa mijozning birinchisi
+    const contractSeller = contracts.find(c => c.id === form.contractId)?.seller;
+    setForm(f => ({ ...f, specId: '', sellerName: contractSeller || clientSellers[0] || '' }));
     if (!form.contractId) return;
     api.get(`/api/specs?contractId=${form.contractId}`)
       .then(r => setSpecs(r.data.data || []))
       .catch(() => {});
-  }, [form.contractId]);
+  }, [form.contractId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fill products from spec
   useEffect(() => {

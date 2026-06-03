@@ -10,7 +10,7 @@ describe('Contracts API', () => {
   const n = uid();
 
   beforeAll(async () => {
-    const client = await makeClient();
+    const client = await makeClient({ seller: 'Test Sotuvchi' });
     clientId = client.id;
     // Turn off autoContractNumbering in settings for this test suite
     await prisma.setting.upsert({
@@ -26,11 +26,28 @@ describe('Contracts API', () => {
       number:     `26-${n.slice(-4)}`,
       date:       '2026-01-15',
       totalValue: 5_000_000,
+      seller:     'Test Sotuvchi',
       clientId,
     });
     expect(res.status).toBe(200);
     expect(res.body.number).toBe(`26-${n.slice(-4)}`);
     contractId = res.body.id;
+  });
+
+  // #1: sotuvchi majburiy va mijozga tegishli bo'lishi shart
+  it('#1 — sellersiz shartnoma → 400', async () => {
+    const res = await request(app).post('/api/contracts').send({
+      number: `26-NS-${n.slice(-3)}`, date: '2026-01-15', totalValue: 1_000_000, clientId,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('#1 — mijozga tegishli bo\'lmagan seller → 400', async () => {
+    const res = await request(app).post('/api/contracts').send({
+      number: `26-XS-${n.slice(-3)}`, date: '2026-01-15', totalValue: 1_000_000,
+      seller: 'Boshqa Odam', clientId,
+    });
+    expect(res.status).toBe(400);
   });
 
   it('PUT /:id — totalValue yangilash', async () => {
@@ -79,8 +96,8 @@ describe('Contracts API', () => {
       create: { id: 'global', data: JSON.stringify({ autoContractNumbering: true }) },
       update: { data: JSON.stringify({ autoContractNumbering: true }) },
     });
-    const c = await makeClient();
-    const body = { date: '2031-03-10', totalValue: 1_000_000, clientId: c.id };
+    const c = await makeClient({ seller: 'Auto Sotuvchi' });
+    const body = { date: '2031-03-10', totalValue: 1_000_000, seller: 'Auto Sotuvchi', clientId: c.id };
 
     const r1 = await request(app).post('/api/contracts').send(body);
     const r2 = await request(app).post('/api/contracts').send(body);
