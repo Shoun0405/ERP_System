@@ -261,6 +261,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         clientId: editSale.clientId,
         contractId: editSale.contractId || '',
         specId: editSale.specId || '',
+        exchangeRate: editSale.exchangeRate || '',
         rows: editSale.products?.map(p => ({
           productId: p.productId,
           unit: 'dona',
@@ -284,6 +285,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       clientId:   initialValues?.clientId   || '',
       contractId: initialValues?.contractId || '',
       specId:     initialValues?.specId     || '',
+      exchangeRate: '',
       rows:       initialValues?.rows       || [{ ...EMPTY_ROW }],
     };
   });
@@ -342,6 +344,10 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
   }, [editing, editSale, initialValues, products]);
 
   const totalAmount = form.rows.reduce((s, r) => s + (parseFloat(r.rowAmount) || 0), 0);
+
+  // Shartnoma valyutasiga qarab USD rejimi (narxlar USD da kiritiladi, kurs majburiy)
+  const selectedContract = contracts.find(c => c.id === form.contractId);
+  const isUsd = selectedContract?.currency === 'USD';
 
   // On client selection, fetch contracts and default seller if any attached
   const selectedClient = clients.find(c => c.id === form.clientId);
@@ -419,6 +425,9 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
     if (selContract && form.date < selContract.date.slice(0, 10)) {
       return toast.error('Yuk xati sanasi shartnoma sanasidan oldin bo\'lmasligi kerak');
     }
+    if (isUsd && (!form.exchangeRate || Number(form.exchangeRate) <= 0)) {
+      return toast.error('USD shartnoma uchun kursni kiriting');
+    }
     setSaving(true);
     try {
       const payload = {
@@ -429,6 +438,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         clientId:     form.clientId,
         contractId:   form.contractId || null,
         specId:       form.specId     || null,
+        ...(isUsd ? { exchangeRate: Number(form.exchangeRate) } : {}),
         // C-2: faqat xom kirish — summa/fizik qiymatlarni server hosil qiladi
         products:     form.rows.map(r => ({
           productId: r.productId,
@@ -535,6 +545,15 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
           <input type="text" value={form.transportNum} placeholder="01 A 123 BC"
             onChange={e => setForm(f => ({ ...f, transportNum: e.target.value }))} className={inp} />
         </div>
+
+        {isUsd && (
+          <div>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Kurs (USD→UZS) *</label>
+            <input type="number" min="0" step="any" value={form.exchangeRate} placeholder="12700"
+              onChange={e => setForm(f => ({ ...f, exchangeRate: e.target.value }))} className={inp} />
+            <p className="text-[10px] text-[var(--accent)] mt-1">Narxlar USD da kiritiladi</p>
+          </div>
+        )}
       </div>
 
       {/* Products table */}
@@ -575,7 +594,16 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       <div className="flex items-center justify-between pt-1">
         <div className="rounded-lg px-5 py-3" style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
           <p className="text-xs opacity-80 mb-0.5">Jami summa</p>
-          <p className="text-xl font-bold">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">UZS</span></p>
+          {isUsd ? (
+            <>
+              <p className="text-xl font-bold">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">USD</span></p>
+              {Number(form.exchangeRate) > 0 && (
+                <p className="text-xs font-normal opacity-80 mt-0.5">≈ {fmt(totalAmount * Number(form.exchangeRate))} UZS</p>
+              )}
+            </>
+          ) : (
+            <p className="text-xl font-bold">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">UZS</span></p>
+          )}
         </div>
         <div className="flex gap-2">
           <button onClick={onCancel} className="px-4 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
@@ -621,6 +649,7 @@ export default function Sales({ user }) {
   const [filterSpecs,     setFilterSpecs]     = useState([]);
   const { from: dateFrom, to: dateTo } = useDateFilter();
   const [facturaFilter,   setFacturaFilter]   = useState('barchasi');
+  const [currencyTab,     setCurrencyTab]     = useState('UZS');
 
   const [detail,        setDetail]        = useState(null);
   const [delId,         setDelId]         = useState(null);
@@ -705,6 +734,7 @@ export default function Sales({ user }) {
       from: dateFrom,
       to: dateTo,
       facturaStatus: facturaFilter === 'barchasi' ? '' : facturaFilter,
+      currency: currencyTab,
       sortBy,
       sortDir
     };
@@ -712,7 +742,7 @@ export default function Sales({ user }) {
       .then(r => { setSales(r.data.data); setTotal(r.data.total); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page, debouncedSearch, filterClient, filterContract, filterSpec, dateFrom, dateTo, facturaFilter, sortBy, sortDir]);
+  }, [page, debouncedSearch, filterClient, filterContract, filterSpec, dateFrom, dateTo, facturaFilter, currencyTab, sortBy, sortDir]);
 
   useEffect(() => { fetchSales(); }, [fetchSales]);
 
@@ -888,6 +918,9 @@ export default function Sales({ user }) {
 
   useModalKeys(!!detail, null, () => setDetail(null));
   useModalKeys(bulkDelOpen, handleBulkDelete, () => setBulkDelOpen(false));
+
+  // USD rejimida 2 ta qo'shimcha ustun (Kurs, USD jami) bo'ladi
+  const tableColSpan = currencyTab === 'USD' ? 15 : 13;
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
@@ -1065,6 +1098,26 @@ export default function Sales({ user }) {
         );
       })()}
 
+      {/* Valyuta tablari: Savdo (UZS) / Eksport (USD) */}
+      <div className="flex items-center gap-2">
+        {[
+          { key: 'UZS', label: 'Savdo (UZS)' },
+          { key: 'USD', label: 'Eksport (USD)' },
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => { setCurrencyTab(t.key); setPage(1); }}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+              currencyTab === t.key
+                ? 'bg-[var(--accent)] text-[var(--accent-text)] shadow-sm'
+                : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* Table Card */}
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -1106,6 +1159,12 @@ export default function Sales({ user }) {
                     </span>
                   </th>
                 ))}
+                {currencyTab === 'USD' && (
+                  <>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kurs</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">USD jami</th>
+                  </>
+                )}
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kim / Qachon</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
@@ -1114,7 +1173,7 @@ export default function Sales({ user }) {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(13)].map((_, j) => (
+                    {[...Array(tableColSpan)].map((_, j) => (
                       <td key={j} className="px-4 py-4">
                         <div className="h-4 bg-[var(--surface-2)] animate-pulse rounded" />
                       </td>
@@ -1123,7 +1182,7 @@ export default function Sales({ user }) {
                 ))
               ) : sales.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
+                  <td colSpan={tableColSpan} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
                     {hasFilter ? 'Topilmadi' : 'Hozircha yuk xatlari yo\'q'}
                   </td>
                 </tr>
@@ -1258,6 +1317,16 @@ export default function Sales({ user }) {
                       );
                     })()}
                   </td>
+                  {currencyTab === 'USD' && (
+                    <>
+                      <td className="px-4 py-3.5 text-sm text-right font-mono text-[var(--text-2)]">
+                        {s.exchangeRate ? fmt(s.exchangeRate) : '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-right font-bold text-[var(--text)]">
+                        {fmt(s.exchangeRate ? s.totalAmount / s.exchangeRate : 0)} <span className="text-[10px] font-normal text-[var(--text-3)]">USD</span>
+                      </td>
+                    </>
+                  )}
                   <td className="px-4 py-3.5"><AuditCell record={s} users={auditUsers}/></td>
                   <td className="px-4 py-3.5">
                     {s.deletedAt ? (

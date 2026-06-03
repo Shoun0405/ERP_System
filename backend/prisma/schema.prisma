@@ -20,6 +20,7 @@ model Client {
   mfo          String?
   bank         String?
   seller       String?
+  country      String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt @default(now())
   createdById  String?
@@ -63,6 +64,7 @@ model Contract {
   totalValue     Decimal         @db.Decimal(18, 2)
   notes          String?
   status         String          @default("yangi")
+  currency       String          @default("UZS")
   clientId       String
   client         Client          @relation(fields: [clientId], references: [id])
   sales          Sale[]
@@ -138,6 +140,8 @@ model Sale {
   spec          Specification? @relation(fields: [specId], references: [id])
   products      SaleProduct[]
   facturaStatus String         @default("yuborilmagan")
+  currency      String         @default("UZS")
+  exchangeRate  Float?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt @default(now())
   createdById   String?

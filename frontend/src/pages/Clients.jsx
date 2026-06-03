@@ -11,7 +11,7 @@ import { downloadFile } from '../lib/download';
 import { fmt } from '../lib/format';
 import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
 
-const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', bank:'', seller:'' };
+const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', bank:'', seller:'', country:'' };
 const SC = {
   'Faol': 'bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] border-[oklch(0.88_0.06_155)]',
   "Muddati o'tgan": 'bg-[oklch(0.96_0.04_25)] text-[oklch(0.42_0.13_25)] border-[oklch(0.88_0.07_25)]',
@@ -146,7 +146,7 @@ export default function Clients({ user }) {
   const [phoneInput, setPhoneInput] = useState('');
 
   // Shartnoma CRUD state
-  const EMPTY_CONTRACT = { number: '', date: '', totalValue: '', seller: '' };
+  const EMPTY_CONTRACT = { number: '', date: '', totalValue: '', seller: '', currency: 'UZS' };
   const [contractModal,  setContractModal]  = useState(null); // 'add' | 'edit' | null
   const [contractForm,   setContractForm]   = useState(EMPTY_CONTRACT);
   const [contractEditId, setContractEditId] = useState(null);
@@ -195,12 +195,12 @@ export default function Clients({ user }) {
 
   const openAdd = () => { setForm(EMPTY); setPhoneInput(''); setEditId(null); setErrors({}); setModal('add'); };
   const openEdit = c => {
-    setForm({ name:c.name||'', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', bank:c.bank||'', seller:c.seller||'' });
+    setForm({ name:c.name||'', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', bank:c.bank||'', seller:c.seller||'', country:c.country||'' });
     setPhoneInput(fmtPhone(c.phone||''));
     setEditId(c.id); setErrors({}); setModal('edit');
   };
   const handleCopy = c => {
-    setForm({ name:(c.name||'') + ' - KOPYA', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', bank:c.bank||'', seller:c.seller||'' });
+    setForm({ name:(c.name||'') + ' - KOPYA', inn:fmtINN(c.inn||''), phone:c.phone||'', director:c.director||'', address:c.address||'', category:c.category||'', status:c.status||'Yangi', account:c.account||'', mfo:c.mfo||'', bank:c.bank||'', seller:c.seller||'', country:c.country||'' });
     setPhoneInput(fmtPhone(c.phone||''));
     setEditId(null); setErrors({}); setModal('add');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -267,7 +267,7 @@ export default function Clients({ user }) {
     setContractModal('add');
   };
   const openContractEdit = (ct, clientId) => {
-    setContractForm({ number: ct.number, date: ct.date.split('T')[0], totalValue: String(ct.totalValue), seller: ct.seller || '' });
+    setContractForm({ number: ct.number, date: ct.date.split('T')[0], totalValue: String(ct.totalValue), seller: ct.seller || '', currency: ct.currency || 'UZS' });
     setContractEditId(ct.id);
     setContractClientId(clientId);
     setContractModal('edit');
@@ -281,7 +281,7 @@ export default function Clients({ user }) {
     if (!contractForm.totalValue || parseFloat(contractForm.totalValue) < 0) { toast.error('Summani kiriting!'); return; }
     if (!contractForm.seller)        { toast.error('Sotuvchini tanlang!'); return; }
     setContractSaving(true);
-    const payload = { number: contractForm.number, date: contractForm.date, totalValue: parseFloat(contractForm.totalValue), seller: contractForm.seller, clientId: contractClientId };
+    const payload = { number: contractForm.number, date: contractForm.date, totalValue: parseFloat(contractForm.totalValue), seller: contractForm.seller, currency: contractForm.currency, clientId: contractClientId };
     try {
       if (contractModal === 'edit') {
         await api.put(`/api/contracts/${contractEditId}`, payload);
@@ -403,6 +403,10 @@ export default function Clients({ user }) {
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Kategoriya</label>
                 <input type="text" value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} className={inp('category')} placeholder="Qurilish, Savdo..."/>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Mamlakat</label>
+                <input type="text" value={form.country} onChange={e=>setForm(f=>({...f,country:e.target.value}))} className={inp('country')} placeholder="O'zbekiston, Rossiya..."/>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Manzil</label>
@@ -639,6 +643,10 @@ export default function Clients({ user }) {
                   <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Kategoriya</label>
                   <input type="text" value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} className={inp('category')} placeholder="Qurilish, Savdo..."/>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Mamlakat</label>
+                  <input type="text" value={form.country} onChange={e=>setForm(f=>({...f,country:e.target.value}))} className={inp('country')} placeholder="O'zbekiston, Rossiya..."/>
+                </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Manzil</label>
                   <input type="text" value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} className={inp('address')} placeholder="Shahar, ko'cha, uy..."/>
@@ -729,6 +737,14 @@ export default function Clients({ user }) {
                 {contractClientId && !(clients.find(c => c.id === contractClientId)?.seller || '').trim() && (
                   <p className="text-[11px] text-red-500 mt-1">Bu mijozga sotuvchilar biriktirilmagan (mijozni tahrirlab qo'shing)</p>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Valyuta</label>
+                <select value={contractForm.currency} onChange={e => setContractForm(f => ({ ...f, currency: e.target.value }))}
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none transition bg-[var(--surface)]">
+                  <option value="UZS">UZS (so'm)</option>
+                  <option value="USD">USD (dollar)</option>
+                </select>
               </div>
               <div className="pt-4 border-t border-[var(--border)] flex justify-end gap-3">
                 <button type="button" onClick={closeContractModal} className="px-4 py-2 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md transition">Bekor</button>

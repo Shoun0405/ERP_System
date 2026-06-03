@@ -246,6 +246,7 @@ router.post('/', requirePermission('contracts', 'create'), async (req, res, next
           notes:      body.notes || null,
           status:     body.status || 'yangi',
           seller:     body.seller || null,
+          currency:   body.currency || 'UZS',
           createdById: req.user.id,
         },
         include: { client: { select: { id: true, name: true, inn: true } } },
@@ -303,6 +304,7 @@ router.put('/:id', requirePermission('contracts', 'update'), async (req, res, ne
         ...(sent('notes')      ? { notes: body.notes || null } : {}),
         ...(sent('status')     ? { status: body.status } : {}),
         ...(sent('seller')     ? { seller: body.seller || null } : {}),
+        ...(sent('currency')   ? { currency: body.currency } : {}),
         ...(clientChanged      ? { clientId: body.clientId } : {}),
         updatedById: req.user.id,
         // number o'zgartirilmaydi — audit izi

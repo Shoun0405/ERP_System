@@ -12,6 +12,7 @@ const clientSchema = z.object({
   mfo:      z.string().max(5).default(''),
   bank:     z.string().max(200).default(''),
   seller:   z.string().max(200).default(''),
+  country:  z.string().max(100).default(''),
 });
 
 const productSchema = z.object({
@@ -52,6 +53,7 @@ const contractSchema = z.object({
   clientId:   z.string().uuid(),
   notes:      z.string().max(2000).default(''),
   status:     z.enum(['yangi', 'amalda', 'yopilgan']).default('yangi'),
+  currency:   z.enum(['UZS', 'USD']).default('UZS'),
   seller:     z.string().max(200).optional().nullable().default(null).transform(v => v || null),
 });
 
@@ -97,6 +99,7 @@ const saleSchema = z.object({
   specId:       z.string().uuid().nullable().optional(),
   products:     z.array(saleProductSchema).min(1),
   facturaStatus: z.enum(['yuborildi', 'yuborilmagan']).default('yuborilmagan'),
+  exchangeRate: z.coerce.number().positive().optional(),
 });
 
 const specProductSchema = z.object({

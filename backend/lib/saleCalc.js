@@ -3,10 +3,12 @@
 // Frontend `Sales.jsx` calculateRowValues bilan bit-aniq bir xil yaxlitlash —
 // aks holda tahrirlashda jami o'zgarib ketadi.
 
-function computeSaleRow({ unit, amount, price, packType = 1 }, product) {
+// rate — valyuta kursi (USD savdo uchun USD→UZS; UZS savdo uchun 1).
+// Narx savdo valyutasida kiritiladi; rowAmount/priceCbm har doim UZS (kanonik baza).
+function computeSaleRow({ unit, amount, price, packType = 1 }, product, rate = 1) {
   const qty = Number(amount) || 0;
   const unitPrice = Number(price) || 0;
-  const rowAmount = Math.round(qty * unitPrice);
+  const rowAmount = Math.round(qty * unitPrice * (Number(rate) || 1));
 
   let totalPieces = 0;
   let totalCbm = 0;

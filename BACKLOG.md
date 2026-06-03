@@ -85,16 +85,18 @@
   UTC) — shartnoma yoki spec sanasidan oldin bo'lsa 400. Frontend: `Sales.jsx` date input
   `min` = shartnoma sanasi + `save()` da tekshiruv (toast).
 
-- ⬜💬 **#6 — Eksport savdosi + ko'p valyuta (USD/UZS)** 🆕 _(KATTA — sxema + Savdo submenu)_
-  Eksport hisobini yuritish uchun valyuta qo'shiladi:
-  - **Mijoz** — mamlakat (country).
-  - **Shartnoma** — valyutasi.
-  - **Savdo** — savdo valyutasi + eksport bo'lса **valyuta kursi** (float): USD × kurs = UZS.
-  - Eksport savdosi ham UZS da yuritiladi (kurs orqali).
-  - **Savdo ichida "Export" submenu:** asosiy Savdo oynasi faqat **UZS**; Export submenu
-    **ham USD ham UZS**.
-  *Sxema:* `Client.country`, `Contract.currency`, `Sale.currency` + `Sale.exchangeRate`.
-  *Eslatma:* "Yana qo'shimchalar qilamiz" — to'liq spetsifikatsiya keyin.
+- ✅ **#6 — Eksport savdosi + ko'p valyuta (USD/UZS)** 🆕 _(2026-06-03)_
+  **Qarorlar:** USD+UZS · summalar **UZS bazada** (kurs orqali — mavjud qarz/hisobot o'zgarmaydi) ·
+  kurs har savdoda qo'lda · eksport **shartnoma valyutasidan**.
+  - Sxema: `Contract.currency`, `Sale.currency`+`exchangeRate`, `Client.country` (informatsion).
+  - Backend: `computeSaleRow(row, product, rate)` — `rowAmount = amount*price*kurs` (UZS baza);
+    USD shartnoma → kurs majburiy (400 aks holda); currency server tomonidan shartnomadan;
+    sales list `?currency=` filtri. Contracts/Clients valyuta saqlaydi.
+  - Frontend: Sales forma USD shartnomada "Kurs" maydoni + USD kiritish; **Savdo (UZS)/Eksport (USD)
+    tab** (eksport tabda Kurs + USD jami ustunlari); Contracts/Clients valyuta tanlovi; Clients mamlakat.
+  - Testlar: `export-currency.test` (USD→UZS hisob, kurssiz→400, currency filtri, debt UZS).
+    **Backend 106/106, lint 0 error, build OK, E2E 4/4; jonli bazada tekshirildi (12.5M UZS).**
+  *Qamrovga kirmaydi (kelajak):* to'lovlar USD'da, markaziy kurs jadvali, eksport PDF.
 
 ### To'lovlar → Bank (qayta loyihalash)
 

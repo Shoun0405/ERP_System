@@ -650,6 +650,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
   const [totalValue, setTotalValue] = useState(editContract?.totalValue ?? '');
   const [notes, setNotes]           = useState(editContract?.notes || '');
   const [status, setStatus]         = useState(editContract?.status || 'yangi');
+  const [currency, setCurrency]     = useState(editContract?.currency || 'UZS');
   const [saving, setSaving]         = useState(false);
   const clientDropRef = useRef(null);
   // Spetsifikatsiya bo'limi (faqat yangi shartnomada)
@@ -737,6 +738,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
       totalValue: Number(totalValue) || 0,
       notes,
       status,
+      currency,
       seller: seller || null,
       ...(!editing && !useAuto && number ? { number } : {}),
     };
@@ -895,6 +897,16 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
               <option value="yangi">Yangi</option>
               <option value="amalda">Amalda</option>
               <option value="yopilgan">Yopilgan</option>
+            </select>
+          </div>
+
+          {/* Valyuta */}
+          <div>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Valyuta</label>
+            <select value={currency} onChange={e => setCurrency(e.target.value)}
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]">
+              <option value="UZS">UZS (so'm)</option>
+              <option value="USD">USD (dollar)</option>
             </select>
           </div>
 

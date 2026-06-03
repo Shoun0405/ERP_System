@@ -7,7 +7,7 @@ const { computeSaleRow } = require('../lib/saleCalc');
 
 // C-2: payloaddagi mahsulotlarni o'qib, har qatorni SERVER tomonda qayta hisoblaydi.
 // Mahsulot topilmasa 400. Qaytaradi: { rows, totalAmount } (klient qiymatlari e'tiborsiz).
-async function recalcProducts(tx, products) {
+async function recalcProducts(tx, products, rate = 1) {
   const ids = [...new Set(products.map(p => p.productId))];
   const found = await tx.product.findMany({ where: { id: { in: ids } } });
   const map = Object.fromEntries(found.map(p => [p.id, p]));
@@ -20,7 +20,7 @@ async function recalcProducts(tx, products) {
       err.publicMessage = 'Mahsulot topilmadi';
       throw err;
     }
-    return computeSaleRow(p, product);
+    return computeSaleRow(p, product, rate);
   });
   const totalAmount = rows.reduce((sum, r) => sum + r.rowAmount, 0);
   return { rows, totalAmount };
@@ -53,6 +53,7 @@ router.get('/', requirePermission('sales', 'read'), async (req, res, next) => {
     const contractId = req.query.contractId || '';
     const specId     = req.query.specId     || '';
     const facturaStatus = req.query.facturaStatus || '';
+    const currency      = req.query.currency      || '';
     const sortBy   = req.query.sortBy    || 'date';
     const sortDir  = req.query.sortDir === 'asc' ? 'asc' : 'desc';
     const offset   = (page - 1) * limit;
@@ -62,6 +63,7 @@ router.get('/', requirePermission('sales', 'read'), async (req, res, next) => {
       ...(contractId ? { contractId } : {}),
       ...(specId ? { specId } : {}),
       ...(facturaStatus ? { facturaStatus } : {}),
+      ...(currency ? { currency } : {}),
       ...(from || to ? {
         date: {
           ...(from ? { gte: new Date(from) }              : {}),
@@ -142,17 +144,18 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
       return res.status(400).json({ error: parsed.error.issues[0].message });
     }
 
-    const { date, nakladnoy, sellerName, transportNum, clientId, products, facturaStatus } = parsed.data;
+    const { date, nakladnoy, sellerName, transportNum, clientId, products, facturaStatus, exchangeRate } = parsed.data;
     let { contractId, specId } = parsed.data;
 
     const sale = await prisma.$transaction(async (tx) => {
-      // C-2: summalarni server qayta hisoblaydi — klient yuborgan qiymatlarga ishonmaymiz
-      const { rows, totalAmount } = await recalcProducts(tx, products);
+      // Valyuta shartnomadan aniqlanadi (server tomonidan; klient spoof qila olmaydi)
+      let contractCurrency = 'UZS';
+
       // 🔒 Data integrity: check contract-client matching
       if (contractId) {
         const contract = await tx.contract.findUnique({
           where: { id: contractId },
-          select: { clientId: true, date: true }
+          select: { clientId: true, date: true, currency: true }
         });
         if (!contract) {
           const err = new Error('Shartnoma topilmadi');
@@ -167,13 +170,14 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
           throw err;
         }
         assertSaleDateNotBeforeContract(date, contract.date);
+        contractCurrency = contract.currency;
       }
 
       // specId lookup inside transaction to avoid TOCTOU race
       if (specId) {
         const spec = await tx.specification.findUnique({
           where: { id: specId },
-          select: { contractId: true, contract: { select: { clientId: true, date: true } } },
+          select: { contractId: true, contract: { select: { clientId: true, date: true, currency: true } } },
         });
         if (!spec) {
           const err = new Error('Spetsifikatsiya topilmadi');
@@ -189,7 +193,24 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
         }
         assertSaleDateNotBeforeContract(date, spec.contract.date);
         contractId = spec.contractId;
+        contractCurrency = spec.contract.currency;
       }
+
+      // Valyuta + kurs: USD shartnoma → kurs majburiy; UZS → rate=1
+      const currency = contractCurrency === 'USD' ? 'USD' : 'UZS';
+      let rate = 1;
+      if (currency === 'USD') {
+        if (!exchangeRate || exchangeRate <= 0) {
+          const err = new Error('USD shartnoma uchun valyuta kursi majburiy');
+          err.status = 400;
+          err.publicMessage = err.message;
+          throw err;
+        }
+        rate = exchangeRate;
+      }
+
+      // C-2: summalarni server qayta hisoblaydi (UZS baza, kurs orqali)
+      const { rows, totalAmount } = await recalcProducts(tx, products, rate);
 
       const s = await tx.sale.create({
         data: {
@@ -202,6 +223,8 @@ router.post('/', requirePermission('sales', 'create'), async (req, res, next) =>
           contractId: contractId || null,
           specId:     specId     || null,
           facturaStatus: facturaStatus || 'yuborilmagan',
+          currency,
+          exchangeRate: currency === 'USD' ? rate : null,
           createdById: req.user.id,
         },
       });
@@ -244,26 +267,12 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
         throw err;
       }
 
-      // If products are provided, rewrite and recalculate (C-2: server tomonda)
-      let totalAmount = existingSale.totalAmount;
-      if (data.products !== undefined) {
-        const recalced = await recalcProducts(tx, data.products);
-        totalAmount = recalced.totalAmount;
-
-        // Remove old sale products
-        await tx.saleProduct.deleteMany({ where: { saleId } });
-
-        // Insert new sale products (server hosil qilgan qiymatlar)
-        await tx.saleProduct.createMany({
-          data: recalced.rows.map(r => ({ ...r, saleId }))
-        });
-      }
-
       // Check client-contract-spec matching if clientId or contractId or specId are changing
       const finalClientId = data.clientId !== undefined ? data.clientId : existingSale.clientId;
       let finalContractId = data.contractId !== undefined ? data.contractId : existingSale.contractId;
       const finalSpecId = data.specId !== undefined ? data.specId : existingSale.specId;
       const finalDate = data.date !== undefined ? data.date : existingSale.date;
+      let contractCurrency = 'UZS';
 
       if (finalSpecId) {
         const spec = await tx.specification.findUnique({
@@ -284,10 +293,11 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
         }
         assertSaleDateNotBeforeContract(finalDate, spec.contract.date);
         finalContractId = spec.contractId;
+        contractCurrency = spec.contract.currency;
       } else if (finalContractId) {
         const contract = await tx.contract.findUnique({
           where: { id: finalContractId },
-          select: { clientId: true, date: true }
+          select: { clientId: true, date: true, currency: true }
         });
         if (!contract) {
           const err = new Error('Shartnoma topilmadi');
@@ -302,6 +312,31 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
           throw err;
         }
         assertSaleDateNotBeforeContract(finalDate, contract.date);
+        contractCurrency = contract.currency;
+      }
+
+      // Valyuta + kurs: kurs data'dan yoki mavjud savdodan; USD bo'lsa majburiy
+      const currency = contractCurrency === 'USD' ? 'USD' : 'UZS';
+      let rate = 1;
+      if (currency === 'USD') {
+        rate = data.exchangeRate ?? existingSale.exchangeRate ?? 0;
+        if (!rate || rate <= 0) {
+          const err = new Error('USD shartnoma uchun valyuta kursi majburiy');
+          err.status = 400;
+          err.publicMessage = err.message;
+          throw err;
+        }
+      }
+
+      // If products are provided, rewrite and recalculate (C-2: UZS baza, kurs orqali)
+      let totalAmount = existingSale.totalAmount;
+      if (data.products !== undefined) {
+        const recalced = await recalcProducts(tx, data.products, rate);
+        totalAmount = recalced.totalAmount;
+        await tx.saleProduct.deleteMany({ where: { saleId } });
+        await tx.saleProduct.createMany({
+          data: recalced.rows.map(r => ({ ...r, saleId }))
+        });
       }
 
       return tx.sale.update({
@@ -316,6 +351,8 @@ router.put('/:id', requirePermission('sales', 'update'), async (req, res, next) 
           ...(data.specId !== undefined ? { specId: data.specId || null } : {}),
           ...(data.facturaStatus !== undefined ? { facturaStatus: data.facturaStatus } : {}),
           totalAmount,
+          currency,
+          exchangeRate: currency === 'USD' ? rate : null,
           updatedById: req.user.id,
         },
         include: {
