@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   typography.css — F-05: Yagona tipografika shkalasi
+   frontend/src/index.css OXIRIGA qo'shing (@layer components ichida bo'lgani
+   muhim — Tailwind utility'lari ustidan yengilroq override bo'lishi uchun).
+
+   MUAMMO: hozir matn o'lchamlari tarqoq — text-[10px], text-[10.5px], text-[11px],
+   text-xs, text-sm, text-lg aralash; font-medium/semibold/bold tasodifiy.
+
+   YECHIM: 6 ta semantik daraja. Har bir ixtiyoriy o'lchamni shulardan biriga
+   moslang (mapping pastda). Yangi o'lcham qo'shmang.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Sahifa sarlavhasi — PageShell title (App TopHeader bilan birga F-03) */
+  .t-h1 { font-size: 20px; line-height: 1.2;  font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+
+  /* Modal / karta sarlavhasi */
+  .t-h2 { font-size: 16px; line-height: 1.3;  font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+
+  /* Asosiy tana matni — jadval kataklari, forma qiymatlari */
+  .t-body { font-size: 13px; line-height: 1.45; font-weight: 400; color: var(--text); }
+
+  /* Forma label / ikkilamchi matn */
+  .t-label { font-size: 12px; line-height: 1.4; font-weight: 500; color: var(--text-2); }
+
+  /* Jadval thead, kichik bo'lim sarlavhalari — UPPERCASE */
+  .t-meta {
+    font-size: 11px; line-height: 1.3; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2);
+  }
+
+  /* Eng kichik — meta izoh, sana, "kim/qachon", yordamchi matn */
+  .t-caption { font-size: 10.5px; line-height: 1.3; font-weight: 400; color: var(--text-3); }
+}
+
+/* Raqamli ustunlar uchun (jadvalda summalar): mono + tabular hizalash */
+.t-num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MAPPING — eski → yangi (Claude Code shu jadval bo'yicha almashtiradi):
+
+     text-lg font-bold / font-semibold        →  t-h2   (modal/karta sarlavha)
+     text-sm font-medium  (forma label)       →  t-label
+     text-xs              (tana, jadval)       →  t-body
+     text-xs text-[var(--text-2)] (label)      →  t-label
+     text-[11px] / text-[10.5px] uppercase     →  t-meta   (thead, bo'lim sarlavha)
+     text-[10px] / text-[10.5px] (meta izoh)   →  t-caption
+     PageShell sahifa sarlavhasi               →  t-h1
+
+   ESLATMA: rang utility'larini (text-[var(--text-2)] va h.k.) kerak bo'lsa
+   qoldiring — t-* klasslar standart rang beradi, lekin alohida rang kerak
+   bo'lsa Tailwind utility ustidan yozadi.
+   ───────────────────────────────────────────────────────────────────────── */
