@@ -16,7 +16,7 @@ import {
   Plus, X, Trash2, Package, Eye, Printer,
   FileText, Truck, User, Calendar, Hash, Search,
   Check, RefreshCw, ChevronDown, CheckCircle2, XCircle,
-  FileSpreadsheet, Download, Pencil, FileArchive
+  FileSpreadsheet, Download, Pencil, FileArchive, Globe
 } from 'lucide-react';
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -51,8 +51,7 @@ function calculateRowValues(row, products) {
   }
 
   const amount = parseFloat(row.amount) || 0;
-  const price = parseFloat(row.price) || 0;
-  const rowAmount = Math.round(amount * price);
+  const price = parseFloat(row.price) || 0; // narx — DOIMO 1 tonna (1000 kg) uchun
 
   let totalPieces = 0;
   let totalCbm = 0;
@@ -81,6 +80,9 @@ function calculateRowValues(row, products) {
     totalSqm = +(totalPieces * p.sqmPerPce).toFixed(4);
   }
 
+  // Pul og'irlikdan: summa = (kg / 1000) × narx. Kurs frontendda qo'llanmaydi
+  // (kiritish valyutasida ko'rsatiladi; UZS bazaga server o'tkazadi).
+  const rowAmount = Math.round((totalKg / 1000) * price);
   const priceCbm = totalCbm > 0 ? +(rowAmount / totalCbm).toFixed(2) : 0;
 
   return {
@@ -180,7 +182,7 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
       productId,
       unit: 'dona',
       amount: 0,
-      price: p.priceCbm || 0,
+      price: p.priceTon || 0, // narx 1 tonna (1000 kg) uchun
       packType: 1,
       totalPieces: 0,
       totalCbm: 0,
@@ -198,6 +200,11 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
 
   const s = 'w-full px-2.5 py-1.5 border border-[var(--border)] rounded text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]';
   const p = products.find(x => x.id === row.productId);
+
+  // Narx ekvivalentlari (kiritish valyutasida): summa har bir birlik miqdoriga bo'linadi
+  const perKg  = row.totalKg  > 0 ? row.rowAmount / row.totalKg  : 0;
+  const perSqm = row.totalSqm > 0 ? row.rowAmount / row.totalSqm : 0;
+  const perCbm = row.totalCbm > 0 ? row.rowAmount / row.totalCbm : 0;
 
   return (
     <tr className="border-b border-[var(--border)] hover:bg-[var(--surface-2)]/50">
@@ -222,14 +229,19 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
       </td>
       <td className="p-2 w-32">
         <input type="number" min="0" value={row.price || ''}
-          onChange={e => handleChange('price', e.target.value)} className={s} placeholder="Narx" />
+          onChange={e => handleChange('price', e.target.value)} className={s} placeholder="1 tonna narxi" />
       </td>
       <td className="p-2 text-xs text-[var(--text-2)]">
         {p ? (
-          <div className="space-y-0.5 bg-[var(--surface-2)] p-1.5 rounded border border-[var(--border)]">
+          <div className="space-y-1 bg-[var(--surface-2)] p-1.5 rounded border border-[var(--border)]">
             <div><span className="font-semibold text-[var(--text-2)]">{row.totalPieces}</span> dona</div>
-            <div className="text-[10px] text-[var(--text-3)]">
-              {row.totalKg.toFixed(1)} kg | {row.totalCbm.toFixed(3)} m³ | {row.totalSqm.toFixed(1)} m²
+            <div className="grid grid-cols-3 gap-x-2 text-[10px]">
+              <div className="text-[var(--text-3)]">{row.totalKg.toFixed(1)} kg</div>
+              <div className="text-[var(--text-3)]">{row.totalCbm.toFixed(3)} m³</div>
+              <div className="text-[var(--text-3)]">{row.totalSqm.toFixed(1)} m²</div>
+              <div className="text-[var(--accent)] border-t border-[var(--border)] pt-0.5">{fmt(perKg)}/kg</div>
+              <div className="text-[var(--accent)] border-t border-[var(--border)] pt-0.5">{fmt(perCbm)}/m³</div>
+              <div className="text-[var(--accent)] border-t border-[var(--border)] pt-0.5">{fmt(perSqm)}/m²</div>
             </div>
           </div>
         ) : (
@@ -266,7 +278,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
           productId: p.productId,
           unit: 'dona',
           amount: p.totalPieces,
-          price: p.totalPieces > 0 ? Math.round(p.rowAmount / p.totalPieces) : 0,
+          price: p.totalKg > 0 ? Math.round((Number(p.rowAmount) * 1000) / p.totalKg) : 0, // so'm/tonna
           packType: p.packType || 1,
           totalPieces: p.totalPieces,
           totalCbm: p.totalCbm,
@@ -575,8 +587,8 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
                 <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)]">Mahsulot</th>
                 <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-28">Birlik</th>
                 <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-24">Miqdor</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-32">Narx</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)]">Konvertatsiya (Haqiqiy hajmi)</th>
+                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-32">Narx / tonna</th>
+                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)]">Konvertatsiya (hajm + narx ekvivalenti)</th>
                 <th className="p-2 text-right text-xs font-semibold text-[var(--text-3)] w-36">Jami (UZS)</th>
                 <th className="p-2 w-8" />
               </tr>
@@ -720,7 +732,7 @@ export default function Sales({ user }) {
     navigate('/sales', { replace: true, state: null });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setPage(1); }, [filterClient, filterContract, filterSpec, dateFrom, dateTo, facturaFilter]);
+  useEffect(() => { setPage(1); }, [filterClient, filterContract, filterSpec, dateFrom, dateTo, facturaFilter, currencyTab]);
 
   const fetchSales = useCallback(() => {
     setLoading(true);
@@ -882,7 +894,7 @@ export default function Sales({ user }) {
           productId: p.productId,
           unit: 'dona',
           amount: p.totalPieces,
-          price: p.totalPieces > 0 ? Math.round(p.rowAmount / p.totalPieces) : 0,
+          price: p.totalKg > 0 ? Math.round((Number(p.rowAmount) * 1000) / p.totalKg) : 0, // so'm/tonna
           packType: p.packType || 1,
           totalPieces: p.totalPieces,
           totalCbm: p.totalCbm,
@@ -996,7 +1008,7 @@ export default function Sales({ user }) {
       </div>
 
       {/* Submenu Quick Filters */}
-      <div className="flex border-b border-[var(--border)] gap-2">
+      <div className="flex items-center border-b border-[var(--border)] gap-2">
         {[
           { key: 'barchasi', label: 'Barchasi' },
           { key: 'yuborildi', label: 'Faktura berilgan' },
@@ -1004,9 +1016,9 @@ export default function Sales({ user }) {
         ].map(t => (
           <button
             key={t.key}
-            onClick={() => setFacturaFilter(t.key)}
+            onClick={() => { setCurrencyTab('UZS'); setFacturaFilter(t.key); }}
             className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
-              facturaFilter === t.key
+              currencyTab === 'UZS' && facturaFilter === t.key
                 ? 'border-[var(--accent)] text-[var(--accent)]'
                 : 'border-transparent text-[var(--text-3)] hover:text-[var(--text)] hover:border-[var(--border)]'
             }`}
@@ -1014,6 +1026,17 @@ export default function Sales({ user }) {
             {t.label}
           </button>
         ))}
+        {/* Eksport (USD) — valyuta ko'rinishi, faktura filtrlari yonida */}
+        <button
+          onClick={() => { setCurrencyTab('USD'); setFacturaFilter('barchasi'); }}
+          className={`ml-auto px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] flex items-center gap-1.5 ${
+            currencyTab === 'USD'
+              ? 'border-[var(--accent)] text-[var(--accent)]'
+              : 'border-transparent text-[var(--text-3)] hover:text-[var(--text)] hover:border-[var(--border)]'
+          }`}
+        >
+          <Globe size={13} /> Eksport (USD)
+        </button>
       </div>
 
       {/* Inline form */}
@@ -1097,26 +1120,6 @@ export default function Sales({ user }) {
           </div>
         );
       })()}
-
-      {/* Valyuta tablari: Savdo (UZS) / Eksport (USD) */}
-      <div className="flex items-center gap-2">
-        {[
-          { key: 'UZS', label: 'Savdo (UZS)' },
-          { key: 'USD', label: 'Eksport (USD)' },
-        ].map(t => (
-          <button
-            key={t.key}
-            onClick={() => { setCurrencyTab(t.key); setPage(1); }}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
-              currencyTab === t.key
-                ? 'bg-[var(--accent)] text-[var(--accent-text)] shadow-sm'
-                : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {/* Table Card */}
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm">

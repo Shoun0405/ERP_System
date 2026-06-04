@@ -68,7 +68,7 @@ describe('ERP System End-to-End Business Integration Suite', () => {
       sellerName: 'System Auditor',
       clientId: clientA.id,
       contractId: contractA.id, // Correct alignment
-      // Server hisoblaydi: 10 * 20000 = 200000
+      // Narx 1 tonna uchun: 10 dona × 2.765 kg = 27.65 kg → (27.65/1000) × 20000 = 553
       products: [{ productId: product.id, unit: 'dona', amount: 10, price: 20_000, packType: 1 }],
     });
     expect(saleRes.status).toBe(200);
@@ -76,20 +76,20 @@ describe('ERP System End-to-End Business Integration Suite', () => {
     // Verify Contract A aggregations
     const contractRes = await request(app).get('/api/contracts');
     const dbContractA = contractRes.body.data.find(c => c.id === contractA.id);
-    expect(dbContractA.deliveredAmount).toBe(200_000);
+    expect(dbContractA.deliveredAmount).toBe(553);
 
-    // Verify Client A debt is now 200,000
+    // Verify Client A debt is now 553
     const clientRes = await request(app).get('/api/clients');
     const dbClientA = clientRes.body.data.find(c => c.id === clientA.id);
-    expect(dbClientA.totalSales).toBe(200_000);
-    expect(dbClientA.debt).toBe(200_000);
+    expect(dbClientA.totalSales).toBe(553);
+    expect(dbClientA.debt).toBe(553);
   });
 
   it('5. Correctly record Payment for Client A and verify Contract A paid amount', async () => {
     // Record valid payment for Client A on Contract A
     const payRes = await request(app).post('/api/payments').send({
       date: new Date().toISOString().split('T')[0],
-      amount: 120_000,
+      amount: 200,
       clientId: clientA.id,
       contractId: contractA.id, // Correct alignment
       note: 'Client payment'
@@ -99,13 +99,13 @@ describe('ERP System End-to-End Business Integration Suite', () => {
     // Verify Contract A aggregations
     const contractRes = await request(app).get('/api/contracts');
     const dbContractA = contractRes.body.data.find(c => c.id === contractA.id);
-    expect(dbContractA.paidAmount).toBe(120_000);
+    expect(dbContractA.paidAmount).toBe(200);
 
-    // Verify Client A debt is reduced to 80,000
+    // Verify Client A debt is reduced to 353
     const clientRes = await request(app).get('/api/clients');
     const dbClientA = clientRes.body.data.find(c => c.id === clientA.id);
-    expect(dbClientA.totalPayments).toBe(120_000);
-    expect(dbClientA.debt).toBe(80_000); // 200,000 - 120,000
+    expect(dbClientA.totalPayments).toBe(200);
+    expect(dbClientA.debt).toBe(353); // 553 - 200
   });
 
   it('6. Block Contract Deletion when Sales are linked', async () => {

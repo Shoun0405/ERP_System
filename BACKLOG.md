@@ -80,6 +80,22 @@
 
 ### Savdo (Sales)
 
+- ✅ **#9 — Narx modeli: doimo 1 tonna (1000 kg) uchun + konvertatsiya narx ekvivalenti** 🆕🐛 _(2026-06-04)_
+  **Qaror:** pul DOIMO og'irlikdan hisoblanadi — `summa = (totalKg / 1000) × narx`. Birlik
+  (dona/kg/m²/m³) faqat miqdor kiritish usuli; baribir kg ga konvertatsiya qilinib, ton narxidan
+  pul chiqadi. Avval `summa = miqdor × narx` (default narx `priceCbm`) edi — dona×kub.m_narxi
+  noto'g'ri natija berardi.
+  - Backend: `lib/saleCalc.js` `computeSaleRow` — avval konvertatsiya, keyin
+    `rowAmount = round((totalKg/1000) × narx × kurs)`.
+  - Frontend `Sales.jsx`: `calculateRowValues` bir xil formula (kurssiz, kiritish valyutasida);
+    mahsulot tanlanganda default narx **`priceTon`**; "Narx / tonna" ustun belgisi; edit/copy
+    rekonstruksiyada narx `rowAmount×1000/totalKg` dan tiklanadi.
+  - UI: konvertatsiya oynasiga **narx ekvivalenti** qatori qo'shildi — `narx/kg | narx/m² | narx/m³`
+    (miqdorlar ostida).
+  - Testlar: 4 faylda (sales/export-currency/integration/softdelete) summa/qarz assertionlari
+    yangi formulaga ko'ra qayta hisoblandi. **Backend 106/106, frontend lint 0 error, build OK.**
+  - *Qamrovga kirmaydi:* spec'dan to'ldirilgan savdo narxi (hozircha eski `unitPriceVat` — keyin ko'riladi).
+
 - ✅ **#7 — Yuk xati sanasi shartnoma sanasidан avval bo'lmasin** 🐛 _(2026-06-03)_
   Server: `sales.js` POST/PUT da `assertSaleDateNotBeforeContract` (faqat kun bo'yicha,
   UTC) — shartnoma yoki spec sanasidan oldin bo'lsa 400. Frontend: `Sales.jsx` date input
@@ -94,6 +110,10 @@
     sales list `?currency=` filtri. Contracts/Clients valyuta saqlaydi.
   - Frontend: Sales forma USD shartnomada "Kurs" maydoni + USD kiritish; **Savdo (UZS)/Eksport (USD)
     tab** (eksport tabda Kurs + USD jami ustunlari); Contracts/Clients valyuta tanlovi; Clients mamlakat.
+  - ✨ _(2026-06-04)_ Alohida "Savdo (UZS)/Eksport (USD)" tab tugmalari **olib tashlandi** — endi
+    **"Eksport (USD)"** faktura quick-filter submenu qatoriga qo'shildi (Barchasi / Faktura berilgan /
+    Faktura berilmagan yonida, o'ngda Globe icon bilan). Yagona single-select qator: faktura tablari →
+    UZS ko'rinish, "Eksport (USD)" → USD ko'rinish. Lint 0 error.
   - Testlar: `export-currency.test` (USD→UZS hisob, kurssiz→400, currency filtri, debt UZS).
     **Backend 106/106, lint 0 error, build OK, E2E 4/4; jonli bazada tekshirildi (12.5M UZS).**
   *Qamrovga kirmaydi (kelajak):* to'lovlar USD'da, markaziy kurs jadvali, eksport PDF.

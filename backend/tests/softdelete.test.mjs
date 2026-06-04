@@ -53,18 +53,18 @@ describe('Soft-delete + superAdmin (#3a)', () => {
   });
 
   it('o\'chirilgan savdo mijoz qarzidan CHIQARILADI', async () => {
-    // Yangi faol savdo: debt = 10000
+    // Yangi faol savdo: 10 dona × 2.765 kg → (27.65/1000) × 1000 = 28
     const liveId = await makeSale(client.id, contract.id, product.id, 'SD-LIVE');
     let res = await request(app).get('/api/clients').query({ limit: 200 });
     let c = res.body.data.find(x => x.id === client.id);
     const debtBefore = c.debt;
-    expect(debtBefore).toBeGreaterThanOrEqual(10000);
+    expect(debtBefore).toBeGreaterThanOrEqual(28);
 
-    // O'chiramiz → debt 10000 ga kamayadi
+    // O'chiramiz → debt 28 ga kamayadi
     await request(app).delete(`/api/sales/${liveId}`);
     res = await request(app).get('/api/clients').query({ limit: 200 });
     c = res.body.data.find(x => x.id === client.id);
-    expect(c.debt).toBe(debtBefore - 10000);
+    expect(c.debt).toBe(debtBefore - 28);
   });
 
   // ── superAdmin: hard-delete + restore (real auth) ──────────────────────────

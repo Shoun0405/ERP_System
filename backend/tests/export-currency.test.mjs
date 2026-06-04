@@ -46,7 +46,8 @@ describe('Eksport savdosi + valyuta (#6)', () => {
       products: [{ productId: product.id, unit: 'dona', amount: 10, price: 100 }],
     });
     expect(res.status).toBe(200);
-    expect(res.body.totalAmount).toBe(10 * 100 * 12000); // 12,000,000 UZS
+    // 10 dona × 2.765 kg = 27.65 kg → (27.65/1000) × 100 USD × 12000 = 33180 UZS
+    expect(res.body.totalAmount).toBe(33180);
     expect(res.body.currency).toBe('USD');
     expect(res.body.exchangeRate).toBe(12000);
   });
@@ -58,7 +59,8 @@ describe('Eksport savdosi + valyuta (#6)', () => {
       products: [{ productId: product.id, unit: 'dona', amount: 10, price: 1000 }],
     });
     expect(res.status).toBe(200);
-    expect(res.body.totalAmount).toBe(10000);
+    // 10 dona × 2.765 kg = 27.65 kg → (27.65/1000) × 1000 = 28
+    expect(res.body.totalAmount).toBe(28);
     expect(res.body.currency).toBe('UZS');
   });
 
@@ -72,7 +74,7 @@ describe('Eksport savdosi + valyuta (#6)', () => {
   it('mijoz debt UZS bazada (eksport savdo qo\'shiladi)', async () => {
     const res = await request(app).get('/api/clients').query({ limit: 200 });
     const c = res.body.data.find(x => x.id === client.id);
-    // 12,000,000 (USD savdo, UZS) + 10,000 (UZS savdo) = 12,010,000
-    expect(c.debt).toBe(12_010_000);
+    // 33180 (USD savdo, UZS bazada) + 28 (UZS savdo) = 33208
+    expect(c.debt).toBe(33208);
   });
 });

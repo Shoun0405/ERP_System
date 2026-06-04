@@ -35,10 +35,10 @@ describe('Sales API', () => {
     });
     expect(res.status).toBe(200);
     expect(res.body.clientId).toBe(client.id);
-    // Server: rowAmount = 10 * 1000 = 10000
-    expect(res.body.totalAmount).toBe(10000);
+    // Narx 1 tonna uchun: 10 dona × 2.765 kg = 27.65 kg → (27.65/1000) × 1000 = 28
+    expect(res.body.totalAmount).toBe(28);
     expect(res.body.products[0].totalPieces).toBe(10);
-    expect(res.body.products[0].rowAmount).toBe(10000);
+    expect(res.body.products[0].rowAmount).toBe(28);
     saleId = res.body.id;
   });
 
@@ -57,9 +57,9 @@ describe('Sales API', () => {
       }],
     });
     expect(res.status).toBe(200);
-    // Server haqiqiy: 5 * 2000 = 10000 (soxta 999999999 emas)
-    expect(res.body.totalAmount).toBe(10000);
-    expect(res.body.products[0].rowAmount).toBe(10000);
+    // Server haqiqiy: 5 dona × 2.765 kg = 13.825 kg → (13.825/1000) × 2000 = 28 (soxta 999999999 emas)
+    expect(res.body.totalAmount).toBe(28);
+    expect(res.body.products[0].rowAmount).toBe(28);
     expect(res.body.products[0].totalPieces).toBe(5);
     await request(app).delete(`/api/sales/${res.body.id}`);
   });
@@ -77,7 +77,8 @@ describe('Sales API', () => {
       ],
     });
     expect(res.status).toBe(200);
-    expect(res.body.totalAmount).toBe(3 * 1000 + 2 * 5000); // 13000
+    // qator1: 3 dona×2.765=8.295kg → round(8.295)=8; qator2: 2×2.765=5.53kg → round(5.53×5)=28
+    expect(res.body.totalAmount).toBe(8 + 28); // 36
     await request(app).delete(`/api/sales/${res.body.id}`);
   });
 
@@ -172,7 +173,7 @@ describe('Sales API', () => {
     });
     expect(editRes.status).toBe(200);
     expect(editRes.body.nakladnoy).toBe('T-EDITED');
-    expect(editRes.body.totalAmount).toBe(40000); // 20 * 2000
+    expect(editRes.body.totalAmount).toBe(111); // 20 dona × 2.765 = 55.3 kg → (55.3/1000) × 2000 = 110.6 → 111
     expect(editRes.body.products.length).toBe(1);
     expect(editRes.body.products[0].packType).toBe(2);
 
