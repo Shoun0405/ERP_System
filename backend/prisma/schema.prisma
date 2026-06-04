@@ -40,6 +40,7 @@ model Client {
 model Product {
   id           String        @id @default(uuid())
   article      String        @unique
+  name         String        @default("Базальтовая вата")
   density      Float
   length       Float
   width        Float

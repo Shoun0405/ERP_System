@@ -17,6 +17,7 @@ const clientSchema = z.object({
 
 const productSchema = z.object({
   article:   z.string().min(1).max(100),
+  name:      z.string().max(200).default('Базальтовая вата'),
   density:   z.coerce.number().positive(),
   length:    z.coerce.number().positive(),
   width:     z.coerce.number().positive(),

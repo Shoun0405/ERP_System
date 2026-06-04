@@ -44,7 +44,8 @@ const calcPrices = (mode, value, product) => {
   return { priceCbm, priceTon, priceSqm };
 };
 
-const EMPTY_FORM = { density: '', length: '', width: '', thickness: '' };
+const DEFAULT_NAME = 'Базальтовая вата';
+const EMPTY_FORM = { name: DEFAULT_NAME, density: '', length: '', width: '', thickness: '' };
 
 export default function Products({ user }) {
   const canCreate = user?.role === 'admin' || user?.permissions?.products?.create !== false;
@@ -102,12 +103,12 @@ export default function Products({ user }) {
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setModal('add'); };
   const openEdit = p => {
-    setForm({ density: String(p.density), length: String(p.length), width: String(p.width), thickness: String(p.thickness) });
+    setForm({ name: p.name ?? DEFAULT_NAME, density: String(p.density), length: String(p.length), width: String(p.width), thickness: String(p.thickness) });
     setEditId(p.id);
     setModal('edit');
   };
   const handleCopy = p => {
-    setForm({ density: String(p.density), length: String(p.length), width: String(p.width), thickness: String(p.thickness) });
+    setForm({ name: p.name ?? DEFAULT_NAME, density: String(p.density), length: String(p.length), width: String(p.width), thickness: String(p.thickness) });
     setEditId(null);
     setModal('add');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -120,6 +121,7 @@ export default function Products({ user }) {
     setSaving(true);
     const payload = {
       article,
+      name:      form.name,
       density:   parseFloat(form.density),
       length:    parseFloat(form.length),
       width:     parseFloat(form.width),
@@ -191,6 +193,12 @@ export default function Products({ user }) {
             <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center justify-between">
               <span className="text-xs text-[var(--text-3)] uppercase tracking-wider">Artikul (auto)</span>
               <span className="text-[var(--text)] font-mono font-bold text-lg">{article || '—'}</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Nomi (yuk xati / print uchun)</label>
+              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inp} placeholder="Базальтовая вата" />
+              <p className="text-[10px] text-[var(--text-3)] mt-1">Print: «{form.name || '—'} {form.density || '…'} кг/м³, {form.length || '…'}x{form.width || '…'}x{form.thickness || '…'} мм»</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -334,7 +342,10 @@ export default function Products({ user }) {
                 </td></tr>
               ) : products.map(p => (
                 <tr key={p.id} className="hover:bg-[var(--surface-2)] border-b border-[var(--border)] transition-colors group">
-                  <td className="px-3 py-2 font-semibold text-[var(--text)] font-mono text-[11px] tracking-tight">{p.article}</td>
+                  <td className="px-3 py-2">
+                    <div className="font-semibold text-[var(--text)] font-mono text-[11px] tracking-tight">{p.article}</div>
+                    <div className="text-[10px] text-[var(--text-3)] truncate max-w-[200px]">{p.name}</div>
+                  </td>
                   <td className="px-3 py-2 text-xs text-[var(--text-2)] font-mono">{p.length}×{p.width}×{p.thickness}</td>
                   <td className="px-3 py-2 text-right text-xs text-[var(--text-2)] font-mono">{p.density} <span className="text-[var(--text-3)]">kg/m³</span></td>
                   <td className="px-3 py-2 text-right font-medium text-[var(--text-2)] font-mono text-[11px]">{fmtD(p.sqmPerPce, 4)}</td>
@@ -375,6 +386,12 @@ export default function Products({ user }) {
               <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center justify-between">
                 <span className="text-xs text-[var(--text-3)] uppercase tracking-wider">Artikul (auto)</span>
                 <span className="text-[var(--text)] font-mono font-bold text-lg">{article || '—'}</span>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-2)] mb-1">Nomi (yuk xati / print uchun)</label>
+                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inp} placeholder="Базальтовая вата" />
+                <p className="text-[10px] text-[var(--text-3)] mt-1">Print: «{form.name || '—'} {form.density || '…'} кг/м³, {form.length || '…'}x{form.width || '…'}x{form.thickness || '…'} мм»</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

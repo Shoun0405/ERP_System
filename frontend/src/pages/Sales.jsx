@@ -35,6 +35,17 @@ const EMPTY_ROW = {
   rowAmount: 0,
 };
 
+// Print "Nomi" uchun: "Базальтовая вата 120 кг/м³, 1200x600x50 мм"
+function prodFullName(prod) {
+  if (!prod) return '';
+  const parts = [prod.name];
+  if (prod.density != null) parts.push(`${prod.density} кг/м³,`);
+  if (prod.length != null && prod.width != null && prod.thickness != null) {
+    parts.push(`${prod.length}x${prod.width}x${prod.thickness} мм`);
+  }
+  return parts.filter(Boolean).join(' ').trim();
+}
+
 // Helper: Calculate converted physical dimensions based on product characteristics
 function calculateRowValues(row, products) {
   const p = products.find(x => x.id === row.productId);
@@ -124,7 +135,7 @@ function PrintableInvoice({ sale, company }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
         <thead>
           <tr>
-            {['№','Mahsulot','Dona','m³','kg','m²','Narx','Summa'].map(h => (
+            {['№','Nomi','Dona','m³','kg','m²','Narx','Summa'].map(h => (
               <th key={h} style={th}>{h}</th>
             ))}
           </tr>
@@ -133,7 +144,7 @@ function PrintableInvoice({ sale, company }) {
           {sale.products?.map((p, i) => (
             <tr key={i}>
               <td style={{ ...td, textAlign: 'center' }}>{i + 1}</td>
-              <td style={td}>{p.product?.article || p.productId?.slice(0, 8)}</td>
+              <td style={{ ...td, fontSize: 13, fontWeight: 600 }}>{prodFullName(p.product) || p.product?.article || p.productId?.slice(0, 8)}</td>
               <td style={{ ...td, textAlign: 'center' }}>{p.totalPieces}</td>
               <td style={{ ...td, textAlign: 'center' }}>{p.totalCbm?.toFixed(4)}</td>
               <td style={{ ...td, textAlign: 'center' }}>{p.totalKg?.toFixed(2)}</td>
@@ -172,8 +183,10 @@ function PrintableInvoices({ sales, company }) {
   );
 }
 
-// ─── ProductRow ──────────────────────────────────────────────────────────────
-function ProductRow({ row, products, onUpdate, onRemove, idx }) {
+// ─── ProductRow (ikki qatorli jadval qatori) ─────────────────────────────────
+// 1-qator: artikul + Birlik/Miqdor/1 t narxi + Jami.
+// 2-qator: rangli o'lchov chiplari (dona/kg/m³/m²) + narx/m³ & narx/m².
+function ProductRow({ row, products, onUpdate, onRemove, idx, isUsd, canRemove }) {
   const handleProductChange = (productId) => {
     const p = products.find(x => x.id === productId);
     if (!p) return;
@@ -193,69 +206,81 @@ function ProductRow({ row, products, onUpdate, onRemove, idx }) {
   };
 
   const handleChange = (field, val) => {
-    const updated = { ...row, [field]: val };
-    const calculated = calculateRowValues(updated, products);
-    onUpdate(idx, calculated);
+    onUpdate(idx, calculateRowValues({ ...row, [field]: val }, products));
   };
 
-  const s = 'w-full px-2.5 py-1.5 border border-[var(--border)] rounded text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]';
+  const s = 'w-full px-2 py-1.5 border border-[var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]';
   const p = products.find(x => x.id === row.productId);
+  const cur = isUsd ? 'USD' : "so'm";
 
-  // Narx ekvivalentlari (kiritish valyutasida): summa har bir birlik miqdoriga bo'linadi
-  const perKg  = row.totalKg  > 0 ? row.rowAmount / row.totalKg  : 0;
+  // 1 dona / 1 kg narxi ko'rsatilmaydi (narx 1 tonna uchun berilgan). Faqat m³/m².
   const perSqm = row.totalSqm > 0 ? row.rowAmount / row.totalSqm : 0;
   const perCbm = row.totalCbm > 0 ? row.rowAmount / row.totalCbm : 0;
 
   return (
-    <tr className="border-b border-[var(--border)] hover:bg-[var(--surface-2)]/50">
-      <td className="p-2 text-center text-sm text-[var(--text-3)] font-medium">{idx + 1}</td>
-      <td className="p-2">
-        <select data-testid="row-product" value={row.productId} onChange={e => handleProductChange(e.target.value)} className={s}>
-          <option value="">— Tanlang —</option>
-          {products.map(p => <option key={p.id} value={p.id}>{p.article}</option>)}
-        </select>
-      </td>
-      <td className="p-2 w-28">
-        <select value={row.unit} onChange={e => handleChange('unit', e.target.value)} className={s}>
-          <option value="dona">dona</option>
-          <option value="kg">kg</option>
-          <option value="kv.m">kv.m</option>
-          <option value="kub.m">kub.m</option>
-        </select>
-      </td>
-      <td className="p-2 w-24">
-        <input data-testid="row-amount" type="number" min="0" step="any" value={row.amount || ''}
-          onChange={e => handleChange('amount', e.target.value)} className={s} placeholder="Miqdor" />
-      </td>
-      <td className="p-2 w-32">
-        <input type="number" min="0" value={row.price || ''}
-          onChange={e => handleChange('price', e.target.value)} className={s} placeholder="1 tonna narxi" />
-      </td>
-      <td className="p-2 text-xs text-[var(--text-2)]">
-        {p ? (
-          <div className="space-y-1 bg-[var(--surface-2)] p-1.5 rounded border border-[var(--border)]">
-            <div><span className="font-semibold text-[var(--text-2)]">{row.totalPieces}</span> dona</div>
-            <div className="grid grid-cols-3 gap-x-2 text-[10px]">
-              <div className="text-[var(--text-3)]">{row.totalKg.toFixed(1)} kg</div>
-              <div className="text-[var(--text-3)]">{row.totalCbm.toFixed(3)} m³</div>
-              <div className="text-[var(--text-3)]">{row.totalSqm.toFixed(1)} m²</div>
-              <div className="text-[var(--accent)] border-t border-[var(--border)] pt-0.5">{fmt(perKg)}/kg</div>
-              <div className="text-[var(--accent)] border-t border-[var(--border)] pt-0.5">{fmt(perCbm)}/m³</div>
-              <div className="text-[var(--accent)] border-t border-[var(--border)] pt-0.5">{fmt(perSqm)}/m²</div>
+    <>
+      <tr className="border-t border-[var(--border)]">
+        <td className="px-2 py-2 text-center text-xs text-[var(--text-3)] font-medium align-middle">{idx + 1}</td>
+        <td className="px-2 py-2 align-middle">
+          <select data-testid="row-product" value={row.productId} onChange={e => handleProductChange(e.target.value)} className={`${s} font-semibold`}>
+            <option value="">— Mahsulot tanlang —</option>
+            {products.map(pr => <option key={pr.id} value={pr.id}>{pr.article}</option>)}
+          </select>
+        </td>
+        <td className="px-2 py-2 w-24 align-middle">
+          <select value={row.unit} onChange={e => handleChange('unit', e.target.value)} className={s}>
+            <option value="dona">dona</option>
+            <option value="kg">kg</option>
+            <option value="kv.m">kv.m</option>
+            <option value="kub.m">kub.m</option>
+          </select>
+        </td>
+        <td className="px-2 py-2 w-20 align-middle">
+          <input data-testid="row-amount" type="number" min="0" step="any" value={row.amount || ''}
+            onChange={e => handleChange('amount', e.target.value)} className={s} placeholder="Miqdor" />
+        </td>
+        <td className="px-2 py-2 w-32 align-middle">
+          <input type="number" min="0" value={row.price || ''}
+            onChange={e => handleChange('price', e.target.value)} className={s} placeholder="1 tonna narxi" />
+        </td>
+        <td className="px-3 py-2 w-32 text-right align-middle">
+          <span className="text-sm font-bold text-[var(--text)] whitespace-nowrap">
+            {fmt(row.rowAmount)} <span className="text-[10px] font-normal text-[var(--text-3)]">{cur}</span>
+          </span>
+        </td>
+        <td className="px-1 py-2 w-8 align-middle">
+          {canRemove && (
+            <button type="button" onClick={() => onRemove(idx)}
+              className="p-1 text-[var(--text-3)] hover:text-red-500 transition"><X size={15} /></button>
+          )}
+        </td>
+      </tr>
+      {p && (
+        <tr>
+          <td></td>
+          <td colSpan={6} className="px-2 pb-3 pt-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold bg-[var(--accent-bg)] text-[var(--accent)]">
+                <Hash size={11} /> {row.totalPieces} dona
+              </span>
+              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400">{fmt(row.totalKg)} kg</span>
+              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">{Number(row.totalCbm || 0).toFixed(2)} m³</span>
+              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400">{fmt(row.totalSqm)} m²</span>
+              <span className="ml-auto flex items-center gap-2">
+                <span className="inline-flex items-baseline gap-1.5 rounded-md px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)]">
+                  <span className="text-[11px] text-[var(--text-3)]">narx/m³</span>
+                  <b className="text-sm text-emerald-600 dark:text-emerald-400">{fmt(perCbm)}</b>
+                </span>
+                <span className="inline-flex items-baseline gap-1.5 rounded-md px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)]">
+                  <span className="text-[11px] text-[var(--text-3)]">narx/m²</span>
+                  <b className="text-sm text-blue-600 dark:text-blue-400">{fmt(perSqm)}</b>
+                </span>
+              </span>
             </div>
-          </div>
-        ) : (
-          <span className="text-[var(--text-3)]">—</span>
-        )}
-      </td>
-      <td className="p-2 w-36 text-right">
-        <span className="text-sm font-semibold text-[var(--text)] pr-2">{fmt(row.rowAmount)}</span>
-      </td>
-      <td className="p-2 w-10">
-        <button type="button" onClick={() => onRemove(idx)}
-          className="p-1 text-[var(--text-3)] hover:text-red-500 transition"><X size={15} /></button>
-      </td>
-    </tr>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -356,6 +381,14 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
   }, [editing, editSale, initialValues, products]);
 
   const totalAmount = form.rows.reduce((s, r) => s + (parseFloat(r.rowAmount) || 0), 0);
+
+  // Pastki yig'indi: jami dona/kg/m³/m² (4-5 mahsulot uchun yuk og'irligi/hajmi)
+  const totals = form.rows.reduce((a, r) => ({
+    pieces: a.pieces + (Number(r.totalPieces) || 0),
+    kg:     a.kg     + (Number(r.totalKg)     || 0),
+    cbm:    a.cbm    + (Number(r.totalCbm)    || 0),
+    sqm:    a.sqm    + (Number(r.totalSqm)    || 0),
+  }), { pieces: 0, kg: 0, cbm: 0, sqm: 0 });
 
   // Shartnoma valyutasiga qarab USD rejimi (narxlar USD da kiritiladi, kurs majburiy)
   const selectedContract = contracts.find(c => c.id === form.contractId);
@@ -568,65 +601,75 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         )}
       </div>
 
-      {/* Products table */}
+      {/* Products table (ikki qatorli) */}
       <div>
         <div className="flex justify-between items-center mb-2">
           <p className="text-sm font-semibold text-[var(--text-2)] flex items-center gap-2">
-            <Package size={14} className="text-[var(--accent)]" /> Mahsulotlar
+            <Package size={14} className="text-[var(--accent)]" /> Mahsulotlar <span className="text-[var(--text-3)] font-normal">({form.rows.length})</span>
           </p>
           <button type="button" onClick={addRow}
             className="text-xs text-[var(--accent)] hover:opacity-80 font-medium flex items-center gap-1">
             <Plus size={13} /> Qator qo'shish
           </button>
         </div>
-        <div className="border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--surface)]">
+        <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]">
           <table className="w-full">
             <thead className="bg-[var(--surface-2)] border-b border-[var(--border)]">
               <tr>
-                <th className="p-2 w-8 text-center text-xs font-semibold text-[var(--text-3)]">#</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)]">Mahsulot</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-28">Birlik</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-24">Miqdor</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)] w-32">Narx / tonna</th>
-                <th className="p-2 text-left text-xs font-semibold text-[var(--text-3)]">Konvertatsiya (hajm + narx ekvivalenti)</th>
-                <th className="p-2 text-right text-xs font-semibold text-[var(--text-3)] w-36">Jami (UZS)</th>
-                <th className="p-2 w-8" />
+                <th className="px-2 py-2 w-8 text-center text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">#</th>
+                <th className="px-2 py-2 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Mahsulot</th>
+                <th className="px-2 py-2 w-24 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Birlik</th>
+                <th className="px-2 py-2 w-20 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Miqdor</th>
+                <th className="px-2 py-2 w-32 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">1 t narxi</th>
+                <th className="px-3 py-2 w-32 text-right text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Jami</th>
+                <th className="px-1 py-2 w-8" />
               </tr>
             </thead>
             <tbody>
               {form.rows.map((row, idx) => (
                 <ProductRow key={idx} idx={idx} row={row} products={products}
-                  onUpdate={updateRow} onRemove={removeRow} />
+                  onUpdate={updateRow} onRemove={removeRow}
+                  isUsd={isUsd} canRemove={form.rows.length > 1} />
               ))}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-1">
-        <div className="rounded-lg px-5 py-3" style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
-          <p className="text-xs opacity-80 mb-0.5">Jami summa</p>
+      {/* Pastki yig'indi: jami dona/kg/m³/m² + summa */}
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-[var(--text-2)]">Jami:</span>
+          <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-bold bg-[var(--accent-bg)] text-[var(--accent)]"><Hash size={12} /> {fmt(totals.pieces)} dona</span>
+          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">{fmt(totals.kg)} kg</span>
+          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">{totals.cbm.toFixed(2)} m³</span>
+          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">{fmt(totals.sqm)} m²</span>
+        </div>
+        <div className="rounded-lg px-5 py-2 text-right" style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
+          <p className="text-[11px] opacity-80 leading-none mb-0.5">Jami summa</p>
           {isUsd ? (
             <>
-              <p className="text-xl font-bold">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">USD</span></p>
+              <p className="text-lg font-bold leading-none">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">USD</span></p>
               {Number(form.exchangeRate) > 0 && (
-                <p className="text-xs font-normal opacity-80 mt-0.5">≈ {fmt(totalAmount * Number(form.exchangeRate))} UZS</p>
+                <p className="text-[11px] font-normal opacity-80 mt-0.5">≈ {fmt(totalAmount * Number(form.exchangeRate))} UZS</p>
               )}
             </>
           ) : (
-            <p className="text-xl font-bold">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">UZS</span></p>
+            <p className="text-lg font-bold leading-none">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">UZS</span></p>
           )}
         </div>
-        <div className="flex gap-2">
-          <button onClick={onCancel} className="px-4 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
-            Bekor (Esc)
-          </button>
-          <button onClick={save} disabled={saving}
-            className="px-6 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md flex items-center gap-2">
-            {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {editing ? "Yangilash" : "Yuk xatini saqlash"}
-          </button>
-        </div>
+      </div>
+
+      {/* Tugmalar */}
+      <div className="flex justify-end gap-2">
+        <button onClick={onCancel} className="px-4 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
+          Bekor (Esc)
+        </button>
+        <button onClick={save} disabled={saving}
+          className="px-6 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md flex items-center gap-2">
+          {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+          {editing ? "Yangilash" : "Yuk xatini saqlash"}
+        </button>
       </div>
     </div>
   );
