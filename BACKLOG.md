@@ -80,6 +80,33 @@
 
 ### Savdo (Sales)
 
+- ✅ **#3s — USD (eksport) savdosi print/detalda valyuta to'g'ri ko'rsatiladi** 🆕 _(2026-06-05)_
+  Avval `PrintableInvoice` (yuk xati) va detal modal summalarni qattiq "UZS" deб yozardi —
+  USD savdo bo'lsa ham. Endi USD savdoda summalar **USD da asosiy** + ostida **"≈ ... UZS (kurs N)"**
+  ekvivalenti (foydalanuvchi qarori). Modul helperlari `curOf(sale)` + `dispAmount(sale, uzs)`
+  (rowAmount/totalAmount UZS bazadan kursga bo'ladi) — print va detal ikkalasida ishlatiladi
+  (yagona manba). UZS savdolar o'zgarmaydi. **Lint 0 error, build OK.**
+
+- ✅ **#2s — USD savdoni tahrir/nusxalashda kurs ikki marta qo'llanishi tuzatildi** 🐛 _(2026-06-05)_
+  USD savdoda `rowAmount` UZS bazada saqlanadi. Tahrir/nusxa narxni `rowAmount×1000/totalKg`
+  dan tiklardi → bu UZS/tonna; forma uni USD deb bilib, saqlashda server **yana ×kurs** qilardi
+  → summa **kurs barobar** (masalan 12500×) shishardi. Yangi `saleProductToRow(p, rate)` helperi
+  USD savdoda narxni kursga bo'lib kirish valyutasiga (USD/tonna) qaytaradi; UZS uchun rate=1.
+  Edit va Copy ikkala joy shu helperга ko'chirildi. **Node simulyatsiyada tasdiqlandi:** real USD
+  savdo (12.5M, kurs 12500) — eski kod 156 mlrd (12500×) berardi, yangi kod 12.5M (−126 so'm =
+  0.001% yaxlitlash qoldig'i, migratsiyasiz model bilan bir xil). **Lint 0 error, build OK.**
+
+- ✅ **#1s — Spec'dan savdoga narx 1 tonna uchun o'giriladi** 🐛 _(2026-06-05)_
+  Spetsifikatsiyadan savdo to'ldirilganda narx eski `unitPriceVat` (dona/kg/m²/m³ QQS-li
+  birlik narxi) o'rniga endi to'g'ri **1 tonna narxi**ga o'giriladi — savdo narx modeliga
+  (#9) mos. Frontend `Sales.jsx` `specProductToRow(sp, products)` helperi: spec qatori avval
+  o'lchamlari bo'yicha kg ga konvertatsiya qilinadi, keyin `1 tonna narxi = rowTotal × 1000 / totalKg`.
+  Shunda savdo qator summasi spec kelishilgan summasiga teng (QQS-li, yalpi). Ikki prefill joyi
+  shu helperga ko'chirildi. Mahsulot **spec javobining o'zidan** (`sp.product`) olinadi —
+  `products` propi yuklanish poygasida (Contracts'dan o'tilganda) bo'sh bo'lib narx bo'sh
+  kelmasligi uchun. Migratsiya/backend yo'q. **Frontend lint 0 error, build OK; node simulyatsiyada
+  (products=[] race) narx to'g'ri hisoblanishi tasdiqlandi.**
+
 - ✅ **#9 — Narx modeli: doimo 1 tonna (1000 kg) uchun + konvertatsiya narx ekvivalenti** 🆕🐛 _(2026-06-04)_
   **Qaror:** pul DOIMO og'irlikdan hisoblanadi — `summa = (totalKg / 1000) × narx`. Birlik
   (dona/kg/m²/m³) faqat miqdor kiritish usuli; baribir kg ga konvertatsiya qilinib, ton narxidan
@@ -94,7 +121,7 @@
     (miqdorlar ostida).
   - Testlar: 4 faylda (sales/export-currency/integration/softdelete) summa/qarz assertionlari
     yangi formulaga ko'ra qayta hisoblandi. **Backend 106/106, frontend lint 0 error, build OK.**
-  - *Qamrovga kirmaydi:* spec'dan to'ldirilgan savdo narxi (hozircha eski `unitPriceVat` — keyin ko'riladi).
+  - ~~*Qamrovga kirmaydi:* spec'dan to'ldirilgan savdo narxi (hozircha eski `unitPriceVat`)~~ → **#1s da hal qilindi (2026-06-05)**.
 
 - ✅ **#7 — Yuk xati sanasi shartnoma sanasidан avval bo'lmasin** 🐛 _(2026-06-03)_
   Server: `sales.js` POST/PUT da `assertSaleDateNotBeforeContract` (faqat kun bo'yicha,

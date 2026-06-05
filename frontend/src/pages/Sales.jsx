@@ -107,11 +107,67 @@ function calculateRowValues(row, products) {
   };
 }
 
+// Spec qatorini savdo qatoriga aylantiradi. Spec narxi (`unitPriceVat`) dona/kg/m²/m³
+// uchun va QQS ichida; savdo narxi esa DOIMO 1 tonna uchun. Shuning uchun spec'ning
+// kelishilgan qator summasini (rowTotal, QQS-li) og'irlikka bo'lib 1 tonna narxini
+// chiqaramiz — natijada savdo qator summasi spec summasiga teng bo'ladi (#1).
+function specProductToRow(sp, products) {
+  // Mahsulotni spec javobining o'zidan olamiz (`sp.product`) — `products` propi yuklanish
+  // poygasida bo'sh bo'lishi mumkin (Contracts'dan o'tilganda), shunga tayanmaymiz.
+  const lookup = sp.product ? [sp.product] : products;
+  const weighed = calculateRowValues({
+    ...EMPTY_ROW,
+    productId: sp.productId,
+    unit: sp.unit || 'dona',
+    amount: sp.quantity || 0,
+  }, lookup);
+  const rowTotal = Number(sp.rowTotal) || (Number(sp.quantity) || 0) * (Number(sp.unitPriceVat) || 0);
+  const pricePerTon = weighed.totalKg > 0 ? Math.round((rowTotal * 1000) / weighed.totalKg) : 0;
+  return calculateRowValues({ ...weighed, price: pricePerTon }, lookup);
+}
+
+// Saqlangan SaleProduct (rowAmount DOIMO UZS bazada) dan tahrir/nusxa uchun forma
+// qatorini tiklaydi. USD savdoda narx kirish valyutasiga (USD) qaytariladi — kursga
+// bo'lib; aks holda saqlashda server kursni QAYTA qo'llab summani shishiradi (#2).
+// UZS savdoda rate=1 — o'zgarishsiz.
+function saleProductToRow(p, rate = 1) {
+  const r = Number(rate) || 1;
+  const totalKg = Number(p.totalKg) || 0;
+  const price = totalKg > 0 ? Math.round((Number(p.rowAmount) / r * 1000) / totalKg) : 0;
+  const rowAmount = Math.round((totalKg / 1000) * price); // kirish valyutasida — ko'rsatish uchun
+  return {
+    productId: p.productId,
+    unit: 'dona',
+    amount: p.totalPieces,
+    price,
+    packType: p.packType || 1,
+    totalPieces: p.totalPieces,
+    totalCbm: p.totalCbm,
+    totalKg: p.totalKg,
+    totalSqm: p.totalSqm,
+    priceCbm: Number(p.totalCbm) > 0 ? +(rowAmount / Number(p.totalCbm)).toFixed(2) : 0,
+    rowAmount,
+  };
+}
+
+// Savdo valyutasi belgisi va summani ko'rsatish valyutasiga o'tkazish.
+// rowAmount/totalAmount DOIMO UZS bazada saqlanadi; USD savdoda kursga bo'lib ko'rsatamiz.
+const curOf = (sale) => (sale?.currency === 'USD' ? 'USD' : 'UZS');
+const dispAmount = (sale, uzs) => {
+  const rate = Number(sale?.exchangeRate) || 0;
+  return sale?.currency === 'USD' && rate > 0 ? Number(uzs) / rate : Number(uzs);
+};
+
 // ─── Print template (Single) ────────────────────────────────────────────────
 function PrintableInvoice({ sale, company }) {
   if (!sale) return null;
   const td = { border: '1px solid #999', padding: '4px 8px', fontSize: 11 };
   const th = { ...td, background: '#f5f5f5', fontWeight: 'bold', textAlign: 'center' };
+  // USD savdoda summalar USD da ko'rsatiladi (rowAmount/totalAmount UZS bazada saqlanadi).
+  const isUsd = sale.currency === 'USD';
+  const rate = Number(sale.exchangeRate) || 0;
+  const cur = curOf(sale);
+  const disp = (uzs) => dispAmount(sale, uzs);
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', padding: '15mm', color: '#000' }}>
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
@@ -149,16 +205,22 @@ function PrintableInvoice({ sale, company }) {
               <td style={{ ...td, textAlign: 'center' }}>{p.totalCbm?.toFixed(4)}</td>
               <td style={{ ...td, textAlign: 'center' }}>{p.totalKg?.toFixed(2)}</td>
               <td style={{ ...td, textAlign: 'center' }}>{p.totalSqm?.toFixed(2)}</td>
-              <td style={{ ...td, textAlign: 'right' }}>{fmt(p.rowAmount / (p.totalPieces || 1))}</td>
-              <td style={{ ...td, textAlign: 'right' }}>{fmt(p.rowAmount)}</td>
+              <td style={{ ...td, textAlign: 'right' }}>{fmt(disp(p.rowAmount) / (p.totalPieces || 1))}</td>
+              <td style={{ ...td, textAlign: 'right' }}>{fmt(disp(p.rowAmount))}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
             <td colSpan={7} style={{ ...th, textAlign: 'right' }}>Jami:</td>
-            <td style={{ ...th, textAlign: 'right' }}>{fmt(sale.totalAmount)} UZS</td>
+            <td style={{ ...th, textAlign: 'right' }}>{fmt(disp(sale.totalAmount))} {cur}</td>
           </tr>
+          {isUsd && rate > 0 && (
+            <tr>
+              <td colSpan={7} style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>≈ UZS (kurs {fmt(rate)}):</td>
+              <td style={{ ...td, textAlign: 'right' }}>{fmt(sale.totalAmount)} UZS</td>
+            </tr>
+          )}
         </tfoot>
       </table>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 30, fontSize: 11 }}>
@@ -299,19 +361,9 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         contractId: editSale.contractId || '',
         specId: editSale.specId || '',
         exchangeRate: editSale.exchangeRate || '',
-        rows: editSale.products?.map(p => ({
-          productId: p.productId,
-          unit: 'dona',
-          amount: p.totalPieces,
-          price: p.totalKg > 0 ? Math.round((Number(p.rowAmount) * 1000) / p.totalKg) : 0, // so'm/tonna
-          packType: p.packType || 1,
-          totalPieces: p.totalPieces,
-          totalCbm: p.totalCbm,
-          totalKg: p.totalKg,
-          totalSqm: p.totalSqm,
-          priceCbm: p.priceCbm,
-          rowAmount: p.rowAmount
-        })) || [{ ...EMPTY_ROW }]
+        rows: editSale.products?.map(p =>
+          saleProductToRow(p, editSale.currency === 'USD' ? editSale.exchangeRate : 1)
+        ) || [{ ...EMPTY_ROW }]
       };
     }
     return {
@@ -358,22 +410,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
         } else {
           setForm(f => ({
             ...f,
-            rows: spec.products.map(sp => {
-              const row = {
-                productId: sp.productId,
-                unit: sp.unit || 'dona',
-                amount: sp.quantity || 0,
-                price: sp.unitPriceVat || 0,
-                packType: 1,
-                totalPieces: 0,
-                totalCbm: 0,
-                totalKg: 0,
-                totalSqm: 0,
-                priceCbm: 0,
-                rowAmount: 0
-              };
-              return calculateRowValues(row, products);
-            }),
+            rows: spec.products.map(sp => specProductToRow(sp, products)),
           }));
         }
       })
@@ -431,22 +468,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
     if (!form.specId) return;
     const spec = specs.find(s => s.id === form.specId);
     if (!spec?.products?.length) return;
-    const rows = spec.products.map(sp => {
-      const row = {
-        productId: sp.productId,
-        unit: sp.unit || 'dona',
-        amount: sp.quantity || 0,
-        price: sp.unitPriceVat || 0,
-        packType: 1,
-        totalPieces: 0,
-        totalCbm: 0,
-        totalKg: 0,
-        totalSqm: 0,
-        priceCbm: 0,
-        rowAmount: 0
-      };
-      return calculateRowValues(row, products);
-    });
+    const rows = spec.products.map(sp => specProductToRow(sp, products));
     setForm(f => ({ ...f, rows }));
   }, [form.specId]);
 
@@ -933,19 +955,9 @@ export default function Sales({ user }) {
         clientId: fullSale.clientId,
         contractId: fullSale.contractId || '',
         specId: fullSale.specId || '',
-        rows: fullSale.products?.map(p => ({
-          productId: p.productId,
-          unit: 'dona',
-          amount: p.totalPieces,
-          price: p.totalKg > 0 ? Math.round((Number(p.rowAmount) * 1000) / p.totalKg) : 0, // so'm/tonna
-          packType: p.packType || 1,
-          totalPieces: p.totalPieces,
-          totalCbm: p.totalCbm,
-          totalKg: p.totalKg,
-          totalSqm: p.totalSqm,
-          priceCbm: p.priceCbm,
-          rowAmount: p.rowAmount
-        })) || [{ ...EMPTY_ROW }]
+        rows: fullSale.products?.map(p =>
+          saleProductToRow(p, fullSale.currency === 'USD' ? fullSale.exchangeRate : 1)
+        ) || [{ ...EMPTY_ROW }]
       });
       inlineForm.open();
     } catch {
@@ -1542,7 +1554,7 @@ export default function Sales({ user }) {
                       <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">m³</th>
                       <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">kg</th>
                       <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">m²</th>
-                      <th className="px-4 py-2.5 text-right font-semibold text-[var(--text-3)]">Jami (UZS)</th>
+                      <th className="px-4 py-2.5 text-right font-semibold text-[var(--text-3)]">Jami ({curOf(detail)})</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
@@ -1556,14 +1568,17 @@ export default function Sales({ user }) {
                         <td className="px-4 py-2.5 text-center">{p.totalCbm?.toFixed(4)}</td>
                         <td className="px-4 py-2.5 text-center">{p.totalKg?.toFixed(2)}</td>
                         <td className="px-4 py-2.5 text-center">{p.totalSqm?.toFixed(2)}</td>
-                        <td className="px-4 py-2.5 text-right font-bold text-[var(--text)]">{fmt(p.rowAmount)}</td>
+                        <td className="px-4 py-2.5 text-right font-bold text-[var(--text)]">{fmt(dispAmount(detail, p.rowAmount))}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end">
-                <p className="text-lg font-bold text-[var(--text)]">Jami: {fmt(detail.totalAmount)} UZS</p>
+              <div className="flex flex-col items-end">
+                <p className="text-lg font-bold text-[var(--text)]">Jami: {fmt(dispAmount(detail, detail.totalAmount))} {curOf(detail)}</p>
+                {detail.currency === 'USD' && Number(detail.exchangeRate) > 0 && (
+                  <p className="text-xs text-[var(--text-3)] mt-0.5">≈ {fmt(detail.totalAmount)} UZS (kurs {fmt(detail.exchangeRate)})</p>
+                )}
               </div>
             </div>
           </div>
