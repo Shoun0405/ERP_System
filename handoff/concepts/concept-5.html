@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mijozlar (CRM)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:oklch(0.984 0.003 247); --surface:oklch(1 0 0); --surface-2:oklch(0.968 0.004 247);
+  --text:oklch(0.210 0.040 265); --text-2:oklch(0.450 0.030 257); --text-3:oklch(0.620 0.020 257);
+  --border:oklch(0.890 0.015 256); --border-strong:oklch(0.820 0.018 256);
+  --accent:oklch(0.585 0.222 277); --accent-hover:oklch(0.520 0.230 277);
+  --accent-bg:oklch(0.950 0.030 277); --accent-text:oklch(1 0 0);
+  --sb-bg:oklch(0.210 0.040 265); --sb-surface:oklch(0.260 0.035 265); --sb-hover:oklch(0.300 0.035 265);
+  --sb-active:oklch(0.340 0.050 277); --sb-border:oklch(0.320 0.030 265);
+  --sb-text:oklch(0.970 0.005 247); --sb-text-2:oklch(0.680 0.020 257); --sb-accent:oklch(0.720 0.160 277);
+  --ok:oklch(0.600 0.180 145); --ok-bg:oklch(0.960 0.050 145);
+  --warn:oklch(0.650 0.180 75); --warn-bg:oklch(0.960 0.060 80);
+  --bad:oklch(0.550 0.230 25); --bad-bg:oklch(0.960 0.050 25);
+  --shadow-sm:0 1px 3px 0 oklch(0.21 0.04 265 / 0.06);
+  --shadow-md:0 4px 12px -2px oklch(0.21 0.04 265 / 0.10);
+  --shadow-lg:0 12px 32px -8px oklch(0.21 0.04 265 / 0.18);
+}
+html.dark{
+  --bg:oklch(0.170 0.020 265); --surface:oklch(0.220 0.025 265); --surface-2:oklch(0.265 0.025 265);
+  --text:oklch(0.960 0.005 247); --text-2:oklch(0.720 0.020 257); --text-3:oklch(0.560 0.020 257);
+  --border:oklch(0.340 0.022 265); --border-strong:oklch(0.420 0.025 265);
+  --accent:oklch(0.700 0.180 277); --accent-hover:oklch(0.760 0.170 277);
+  --accent-bg:oklch(0.300 0.060 277); --accent-text:oklch(0.170 0.020 265);
+  --sb-bg:oklch(0.190 0.022 265); --sb-surface:oklch(0.240 0.025 265); --sb-hover:oklch(0.280 0.025 265);
+  --sb-active:oklch(0.320 0.050 277); --sb-border:oklch(0.300 0.020 265);
+  --sb-text:oklch(0.960 0.005 247); --sb-text-2:oklch(0.640 0.020 257); --sb-accent:oklch(0.740 0.160 277);
+  --ok:oklch(0.700 0.180 145); --ok-bg:oklch(0.240 0.090 145);
+  --warn:oklch(0.750 0.160 80); --warn-bg:oklch(0.260 0.090 80);
+  --bad:oklch(0.600 0.200 25); --bad-bg:oklch(0.250 0.090 25);
+  --shadow-sm:0 1px 3px 0 oklch(0 0 0 / 0.30); --shadow-md:0 4px 12px -2px oklch(0 0 0 / 0.40); --shadow-lg:0 12px 32px -8px oklch(0 0 0 / 0.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.tnum{font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,'Geist Mono',Menlo,monospace;font-variant-numeric:tabular-nums}
+
+/* ===== APP SHELL ===== */
+.app{width:1440px;display:flex;min-height:900px;margin:0 auto}
+
+/* ===== SIDEBAR ===== */
+.sb{width:240px;flex:0 0 240px;background:var(--sb-bg);color:var(--sb-text);display:flex;flex-direction:column;border-right:1px solid var(--sb-border)}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:20px 20px 18px}
+.sb-logo{width:30px;height:30px;border-radius:8px;background:var(--sb-active);display:flex;align-items:center;justify-content:center;color:var(--sb-accent)}
+.sb-brand b{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.sb-brand span{display:block;font-size:11px;color:var(--sb-text-2);font-weight:500;margin-top:1px}
+.sb-nav{padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.sb-sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--sb-text-2);padding:14px 10px 6px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:8px;color:var(--sb-text-2);font-size:13.5px;font-weight:500;text-decoration:none;position:relative;cursor:pointer}
+.sb-item svg{width:17px;height:17px;flex:0 0 17px}
+.sb-item:hover{background:var(--sb-hover);color:var(--sb-text)}
+.sb-item.active{background:var(--sb-active);color:var(--sb-text);font-weight:600}
+.sb-item.active::before{content:"";position:absolute;left:-12px;top:6px;bottom:6px;width:3px;border-radius:0 3px 3px 0;background:var(--sb-accent)}
+.sb-foot{margin-top:auto;padding:14px;border-top:1px solid var(--sb-border);display:flex;align-items:center;gap:10px}
+.sb-ava{width:32px;height:32px;border-radius:9px;background:var(--sb-surface);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--sb-accent)}
+.sb-foot b{font-size:13px;font-weight:600;display:block}
+.sb-foot span{font-size:11px;color:var(--sb-text-2)}
+
+/* ===== MAIN ===== */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.hdr{height:60px;flex:0 0 60px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.crumb{font-size:13px;color:var(--text-3);font-weight:500}
+.crumb b{color:var(--text-2);font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.gsearch{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:7px 11px;width:280px;color:var(--text-3)}
+.gsearch svg{width:15px;height:15px}
+.gsearch input{border:0;background:transparent;outline:0;font:inherit;font-size:13px;color:var(--text);width:100%}
+.gsearch kbd{margin-left:auto;font-family:inherit;font-size:10.5px;color:var(--text-3);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+.icobtn{width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.icobtn:hover{background:var(--surface-2);color:var(--text)}
+.icobtn svg{width:17px;height:17px}
+.hdr-ava{width:36px;height:36px;border-radius:9px;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer}
+
+.content{padding:24px;width:1200px}
+
+/* ZONE 1 — title */
+.z1{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.z1 h1{font-size:23px;font-weight:700;letter-spacing:-.02em;margin:0}
+.z1 .sub{font-size:13px;color:var(--text-3);margin-top:4px;font-weight:500}
+.z1 .sub b{color:var(--text-2);font-weight:600}
+.z1-act{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;font-size:13px;font-weight:600;padding:9px 15px;cursor:pointer;border:1px solid transparent;font-family:inherit}
+.btn svg{width:15px;height:15px}
+.btn-2{background:var(--surface);color:var(--text-2);border-color:var(--border)}
+.btn-2:hover{background:var(--surface-2);color:var(--text)}
+.btn-p{background:var(--accent);color:var(--accent-text);box-shadow:var(--shadow-sm)}
+.btn-p:hover{background:var(--accent-hover)}
+
+/* ZONE 2 — pill tabs */
+.z2{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--text-3);padding:8px 14px;border-radius:8px 8px 0 0;cursor:pointer;position:relative;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--text-2);background:var(--surface-2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .cnt{font-size:11px;font-weight:700;background:var(--surface-2);color:var(--text-3);border-radius:20px;padding:1px 7px}
+.tab.active .cnt{background:var(--accent-bg);color:var(--accent)}
+
+/* ZONE 3 — TOOLBAR (the differentiator) */
+.toolbar{background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 0 0;border-bottom:none;padding:13px 14px;display:flex;flex-direction:column;gap:11px}
+.tb-row{display:flex;align-items:center;gap:10px}
+.tb-search{flex:1;display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;max-width:380px}
+.tb-search svg{width:16px;height:16px;color:var(--text-3);flex:0 0 16px}
+.tb-search input{border:0;background:transparent;outline:0;font:inherit;font-size:13.5px;color:var(--text);width:100%}
+.tb-search input::placeholder{color:var(--text-3)}
+.spacer{flex:1}
+/* filter add buttons */
+.filt-add{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 12px;cursor:pointer}
+.filt-add svg{width:14px;height:14px;color:var(--text-3)}
+.filt-add:hover{background:var(--surface-2);border-color:var(--border-strong)}
+/* view toggle segmented */
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:2px}
+.seg button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--text-3);padding:6px 11px;border-radius:7px;cursor:pointer}
+.seg button svg{width:14px;height:14px}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+/* sort dropdown */
+.sort{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 12px;cursor:pointer}
+.sort svg{width:14px;height:14px;color:var(--text-3)}
+.sort b{color:var(--text);font-weight:600}
+.sort:hover{border-color:var(--border-strong)}
+
+/* CHIP ROW — active filters */
+.chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chips-lbl{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:var(--accent-bg);color:var(--accent);border:1px solid color-mix(in oklab,var(--accent) 30%,transparent);border-radius:20px;padding:5px 6px 5px 11px}
+.chip .k{font-weight:500;opacity:.8}
+.chip .x{width:17px;height:17px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent)}
+.chip .x:hover{background:color-mix(in oklab,var(--accent) 22%,transparent)}
+.chip .x svg{width:11px;height:11px}
+.chip.neutral{background:var(--surface-2);color:var(--text-2);border-color:var(--border)}
+.chip.neutral .x{color:var(--text-3)}
+.chip.neutral .x:hover{background:var(--border)}
+.chip-clear{font-size:12px;font-weight:600;color:var(--text-3);cursor:pointer;padding:5px 8px;border-radius:7px}
+.chip-clear:hover{color:var(--bad);background:var(--bad-bg)}
+
+/* ===== TABLE ===== */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:0 0 12px 12px;box-shadow:var(--shadow-sm);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;padding:11px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap}
+thead th.r{text-align:right}
+thead th.sortable{cursor:pointer}
+thead th.sortable .car{display:inline-block;margin-left:4px;color:var(--accent)}
+tbody td{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+
+/* client cell */
+.cli{display:flex;align-items:center;gap:12px}
+.cli-ava{width:38px;height:38px;flex:0 0 38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);background:var(--accent-bg)}
+.cli-ava.c2{color:var(--ok);background:var(--ok-bg)}
+.cli-ava.c3{color:var(--warn);background:var(--warn-bg)}
+.cli-ava.c4{color:var(--bad);background:var(--bad-bg)}
+.cli-name{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-.01em;line-height:1.25}
+.cli-dir{font-size:12px;color:var(--text-3);margin-top:2px}
+.inn{font-size:13px;color:var(--text-2);letter-spacing:.02em}
+.tel{font-size:13px;color:var(--text-2)}
+.seller{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);font-weight:500}
+.seller .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+/* status pill */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{color:var(--ok);background:var(--ok-bg)}
+.pill.ac{color:var(--accent);background:var(--accent-bg)}
+.pill.wa{color:var(--warn);background:var(--warn-bg)}
+.pill.bd{color:var(--bad);background:var(--bad-bg)}
+
+/* debt */
+.debt{font-size:14px;font-weight:600;text-align:right;letter-spacing:.01em}
+.debt.neg{color:var(--bad)}
+.debt.pos{color:var(--ok)}
+.debt.zero{color:var(--text-3);font-weight:500}
+
+/* audit */
+.audit{display:flex;align-items:center;gap:9px}
+.aud-ava{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--text-2)}
+.aud-t b{font-size:12.5px;font-weight:600;color:var(--text-2);display:block;line-height:1.2}
+.aud-t span{font-size:11px;color:var(--text-3)}
+
+/* actions — always visible, low contrast */
+.acts{display:flex;align-items:center;gap:3px;justify-content:flex-end}
+.act{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer;border:1px solid transparent}
+.act svg{width:15px;height:15px}
+.act:hover{background:var(--surface);border-color:var(--border);color:var(--text)}
+.act.del:hover{color:var(--bad);background:var(--bad-bg);border-color:transparent}
+
+/* footer */
+.tfoot{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;font-size:12.5px;color:var(--text-3);margin-top:-1px}
+.pager{display:flex;gap:4px}
+.pg{min-width:30px;height:30px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font:inherit;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.pg:hover{background:var(--surface-2)}
+.pg.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sb">
+    <div class="sb-brand">
+      <div class="sb-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </div>
+      <div><b>ERP System</b><span>Savdo boshqaruvi</span></div>
+    </div>
+    <nav class="sb-nav">
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Boshqaruv paneli
+      </a>
+      <a class="sb-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Mijozlar
+      </a>
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        Mahsulotlar
+      </a>
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13 5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>
+        Savdolar
+      </a>
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Tushumlar
+      </a>
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>
+        Shartnomalar
+      </a>
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+        Hisobotlar
+      </a>
+      <a class="sb-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Sozlamalar
+      </a>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-ava">A</div>
+      <div><b>Admin</b><span>Administrator</span></div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <header class="hdr">
+      <div class="crumb">Boshqaruv paneli / <b>Mijozlar</b></div>
+      <div class="hdr-right">
+        <div class="gsearch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input placeholder="Qidirish...">
+          <kbd>⌘K</kbd>
+        </div>
+        <button class="icobtn" title="Tema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <div class="hdr-ava">A</div>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ZONE 1 -->
+      <div class="z1">
+        <div>
+          <h1>Mijozlar (CRM)</h1>
+          <div class="sub"><b>128</b> ta mijoz · <b>24</b> ta qarzdor</div>
+        </div>
+        <div class="z1-act">
+          <button class="btn btn-2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 3 3 3-3M12 18v-6"/></svg>
+            Excel
+          </button>
+          <button class="btn btn-p">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Yangi Mijoz
+          </button>
+        </div>
+      </div>
+
+      <!-- ZONE 2 — pill tabs -->
+      <div class="z2">
+        <div class="tab active">Barchasi <span class="cnt">128</span></div>
+        <div class="tab">Qarzdorlar <span class="cnt">24</span></div>
+        <div class="tab">Haqdorlar <span class="cnt">9</span></div>
+        <div class="tab">Yangi <span class="cnt">12</span></div>
+      </div>
+
+      <!-- ZONE 3 — TOOLBAR + CHIPS -->
+      <div class="toolbar">
+        <div class="tb-row">
+          <div class="tb-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input placeholder="Mijoz, STIR, telefon, sotuvchi...">
+          </div>
+          <button class="filt-add">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            Filtr qo'shish
+          </button>
+          <div class="spacer"></div>
+          <div class="sort">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4"/></svg>
+            Saralash: <b>Sana</b>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="seg">
+            <button class="on" title="Jadval">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <button title="Kartalar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            </button>
+          </div>
+        </div>
+        <!-- active filter chips -->
+        <div class="chips">
+          <span class="chips-lbl">Faol filtrlar</span>
+          <span class="chip">
+            <span class="k">Holati:</span> Faol
+            <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+          </span>
+          <span class="chip">
+            <span class="k">Sotuvchi:</span> Jasur
+            <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+          </span>
+          <span class="chip neutral">
+            <span class="k">Qarz:</span> &gt; 1 000 000
+            <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+          </span>
+          <span class="chip-clear">Tozalash</span>
+        </div>
+      </div>
+
+      <!-- ZONE 4 — TABLE -->
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:25%">Mijoz / Tashkilot</th>
+              <th>STIR</th>
+              <th>Telefon</th>
+              <th>Sotuvchi</th>
+              <th>Holati</th>
+              <th class="r sortable">Qarzdorlik, UZS <span class="car">▾</span></th>
+              <th>Kim / Qachon</th>
+              <th class="r" style="width:108px">Amallar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 1 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava">OQ</div><div><div class="cli-name">Oqsaroy Qurilish MChJ</div><div class="cli-dir">Karimov A.</div></div></div></td>
+              <td class="inn mono">305 412 889</td>
+              <td class="tel mono">+998 90 123 45 67</td>
+              <td><span class="seller"><span class="dot"></span>Jasur</span></td>
+              <td><span class="pill ok">Faol</span></td>
+              <td><div class="debt neg mono">12 480 000</div></td>
+              <td><div class="audit"><div class="aud-ava">JA</div><div class="aud-t"><b>Jasur</b><span>02.06.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 2 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava c4">BT</div><div><div class="cli-name">Buxoro Teks XK</div><div class="cli-dir">Yusupova M.</div></div></div></td>
+              <td class="inn mono">302 118 540</td>
+              <td class="tel mono">+998 91 234 56 78</td>
+              <td><span class="seller"><span class="dot"></span>Dilnoza</span></td>
+              <td><span class="pill bd">Muddati o'tgan</span></td>
+              <td><div class="debt neg mono">47 200 000</div></td>
+              <td><div class="audit"><div class="aud-ava">DI</div><div class="aud-t"><b>Dilnoza</b><span>28.05.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 3 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava c2">SB</div><div><div class="cli-name">Star Build Group</div><div class="cli-dir">Aliyev S.</div></div></div></td>
+              <td class="inn mono">309 553 217</td>
+              <td class="tel mono">+998 93 345 67 89</td>
+              <td><span class="seller"><span class="dot"></span>Jasur, Aziz</span></td>
+              <td><span class="pill ac">Yangi</span></td>
+              <td><div class="debt zero mono">0</div></td>
+              <td><div class="audit"><div class="aud-ava">AZ</div><div class="aud-t"><b>Aziz</b><span>05.06.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 4 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava c2">TP</div><div><div class="cli-name">Toshkent Profil</div><div class="cli-dir">Rahimov B.</div></div></div></td>
+              <td class="inn mono">301 776 432</td>
+              <td class="tel mono">+998 94 456 78 90</td>
+              <td><span class="seller"><span class="dot"></span>Aziz</span></td>
+              <td><span class="pill ok">Faol</span></td>
+              <td><div class="debt pos mono">+3 150 000</div></td>
+              <td><div class="audit"><div class="aud-ava">AZ</div><div class="aud-t"><b>Aziz</b><span>01.06.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 5 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava c3">SM</div><div><div class="cli-name">Samarqand Mramor</div><div class="cli-dir">Qodirova N.</div></div></div></td>
+              <td class="inn mono">304 990 128</td>
+              <td class="tel mono">+998 97 567 89 01</td>
+              <td><span class="seller"><span class="dot"></span>Dilnoza</span></td>
+              <td><span class="pill wa">Kutilmoqda</span></td>
+              <td><div class="debt neg mono">8 900 000</div></td>
+              <td><div class="audit"><div class="aud-ava">DI</div><div class="aud-t"><b>Dilnoza</b><span>30.05.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 6 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava">AC</div><div><div class="cli-name">Asia Cement Trade</div><div class="cli-dir">Tursunov X.</div></div></div></td>
+              <td class="inn mono">308 221 765</td>
+              <td class="tel mono">+998 99 678 90 12</td>
+              <td><span class="seller"><span class="dot"></span>Jasur</span></td>
+              <td><span class="pill ok">Faol</span></td>
+              <td><div class="debt neg mono">21 050 000</div></td>
+              <td><div class="audit"><div class="aud-ava">JA</div><div class="aud-t"><b>Jasur</b><span>03.06.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 7 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava c2">NB</div><div><div class="cli-name">Navoiy Beton</div><div class="cli-dir">Ergashev D.</div></div></div></td>
+              <td class="inn mono">303 445 990</td>
+              <td class="tel mono">+998 90 789 01 23</td>
+              <td><span class="seller"><span class="dot"></span>Aziz</span></td>
+              <td><span class="pill ok">Faol</span></td>
+              <td><div class="debt zero mono">0</div></td>
+              <td><div class="audit"><div class="aud-ava">AZ</div><div class="aud-t"><b>Aziz</b><span>29.05.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+            <!-- 8 -->
+            <tr>
+              <td><div class="cli"><div class="cli-ava c4">FP</div><div><div class="cli-name">Fergana Plast</div><div class="cli-dir">Saidova G.</div></div></div></td>
+              <td class="inn mono">306 112 348</td>
+              <td class="tel mono">+998 91 890 12 34</td>
+              <td><span class="seller"><span class="dot"></span>Dilnoza</span></td>
+              <td><span class="pill bd">Muddati o'tgan</span></td>
+              <td><div class="debt neg mono">5 670 000</div></td>
+              <td><div class="audit"><div class="aud-ava">DI</div><div class="aud-t"><b>Dilnoza</b><span>27.05.2026</span></div></div></td>
+              <td>
+                <div class="acts">
+                  <span class="act" title="Nusxa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                  <span class="act" title="Tahrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                  <span class="act del" title="O'chir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- footer / pagination -->
+      <div class="tfoot">
+        <div><b style="color:var(--text-2)">1–8</b> / 128 mijoz ko'rsatilmoqda</div>
+        <div class="pager">
+          <button class="pg">‹</button>
+          <button class="pg on">1</button>
+          <button class="pg">2</button>
+          <button class="pg">3</button>
+          <button class="pg">…</button>
+          <button class="pg">16</button>
+          <button class="pg">›</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

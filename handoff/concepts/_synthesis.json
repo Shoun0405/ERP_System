@@ -1,0 +1,204 @@
+{
+  "generatedBy": "workflow erp-uxui-concepts (9 agents)",
+  "understand": {
+    "mustSupport": [
+      "RENDER SLOTLAR (children/render-prop). Shell faqat tashqi karkas — barcha o'zgaruvchan qismlar slot orqali. Minimal: titleSlot, actionSlot (Yangi tugma), submenuSlot, filterSlot, summarySlot, formSlot (inline akkordeon), tableSlot, footerSlot (Pagination), overlaySlot (modal/floating panel).",
+      "O'ZGARUVCHAN USTUN SONI. Har sahifa har xil ustun soni: Payments=7, Products=10 (action ruxsatga bog'liq +1), Sales=13 yoki 15 (currencyTab==='USD' da +2 ustun: Kurs, USD jami), Contracts=13. Shell colSpan ni hardcode qilmasligi kerak — loading/empty satrlar Page'dan kelgan colSpan/columns ni olishi shart. Sales'da tableColSpan = currencyTab==='USD'?15:13 dinamik.",
+      "SUBMENU TAB BO'LIMI ixtiyoriy va har xil semantikaga ega. Sales: faktura statusi (barchasi/yuborildi/yuborilmagan) + o'ng tarafda ml-auto 'Eksport (USD)' tab valyutani almashtiradi (currencyTab). Contracts: qarz holati (barchasi/qarzdorlar/haqdorlar/yangi). Products va Payments'da submenu YO'Q. Shell submenu yo'qligini ham qo'llab-quvvatlashi shart.",
+      "INLINE AKKORDEON FORMA (modal emas) header ostida ochiladi. Payments/Products 'add' va Sales/Contracts 'Yangi' inline akkordeon (animate-in slide-in-from-top-4). Lekin Products 'edit' va Contracts 'edit' MODAL (modal-overlay) — ya'ni add=inline, edit=modal aralash. Shell forma joylashuvini majburlamasligi, balki Page o'zi joylashtira olishi kerak.",
+      "KASKAD SELEKTLAR (Mijoz→Shartnoma→Spetsifikatsiya) filter sloti ichida. Sales'da 3 bosqichli kaskad: filterClient o'zgarsa contractlar yuklanadi (/api/contracts?clientId), filterContract o'zgarsa speclar (/api/specs?contractId); pastki selektlar disabled. Bu butun mantiq filterSlot ichida Page'da qolishi shart — shell faqat konteyner.",
+      "SORTLANADIGAN USTUN SARLAVHALARI (toggleSort + ↑/↓/↕ indikator). Sales va Contracts'da bor (col bo'lsa cursor-pointer + sortBy/sortDir indikatori), Products va Payments'da YO'Q (oddiy th). Bir xil th-render pattern Sales/Contracts'da takrorlanadi — ixtiyoriy sortable-header helper'ga chiqarish mumkin, lekin shell uni majburlamasligi kerak.",
+      "SUMMARY/AGGREGATE BLOKLARI har xil. Sales: 4 ta karta (summa/kub/kg/m²) jadval ustida. Payments: qarzdorlik kartalari (debtSummary, bosilganda filtr) + filter qatorida o'ng tarafda 'Jami' summa. Products: 'Global narx paneli' (priceMode+apply, ruxsatga bog'liq). Contracts: summary yo'q. Shell bu bloklar uchun erkin slot bermog'i kerak.",
+      "PAGINATION VARIANTLARI. Hamma <Pagination page total limit onPage> ishlatadi lekin: Payments/Products/Sales LIMIT=50 va doim render; Contracts LIMIT=20 va faqat total>LIMIT bo'lganda render + o'rab turuvchi border-t div. Shell footer slotiga shartli render'ni Page'ga qoldirishi kerak.",
+      "RUXSAT (permission) GATING bir nechta darajada. Header tugmasi (canCreate), action ustun mavjudligi (Products: canUpdate||canDelete), qator ichidagi tugmalar (canDelete, canHardDelete=superAdmin), Contracts'da ruxsat ContractRow ICHIDA tekshiriladi (page emas). Shell ruxsatga aralashmasligi — barchasi slot kontenti ichida qolishi shart.",
+      "KENGAYTIRILADIGAN QATOR (expandable row). Contracts'dagi ContractRow expand bo'lib spec ro'yxati + inline SpecForm ochadi (alohida tbody/tr emas, <ContractRow> komponenti <tr>+<tr expand> qaytaradi). Sales'da qator EMAS, alohida detail modal. Shell jadval body'sini to'liq Page'ga (map qilingan komponentlar) qoldirishi shart — qator strukturaga aralashmasin.",
+      "FLOATING/OVERLAY ELEMENTLAR. Sales: tanlangandagi floating bulk-actions panel (fixed bottom), hidden print area (printRef), faktura status dropdown (position:fixed escaping). Contracts: spec context menu (specMenuPos fixed). Shell bu fixed/portal elementlarni bloklamasligi (overflow-hidden ichiga qamamaslik) kerak.",
+      "BIR XIL TASHQI KARKAS: barcha 4 sahifa 'p-6 max-w-7xl mx-auto space-y-6 animate-in' bilan o'raladi — bu xavfsiz umumiy konteyner. Jadval karti 'bg-[var(--surface)] rounded-xl border overflow-hidden shadow-sm' + ichki 'overflow-x-auto'. Shu ikki qatlamni shell beradi."
+    ],
+    "perPage": "Header strukturasi 2 xil: Sales — birlashgan 'Header+Filtr Control Center' (bitta rounded-2xl panel ichida h2+Yangi tugma CHAP, qidiruv+3 kaskad selekt+Tozalash O'NG). Products/Payments/Contracts — sodda: flex justify-between, chap tomonda h2+subtitle+Yangi tugma; filtr esa ALOHIDA blokda (Payments: jadval kartining px-5 py-3 header qatorida selekt+qidiruv+o'ngda Jami; Products: jadval header qatorida faqat qidiruv+natija soni; Contracts: alohida bg-[var(--surface-2)] p-4 panelda qidiruv+status selekt). Subtitle har xil: Sales '{total} ta yuk xati', Products '{total} ta mahsulot · Kalkulyator...', Payments '{total} ta to'lov', Contracts 'Jami: {total} ta'. Jadval header (th) varianti: Sales/Contracts sortable (toggleSort+indikator, ikkalasida [{label,col,align}].map pattern bir xil), Products/Payments oddiy statik th. Filtr joylashuvi: Sales header bilan birlashgan; qolganlar jadval karti header qatorida yoki alohida panelda — demak filter slotning JOYI sahifaga qarab header ichida YOKI jadval ustida bo'lishi mumkin, shell uni qattiq belgilamasligi kerak.",
+    "risks": [
+      "KASKAD SELEKT POYGASI (Sales): filterClient→contracts→specs zanjiri va useEffect bog'liqliklari shell refaktoringida uzilib qolishi mumkin. Kaskad state (filterContracts/filterSpecs) va reset mantig'i (yuqori selekt o'zgarsa pastkilarni tozalash) ko'chirilganda sinchiklab saqlanishi shart.",
+      "DINAMIK colSpan/ustun soni: loading skeleton va 'Topilmadi' satrlari hardcode colSpan ishlatadi (Payments=7, Products=10, Sales=tableColSpan 13/15, Contracts=13). Shell bularni umumlashtirsa, currencyTab==='USD' dagi +2 ustun bilan moslik buzilib, jadval siljiydi. colSpan Page'dan kelishi shart.",
+      "SUBMENU semantikasini chalkashtirish: Sales submenu currencyTab+facturaFilter ni BIRGA boshqaradi (USD tab faktura filtrini barchasi'ga qaytaradi), Contracts submenu debtFilter. Generik 'tabs' propi qilinsa, Sales'ning USD↔faktura bog'liqligi va ml-auto joylashuvi yo'qolishi mumkin.",
+      "INLINE vs MODAL forma aralashmasi: add=inline akkordeon, edit=modal. Shell formani bitta belgilangan joyga majburlasa (masalan doim inline), Products/Contracts edit modal oqimi buziladi. Edit Contract hatto window.scrollTo + form.close() bilan bog'liq.",
+      "RUXSAT REGRESSIYASI: Contracts ruxsatni ContractRow ichida, boshqalari Page yuqorisida tekshiradi. Action ustunining MAVJUDLIGI Products'da (canUpdate||canDelete) ga, Sales/Payments'da har doim bor lekin tugmalar ichida gated. Umumlashtirish ruxsat shartini noto'g'ri joyga ko'chirsa, ruxsatsiz foydalanuvchiga tugma ko'rinib qolishi yoki aksincha yashirinib qolishi xavfi.",
+      "FIXED/PORTAL ELEMENTLAR overflow ichida qolib ketishi: jadval karti 'overflow-hidden'; Sales floating bulk panel, faktura status dropdown (position:fixed), Contracts spec context menu (specMenuPos) shell konteyneri ichiga qamalib qolsa kesiladi. Bu elementlar shell konteyneridan TASHQARIDA yoki portal orqali render bo'lishi shart.",
+      "SortBy/sortDir backend bilan sinxron: Sales/Contracts toggleSort serverga sortBy/sortDir yuboradi (params). Shell sortable header'ni umumlashtirsa, col nomlari (date/client/contract/totalValue h.k.) backend kutgan qiymatlar bilan aniq mos kelishi shart — aks holda sort jim ishlamay qoladi.",
+      "Pagination shartli render farqi: Contracts faqat total>LIMIT da va o'rovchi border-t div bilan; boshqalari doim. Shell footer'ni doim ko'rsatsa Contracts'da bo'sh pagination paydo bo'ladi yoki LIMIT=20 vs 50 farqi e'tibordan chetda qolib sahifalash noto'g'ri ishlaydi.",
+      "DateFilter konteksti: Payments/Sales/Contracts useDateFilter() (global sana filtri) ga bog'liq va setPage(1) effektlari bor; Products'da YO'Q. Shell filter slotini standartlashtirayotganda sana filtri integratsiyasi va unga bog'liq page reset effektlari tushib qolmasligi kerak.",
+      "Expandable ContractRow: jadval body'si oddiy <tr> emas, expand+inline SpecForm chiqaruvchi murakkab komponent. Shell 'rows' ni generik render qilmoqchi bo'lsa, bu komponentning <tbody> ichidagi ikki-qatorli (fragment) tuzilishi va spec yuklash/akkordeon holati buzilishi mumkin."
+    ]
+  },
+  "concepts": [
+    {
+      "n": 1,
+      "name": "Tuzatilgan Hozirgi",
+      "rationale": "slate",
+      "keyMoves": [
+        "valyuta header",
+        "qarz qizil",
+        "dark"
+      ]
+    },
+    {
+      "n": 2,
+      "name": "Zich Pro Grid (Linear/Bloomberg)",
+      "rationale": "Klaviatura-birinchi quvvat foydalanuvchilar (sotuv menejerlari, hisobchilar) uchun kun bo'yi ishlatiladigan ma'lumot terminali: bir ekranda maksimal mijoz qatori, tez skanlash va minimal vizual shovqin. Linear/Bloomberg uslubidagi zich grid yondashuvi kim ko'p qatorni tez taqqoslab, qarz/holatni bir qarashda baholashni xohlasa, o'shanga mos.",
+      "keyMoves": [
+        "Karta/soya o'rniga yupqa chiziqli grid: jadval to'g'ridan-to'g'ri fon ustida, ~36px satr balandligi va sticky header bilan zichlik maksimal",
+        "Status pill o'rniga kichik rangli nuqta + matn (semantik: ok/accent/warn/bad) — vizual og'irlikni kamaytirib skanlashni tezlashtiradi",
+        "Pul ustuni mono tabular-nums, o'ngga tik tekislangan, U+202F probel guruhlash; UZS faqat sarlavhada (qarz=qizil, haqdor=+yashil, 0=kulrang)",
+        "Amal ikonkalari (nusxa/tahrir/o'chir) doim past-kontrastli ko'rinadi, hoverda kuchayadi — audit F-11 talabi",
+        "4-zona qat'iy tartibi: sarlavha+statistika, tabs (sanoq bilan), filtr/sort+zichlik, jadval; pastda real-vaqt summa qatori va paginatsiya",
+        "To'liq var(--...) token tizimi — hech qaerda qotirma rang yo'q, shuning uchun dark mode avtomatik mukammal"
+      ]
+    },
+    {
+      "n": 3,
+      "name": "Yumshoq Karta (Stripe/havodor)",
+      "rationale": "Bu yo'nalish kun bo'yi CRM bilan ishlaydigan, ko'p ma'lumotdan charchamasligi muhim foydalanuvchi uchun: havodor bo'shliq, yumshoq sirtlar va kam accent xotirjam, premium SaaS hissini beradi, skanlash zichligidan ko'ra qulaylikka urg'u beradi.",
+      "keyMoves": [
+        "Segment-control pill tablar va yumshoq 14-16px radiusli kartalar bilan Stripe/Linear-lite estetikasi",
+        "Baland, havodor (~52px) jadval satrlari va saxiy 14px asosiy tipografiya — zichlik o'rniga qulaylik",
+        "Rangli avatar chiplari + neytral palitra, accent faqat birlamchi tugma va faol holatlarda maqsadli ishlatilgan",
+        "Pul ustuni mono shrift + tabular-nums + ingichka probel (U+202F) guruhlash, UZS faqat sarlavhada bir marta",
+        "Amal ikonkalari doim past kontrastda ko'rinadi (audit F-11), faqat hoverda yorqinlashadi"
+      ]
+    },
+    {
+      "n": 4,
+      "name": "Ikki Panel Workspace (master-detail)",
+      "rationale": "Kun bo'yi ishlovchi savdo menejeri uchun: ro'yxat kontekstini yo'qotmasdan tanlangan mijozning to'liq profili (qarzdorlik, rekvizit, shartnomalar) bir ekranda. Master-detail naqsh modal sakrashlarni yo'qotadi, skanlash tezligini oshiradi.",
+      "keyMoves": [
+        "Ikki panelli workspace: chapda ixcham 4-ustunli ro'yxat, o'ngda sticky 380px detal pane — birinchi satr (Oqsaroy) tanlangan, accent chap chiziq + accent-bg fon bilan",
+        "Detal panelda Phase-2 Drawer naqshi ro'yxat darajasiga olib chiqilgan: qarzdorlik kartasi (jami savdo/to'lov metrikalari), rekvizitlar va shartnomalar ro'yxati — tahrir/ko'rish modal sakramaydi",
+        "4-zona to'liq saqlangan: sarlavha+aksiya, tab submenu (count badge bilan), filtr/sort/zichlik qatori, jadval — audit talablariga rioya",
+        "Audit tuzatishlari: header sahifa nomini takrorlamaydi (F-03), UZS faqat ustun sarlavhasida (F-06), amal/aksiya doim ko'rinadi past kontrastda — pane-da Tahrir/Nusxa tugmalari (F-11)",
+        "Semantik status pill'lar (Faol=ok, Yangi=accent, Kutilmoqda=warn, Muddati o'tgan=bad) + qarz=qizil / haqdor=yashil '+' / 0=kulrang summa kodlash",
+        "Faqat var(--...) tokenlar — hech qaerda hex qotirma, shuning uchun html.dark avtomatik mukammal ishlaydi; pul ustunlari U+202F probel + mono shrift bilan tabular-nums"
+      ]
+    },
+    {
+      "n": 5,
+      "name": "Toolbar + Chiplar (Airtable/filtr-pillar)",
+      "rationale": "Operatsion CRM uchun filtr-birinchi yo'nalish: kun bo'yi ro'yxatni kesib-bo'lib ishlaydigan sotuvchi/administrator uchun mo'ljallangan — toolbar va olib-tashlanadigan filtr chiplari ma'lumotni tez va aniq tor doiraga oladi, jadval esa toza va skanlanadigan qoladi.",
+      "keyMoves": [
+        "Kuchli toolbar: keng qidiruv + 'Filtr qo'shish' + aniq 'Saralash: Sana' dropdown + jadval/karta segmented almashtirgich — Airtable uslubidagi boshqaruv qatori",
+        "Faol filtrlar toolbar ostida olib-tashlanadigan chiplar sifatida (Holati: Faol ×, Sotuvchi: Jasur ×, Qarz: >1M ×) + 'Tozalash' — vizual, tushunarli filtr holati",
+        "Tezkor tablar pill+counter ko'rinishida (Barchasi 128 / Qarzdorlar 24 / Haqdorlar 9 / Yangi 12) bilan ajralib turadi",
+        "Tipografik ierarxiya: nom 14px/600 + summa 14px/600 mono, STIR/audit ikkilamchi va kichik; pul U+202F nozik probel bilan, UZS faqat ustun sarlavhasida (F-06)",
+        "Amal ikonkalari doim ko'rinadigan past kontrastli (F-11), o'chirish hoverda qizil; status pillar semantik ranglar (ok/accent/warn/bad) bilan",
+        "Barcha rang faqat var(--...) tokenlari orqali — light/dark avtomatik; header sahifa nomini takrorlamaydi (F-03), faqat breadcrumb"
+      ]
+    },
+    {
+      "n": 6,
+      "name": "Premium Fintech (KPI-strip)",
+      "rationale": "Buxgalteriya/moliyaviy aniqlikni qadrlaydigan ERP foydalanuvchisi uchun: sahifa ochilishi bilanoq mijozlar bazasining moliyaviy salomatligini (jami, qarz, kechikkan, yangi) bir qarashda ko'rsatadigan \"dashboard energiyali\" KPI chizig'i, so'ng tez skanlanadigan jadval.",
+      "keyMoves": [
+        "Sarlavha ostida 4 ta KPI kartochkasi (mini-stat): har birida ikonka, yirik tabular-nums qiymat, rangli trend chipi va chap rangli accent chiziq (accent/bad/ok) — moliyaviy KPI-strip yo'nalishi shu yerda aniq ajralib turadi",
+        "Qarzdorlik ustuni eng kuchli urg'uda: yirikroq, qalin, mono shrift; qarz=qizil, haqdor=yashil '+', 0=kulrang/yengil — buxgalteriya darajasidagi raqam ierarxiyasi",
+        "UZS belgisi faqat ustun sarlavhasida ('Qarzdorlik, UZS') va KPI'larda bir marta; raqamlar U+202F ingichka probel bilan guruhlangan (audit F-06)",
+        "Status — rangli nuqta + matn pill (Faol=ok, Yangi=accent, Kutilmoqda=warn, Muddati o'tgan=bad), semantik ranglar to'liq tokenlardan",
+        "Amal ikonkalari (nusxa/tahrir/o'chir) har satrda doim past kontrastda ko'rinadi, hoverda kuchayadi — F-11 talabi; header sahifa nomini takrorlamaydi (F-03)",
+        "Hammasi var(--...) tokenlarda — light/dark avtomatik; gradient avatarlar ham oklch'da"
+      ]
+    }
+  ],
+  "feasibility": {
+    "perConcept": [
+      {
+        "n": 1,
+        "effort": "Kichik",
+        "risk": "Past",
+        "generalizes": "Ha — bu konsepsiya aslida HOZIRGI holatni saqlab, faqat nuqsonlarni tuzatadi: valyuta header (Sales currencyTab allaqachon bor), qarz=qizil (Clients debt cell allaqachon `text-red-500`/`text-emerald-600` qiladi), dark (index.css `html.dark` + useTheme allaqachon ishlaydi). Hech qanday yangi karkas talab qilinmaydi, shuning uchun 6 sahifaga ham tabiiy ravishda mos keladi.",
+        "notes": "Eng past tavakkalli yo'l — PageShell refaktoringisiz, sahifama-sahifa nuqson tuzatish (slate token, qarz rangi, valyuta header). Funksiyalarning HECH BIRI o'zgarmaydi: qidiruv (useSearchOnEnter), sort (toggleSort Sales/Contracts/Clients), kaskad filtr (Sales filterClient→contract→spec), pagination (LIMIT 50/20 farqi), CRUD inline+modal aralash, ruxsat (canCreate/canUpdate/canDelete + Contracts ContractRow ichidagi gating) — barchasi joyida qoladi. Bu konsepsiyani 'bazaviy higiena' sifatida AVVAL bajarib, qolgan 5 tasini ustiga qurish mantiqan to'g'ri. Yagona ehtiyot: hozir pagelarda tarqalgan hardcode `bg-red-50`/`text-emerald-600`/`bg-zinc-900`/`bg-[oklch(...)]` ranglarini token (--bad/--ok/--surface-2)ga ko'chirish — kichik lekin har sahifada takror."
+      },
+      {
+        "n": 2,
+        "effort": "Katta",
+        "risk": "Yuqori",
+        "generalizes": "Qisman — zich grid (36px satr, sticky header, mono tabular-nums, rangli nuqta status) Clients/Contracts/Payments uchun yaxshi mos, lekin Products (10 ustun, hisoblangan birliklar + 3 narx ustuni) va Sales (13/15 dinamik ustun, kaskad selekt, USD tab, bulk panel) da zichlik o'rniga axborot sig'imi muammosi tug'iladi. Sales'ning 4 summary kartasi va Products global narx paneli 'minimal vizual shovqin' falsafasiga zid.",
+        "notes": "Eng yuqori tavakkal. 36px satr + sticky thead + 'karta/soya o'rniga to'g'ridan-to'g'ri fon ustida grid' BARCHA jadval markup (thead/tbody, mini-card overflow-hidden konteyner)ni qayta yozishni talab qiladi — ya'ni 6 sahifaning eng katta bo'lagi. KASKAD SELEKT POYGASI (Sales filterClient→contracts→specs useEffect zanjiri) va DINAMIK colSpan (tableColSpan 13/15) shu refaktoringda uzilish xavfi eng yuqori shu konsepsiyada. U+202F + mono tabular-nums uchun `lib/format.js` `fmt()` ni o'zgartirish kerak (markaziy, lekin barcha sahifaga ta'sir). Rangli nuqta status — hozir Clients status badge bor, Payments/Sales'da status semantikasi har xil (faktura/qarz), umumlashtirishda chalkashlik. Sticky header + overflow-hidden karta + Sales fixed bulk panel/faktura dropdown (position:fixed) birga ishlashi sinchiklab tekshirilishi shart. Funksiya saqlash: sort/qidiruv/pagination DOM o'zgarsa ham state'da qoladi, lekin sortable th `{label,col,align}.map` pattern qayta yozilganda backend col nomlari (date/client/totalAmount/totalValue) bilan moslik buzilmasligi shart."
+      },
+      {
+        "n": 3,
+        "effort": "O'rta",
+        "risk": "O'rta",
+        "generalizes": "Ha — yumshoq karta, segment-control pill tab, 52px havodor satr, avatar chip barcha 6 sahifaga bir xil qo'llanadi (ustun soni o'zgarmaydi, faqat satr balandligi/radius/tipografiya). Faqat Products (10 ta zich raqamli ustun) 52px satrda gorizontal scroll kuchayadi va 'havodorlik' qisman yo'qoladi.",
+        "notes": "O'rta mehnat: asosan vizual qatlam (radius 14-16px, py satr balandligi 52px, 14px tipografiya, avatar chip, segment-control tab). Jadval STRUKTURASI (colSpan, ustunlar, sortable th, kaskad, pagination) o'zgarmaydi — shuning uchun funksional regressiya tavakkali #2 dan past. Submenu hozir border-b tab — segment-control pill ga o'tkazish Clients/Contracts(debtFilter) va Sales(currencyTab+facturaFilter ml-auto USD coupling) da alohida ishlov talab qiladi: Sales pill'da USD↔faktura bog'liqligini saqlash kerak. Avatar chip yangi element — Clients/Contracts'da mijoz nomi bor (ishlaydi), Payments/Sales'da ham client.name bor, Products'da mijoz YO'Q (avatar o'rniga artikul ikonkasi kerak). F-11 (action icon doim past-kontrast) hozirgi `opacity-0 group-hover` ni teskari qilish — kichik lekin har sahifada. U+202F yana `fmt()` markaziy o'zgarish. Inline(add)+modal(edit) aralashmasi saqlanadi — karta estetikasi forma joylashuviga aralashmaydi."
+      },
+      {
+        "n": 4,
+        "effort": "Katta",
+        "risk": "Yuqori",
+        "generalizes": "Yo'q — ikki panel master-detail tabiatan Mijozlar (o'ng panelda profil: qarz/rekvizit/shartnoma) uchun mo'ljallangan. Mahsulotlar/Tushumlar/Savdolar/Shartnomalarda 'tanlangan qator detali' semantikasi zaif: Sales allaqachon alohida detail modal ishlatadi, Contracts allaqachon expandable row (spec) ishlatadi — ular uchun sticky 380px pane qo'shimcha qiymat bermaydi va mavjud expand/modal oqimi bilan ziddiyatga tushadi.",
+        "notes": "Eng yuqori mehnat+tavakkal, ENG kam umumlashadigan. Ikki panelli layout (chap ro'yxat + o'ng sticky 380px) `p-6 max-w-7xl mx-auto` umumiy konteynerni buzadi — bu 'xavfsiz umumiy karkas' edi. Sales kaskad filtri + USD tab + fixed bulk panel + 13/15 ustun bunday tor chap panelga sig'maydi (ustun soni eng katta muammo). Contracts expandable ContractRow (tr+tr fragment, inline SpecForm, spec context menu position:fixed) o'ng pane bilan ikki marta detail ko'rsatish — qaysi biri? Master-detail tanlangan-qator state, o'ng pane uchun alohida data fetch (mijoz profili), modal sakrashlarni yo'qotish uchun edit/ko'rishni pane ichiga ko'chirish kerak — bu CRUD oqimini qayta loyihalash. Realistik tavsiya: bu konsepsiyani FAQAT Mijozlar sahifasiga qo'llab, qolgan 5 tasi #1/#3 da qolsin (lekin u holda 'yagona vizual til' buziladi). Funksiya saqlash xavfi: pagination o'ng pane ochiqligida qator tanlovini saqlash, kaskad reset, ruxsat gating (pane ichidagi Tahrir/Nusxa) — ko'p nuqtali regressiya."
+      },
+      {
+        "n": 5,
+        "effort": "Katta",
+        "risk": "O'rta",
+        "generalizes": "Qisman — toolbar + olib-tashlanadigan filtr chiplari Sales (kaskad mijoz/shartnoma/spec → chip) va Contracts (status+debtFilter → chip) uchun kuchli mos. Lekin Products'da faqat 1 ta filtr (qidiruv) bor — chip arxitekturasi ortiqcha; Payments'da filtr (mijoz selekt + qidiruv) oz. Tezkor tab+counter (Barchasi 128/Qarzdorlar 24) Clients/Contracts'da bor (debtFilter) lekin HOZIR counter YO'Q — backend har tab uchun count qaytarmaydi, ya'ni yangi API/aggregat kerak.",
+        "notes": "Katta mehnat: 'Filtr qo'shing' generik filter-builder + olib-tashlanadigan chip tizimi YANGI komponent va state modeli (filtrlar massivi). Hozirgi filtrlar alohida state (filterClient, status, debtFilter, dateFrom/to) — ularni yagona chip-array modeliga ko'chirish kaskad poygasi (Sales filterClient→contract→spec reset mantig'i) bilan integratsiyani qiyinlashtiradi: chip o'chirilganda kaskadni to'g'ri tozalash kerak. Tab+counter uchun backend har submenu tab bo'yicha sanoq qaytarishi shart (hozir yo'q) — bu backend ishi, frontend-only emas. jadval/karta segmented almashtirgich — karta view'ni 6 sahifa uchun alohida render qilish = ikki barobar markup. Tavakkal #2/#4 dan past, chunki jadval strukturasi (colSpan, sortable th) saqlanadi; asosiy xavf filtr state migratsiyasida va DateFilterContext (useDateFilter setPage(1) effektlari) ni chip tizimiga to'g'ri ulashda. F-06/F-11/U+202F yana markaziy tuzatishlar."
+      },
+      {
+        "n": 6,
+        "effort": "O'rta",
+        "risk": "O'rta",
+        "generalizes": "Qisman — 4 ta KPI-strip (jami/qarz/kechikkan/yangi) Mijozlar uchun ideal (debt agregati allaqachon hisoblanadi), Tushumlar'da qisman (debtSummary kartalari allaqachon bor — KPI'ga aylantirishga yaqin), Savdolar'da allaqachon 4 summary karta bor (summa/kub/kg/m² — KPI strip pattern moslashadi). Lekin Shartnomalar'da summary YO'Q va KPI uchun ma'no kam; Mahsulotlar'da moliyaviy KPI semantikasi yo'q (narx kalkulyatori bor, qarz yo'q) — KPI-strip bu ikkisida sun'iy bo'ladi.",
+        "notes": "O'rta mehnat: KPI-strip aslida MAVJUD pattern'ning generallashtirilishi — Sales'da 4 karta (summa/kub/kg/m²), Payments'da debtSummary kartalari allaqachon bor. Yangi ish: (1) har sahifa uchun mos 4 metrikani aniqlash, (2) backend dan agregat olish — Clients KPI (jami qarz/kechikkan/yangi son) uchun yangi endpoint yoki dashboard SQL kerak (hozir client list debt'ni JS map qiladi, lekin 'kechikkan' kabi metrika yo'q). Jadval strukturasi (colSpan, sort, kaskad, pagination) butunlay o'zgarmaydi — shuning uchun funksional regressiya tavakkali past; asosiy xavf KPI ma'lumot manbai (frontend agregat vs backend). Qarz ustunini 'eng kuchli urg'u' (yirik mono qalin) qilish — Clients debt cell'da kichik o'zgarish. F-06 (UZS faqat sarlavhada+KPI'da bir marta), U+202F (`fmt()` markaziy), F-11 (action icon doim ko'rinadi) — boshqa konsepsiyalardagi kabi takror tuzatishlar. Shartnomalar/Mahsulotlarda KPI-strip o'rniga sahifa-spetsifik blok (Products global narx paneli) qoldirish kerak — ya'ni 'barcha sahifada bir xil KPI' qat'iy emas."
+      }
+    ]
+  },
+  "pm": {
+    "ranking": [
+      {
+        "n": 1,
+        "name": "Tuzatilgan Hozirgi (slate higiena)",
+        "score": 9,
+        "why": "Eng past tavakkal, eng yuqori izchillik. Token tizimi (--surface/--ok/--bad/--accent, badge-ok/bad/info, .dark + useTheme) index.css'da ALLAQACHON tayyor; yangi karkas YO'Q. Yagona ish — 10 sahifadagi ~105 hardcode rang (Clients SC oklch literallari, text-red-500/text-emerald-600/bg-red-50) ni tokenga ko'chirish. HECH bir funksiya (Sales kaskad, tableColSpan 13/15, sort, pagination, ruxsat gating) tegmaydi. 6 sahifaga tabiiy umumlashadi. Modern SaaS slate+indigo did'iga to'g'ridan-to'g'ri mos (accent allaqachon indigo-500). Yagona kamchilik — o'zicha 'wow' bermaydi, lekin u baza."
+      },
+      {
+        "n": 3,
+        "name": "Yumshoq Karta (Stripe/havodor)",
+        "score": 8,
+        "why": "Modern SaaS did'iga ENG yaqin estetika (yumshoq 14-16px radius, segment-pill tab, 52px havodor satr, premium his). Jadval STRUKTURASI (colSpan, sortable th, kaskad, pagination) o'zgarmaydi — funksional regressiya past. O'rta mehnat, asosan vizual qatlam. Faqat Products (10 zich raqamli ustun) 52px satrda gorizontal scroll'dan biroz aziyat chekadi va avatar chip mahsulotda mijoz yo'qligi sabab artikul ikonkasiga moslanishi kerak. #1 ustiga qurish uchun ideal ikkinchi qadam."
+      },
+      {
+        "n": 6,
+        "name": "Premium Fintech (KPI-strip)",
+        "score": 7,
+        "why": "ERP buxgalteriya kontekstiga semantik jihatdan kuchli mos: Sales'da 4 summary karta, Payments'da debtSummary ALLAQACHON bor — KPI-strip ularning generallashtirilishi. Jadval strukturasi o'zgarmaydi, regressiya past. Asosiy xavf — ma'lumot manbai: Clients 'kechikkan' kabi metrika uchun yangi backend agregat/endpoint kerak (frontend-only emas). Shartnomalar/Mahsulotlarda KPI sun'iy — 'barcha sahifada bir xil KPI' qat'iy bo'lolmaydi, sahifa-spetsifik blok qoldirish kerak. #3 yoki #1 ustiga moliyaviy sahifalar (Clients/Payments/Sales) uchun qo'shimcha qatlam sifatida zo'r."
+      },
+      {
+        "n": 5,
+        "name": "Toolbar + Chiplar (Airtable)",
+        "score": 5,
+        "why": "Filtr-og'ir sahifalar (Sales kaskad, Contracts status+debt) uchun mos, lekin generik filter-builder + olib-tashlanadigan chip-array YANGI komponent va state modeli. Hozirgi alohida state (filterClient/status/debtFilter/dateFrom-to) ni chip-massivga ko'chirish Sales kaskad poygasi (filterClient→contract→spec reset) bilan integratsiyani qiyinlashtiradi: chip o'chirilganda kaskadni to'g'ri tozalash shart. Tab+counter (Barchasi 128/Qarzdorlar 24) HOZIR backend'da yo'q — har tab uchun count qaytaradigan yangi API kerak. Products/Payments'da filtr oz — chip arxitekturasi ortiqcha. Katta mehnat, o'rta-yuqori tavakkal."
+      },
+      {
+        "n": 2,
+        "name": "Zich Pro Grid (Linear/Bloomberg)",
+        "score": 4,
+        "why": "Klaviatura-birinchi quvvat foydalanuvchi uchun jozibali, lekin ENG yuqori tavakkal. 36px satr + sticky thead + karta o'rniga to'g'ridan-to'g'ri fon grid BARCHA jadval markup'ini qayta yozadi — Sales kaskad useEffect zanjiri va dinamik tableColSpan (13/15) shu refaktoringda uzilish xavfi eng katta. Products (10 ustun, 3 narx) va Sales (13/15 ustun, USD tab, fixed bulk panel) 'minimal vizual shovqin'ga zid: zichlik emas, axborot sig'imi muammosi. Sticky header + position:fixed bulk panel/faktura dropdown birgalikda sinchiklab tekshirilishi shart. fmt() markaziy o'zgarishi (U+202F + tabular-nums) barcha sahifaga ta'sir."
+      },
+      {
+        "n": 4,
+        "name": "Ikki Panel Workspace (master-detail)",
+        "score": 3,
+        "why": "Faqat Mijozlar uchun mantiqiy, ENG kam umumlashadi. Sticky 380px o'ng pane p-6 max-w-7xl umumiy konteynerni buzadi — 'xavfsiz umumiy karkas' yo'qoladi. Sales 13/15 ustun + kaskad + fixed bulk panel tor chap panelga sig'maydi. Contracts ALLAQACHON expandable row, Sales ALLAQACHON detail modal ishlatadi — o'ng pane ikki marta detail ko'rsatib mavjud oqim bilan ziddiyatga tushadi. CRUD'ni pane ichiga ko'chirish = oqimni qayta loyihalash, ko'p nuqtali regressiya. 'Yagona vizual til' uchun yaroqsiz; faqat Clients-spetsifik bezak sifatida ko'rib chiqish mumkin."
+      }
+    ],
+    "recommendation": "Top-1: Konsepsiya #1 'Tuzatilgan Hozirgi (slate higiena)' ni BAZA sifatida, ustiga #3 'Yumshoq Karta' ni vizual yo'nalish sifatida bosqichma-bosqich qo'llash. Sabab: tahlil tasdiqladiki, token tizimi (--surface/--ok/--bad/--accent, badge sinflari, .dark+useTheme) index.css'da allaqachon to'liq mavjud — hardcode ranglarni (10 fayl, ~105 joy, Clients'da 21) tokenga ko'chirish 'bazaviy higiena' bo'lib, HECH qanday funksiyani (Sales filterClient→contract→spec kaskadi, tableColSpan 13/15 USD logikasi, sort/pagination/ruxsat gating) buzmaydi. Bu #2/#4/#5 ning jadval-markup yoki filtr-state qayta yozishidan kelib chiqadigan asosiy regressiya xavfini chetlab o'tadi. #3 esa foydalanuvchining 'Modern SaaS slate+indigo' did'iga eng mos premium estetikani beradi va jadval strukturasini saqlagani uchun xavfsiz. Moliyaviy sahifalarda (Clients/Payments/Sales) keyinroq ixtiyoriy ravishda #6 KPI-strip qatlamini qo'shish mumkin — lekin faqat backend agregat tasdiqlangach va faqat ma'no bor sahifalarda. #2 va #4 ni TAVSIYA ETMAYMAN: ikkalasi ham eng katta mehnat, eng yuqori tavakkal, eng kam umumlashadi.",
+    "rollout": [
+      "0-bosqich (BAZA, faqat Mijozlar): Clients.jsx'da hardcode ranglarni tokenga ko'chir — SC status-badge oklch literallarini badge-ok/bad/info/warn sinflariga, qarz cell'dagi text-red-500→var(--bad), text-emerald-600→var(--ok), bg-red-50→var(--bad-bg). Funksiya O'ZGARMAYDI. Faqat shu sahifani #3 yumshoq-karta vizualida (segment-pill tab o'rniga border-b, 52px havodor satr, avatar chip allaqachon bor) tayyorla.",
+      "JONLI KO'RSAT #1: npm run dev → brauzerda Mijozlar sahifasini light + dark'da ko'rsat. Qidiruv (Enter), sort, debtFilter tab, qarz rangi, expand→shartnoma CRUD, pagination — barchasi ishlayotganini foydalanuvchi O'Z KO'ZI bilan ko'radi.",
+      "DARVOZA #1: Foydalanuvchidan ANIQ tasdiq ol — 'Mijozlar sahifasi shu yo'nalishda OK mi? Keyingisiga o'taymi?' TASDIQ BO'LMASA — to'xta, tuzat, qayta ko'rsat. Bulk'ga O'TMA.",
+      "Keyingi sahifa (faqat tasdiqdan keyin): Payments.jsx'ni AYNAN shu naqshda qil (10 ta hardcode rang → token). debtSummary kartalarini saqla. → JONLI KO'RSAT → DARVOZA #2 (tasdiq) → keyin Contracts.jsx (14 hardcode) → ko'rsat → darvoza → Products.jsx (8 hardcode, avatar→artikul ikonkasi, 52px satr scroll'ni tekshir) → ko'rsat → darvoza.",
+      "ENG OXIRIDA Sales.jsx (eng murakkab, 12 hardcode): currencyTab/facturaFilter coupling, filterClient→contract→spec kaskadi, tableColSpan 13/15, fixed bulk panel'ni AVVAL hech narsa buzmasdan vizual ko'chir. Har bir filtr va USD↔faktura bog'liqligini qo'lda sinab ko'r. → JONLI KO'RSAT → yakuniy DARVOZA.",
+      "Ixtiyoriy keyingi raund (alohida tasdiq bilan): backend KPI agregat tayyor bo'lsa, faqat Clients/Payments/Sales'ga #6 KPI-strip qatlamini qo'sh. Shartnomalar/Mahsulotlarga KPI QO'SHMA. Bu ham sahifama-sahifa, darvozali."
+    ],
+    "gates": "Har bir sahifa uchun qat'iy jonli-tasdiq darvozasi: (1) FAQAT bitta sahifani tanlangan yo'nalishda o'zgartir; (2) npm run dev bilan brauzerda light VA dark mode'da KO'RSAT — qidiruv, sort, filtr/tab, kaskad (Sales), qarz rangi, CRUD oqimi, pagination ishlayotganini foydalanuvchi o'z ko'zi bilan ko'rsin; (3) foydalanuvchidan ANIQ 'ha, keyingisiga o't' tasdiqini OL; (4) tasdiq bo'lmaguncha keyingi sahifaga O'TMA va hech qachon bir nechta sahifani birdan o'zgartirma. Avvalgi bekor qilingan bulk PageShell migratsiyasi QAYTA bo'lmasin — bu MEMORY.md 'ui-bulk-migration-rejected' qoidasining bevosita talabi. Tartib: Mijozlar → Tushumlar → Shartnomalar → Mahsulotlar → Savdolar (eng murakkab oxirida), har biri orasida darvoza."
+  }
+}
