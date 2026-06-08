@@ -1,14 +1,35 @@
-export const fmt = (n) => (!n && n !== 0) ? '0' : Math.round(n).toLocaleString('ru-RU');
-export const fmtOrDash = (n) => (!n && n !== 0) ? '—' : Math.round(n).toLocaleString('ru-RU');
-export const fmtDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU') : '—';
+// Locale-aware formatlash. Aktiv BCP-47 tag i18n qatlamidan (i18n/index.js)
+// languageChanged'da beriladi — format.js toza qoladi (i18n import qilmaydi),
+// shu sabab unit-test qilinadi va circular dependency yo'q.
+let currentTag = 'uz-UZ';
+const numCache = new Map();
+const dateCache = new Map();
+const dateTimeCache = new Map();
 
-// Sana + soat (audit "qachon" ustuni uchun)
-export const fmtDateTime = (d) => d
-  ? new Date(d).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  : '—';
+const num = (tag) => {
+  if (!numCache.has(tag)) numCache.set(tag, new Intl.NumberFormat(tag, { maximumFractionDigits: 0 }));
+  return numCache.get(tag);
+};
+const dateF = (tag) => {
+  if (!dateCache.has(tag)) dateCache.set(tag, new Intl.DateTimeFormat(tag));
+  return dateCache.get(tag);
+};
+const dateTimeF = (tag) => {
+  if (!dateTimeCache.has(tag)) dateTimeCache.set(tag, new Intl.DateTimeFormat(tag, {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  }));
+  return dateTimeCache.get(tag);
+};
 
-// Foydalanuvchi id'sidan deterministik rang (audit "kim" ustuni — har userга alohida rang).
-// Faqat UI; DB'ga yozilmaydi. HSL: doim bir xil id → bir xil rang.
+export const setFormatLocale = (tag) => { currentTag = tag || 'uz-UZ'; };
+export const getFormatLocale = () => currentTag;
+
+export const fmt        = (n) => (!n && n !== 0) ? '0' : num(currentTag).format(Math.round(n));
+export const fmtOrDash  = (n) => (!n && n !== 0) ? '—' : num(currentTag).format(Math.round(n));
+export const fmtDate    = (d) => d ? dateF(currentTag).format(new Date(d)) : '—';
+export const fmtDateTime = (d) => d ? dateTimeF(currentTag).format(new Date(d)) : '—';
+
+// Foydalanuvchi id'sidan deterministik rang (audit "kim" ustuni). Faqat UI.
 export const userColor = (id) => {
   if (!id) return 'var(--text-3)';
   let h = 0;
