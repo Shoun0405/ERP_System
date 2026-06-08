@@ -5,7 +5,7 @@
 
 ---
 
-## Joriy holat (oxirgi yangilanish: 2026-06-03)
+## Joriy holat (oxirgi yangilanish: 2026-06-08)
 
 **To'liq audit o'tkazildi (2026-06-02)** — fayl oxiridagi "🔬 DIAGNOSTIK HISOBOT" bo'limiga qarang.
 3 ta CRITICAL, 6 ta HIGH topildi.
@@ -28,7 +28,18 @@ H-1 (stavka Settings'dan). (3) Hisobot H-5 (running-balance SQL window, export i
 eksport + zaif `xlsx` butunlay olib tashlandi (H-6, backend `exceljs` ga ko'chirildi). Backend **81/81 test**.
 *(Bosqich 15 ombor o'tkazib yuborildi. P&L va ombor-qiymat hisobotlari tannarx/ombor modeliga bog'liq — qoldirildi.)*
 
+**Bajarildi (2026-06-08): Ko'p tillilik (i18n) — UZ/RU/ZH.** Butun frontend UI uchta tilga o'tkazildi
+(`react-i18next` + lazy locales + localStorage). TopHeader'da globus dropdown almashtirgich. `lib/format.js`
+locale-aware (Intl, til bo'yicha sana/raqam — zh yil oldinda). 13 sahifa/komponent migratsiya qilindi
+(652 matn), rus ko'pligi (`_one/_few/_many`) qo'llandi. Sales print shabloni o'zbekcha qoldirildi (hujjat).
+Noto Sans SC fonti faqat zh tanlanganda yuklanadi. Tekshiruvlar: parity 734 kalit × 3 til, statik t() kalit
+tekshiruvi, lint 0 xato, build OK, format unit-test 3/3, til almashtirgich E2E o'tdi. Branch:
+`feat/i18n-multilanguage`. Spec/reja: `docs/superpowers/{specs,plans}/2026-06-08-i18n-multilanguage*`.
+ZH tarjima sifatini (atamalar) foydalanuvchi ko'rigidan o'tkazishi tavsiya etiladi. **Eslatma:** yangi npm
+paketlar qo'shildi — dev serverni qayta ishga tushirish kerak (Vite dep re-optimize).
+
 **Keyingi qadam:** Bosqich 15 (ombor + C-2 race-lock) yoki Bosqich 17 (test qamrovi kengaytirish + CI).
+i18n bo'yicha kelajak: hujjat/print shablonlarini (PDF/Word + Sales print bloki) tarjima qilish (alohida bosqich).
 
 **Bosqich 1–13 HAMMASI BAJARILDI. Bosqich 14 (JWT) — C-1/C-3/H-3/M-1/H-4 BAJARILDI (CSRF ixtiyoriy qoldi).**
 
