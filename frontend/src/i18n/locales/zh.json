@@ -2,7 +2,21 @@
   "common": {
     "save": "保存", "saving": "保存中...", "cancel": "取消", "delete": "删除",
     "edit": "编辑", "close": "关闭", "all": "全部", "notFound": "未找到",
-    "loading": "加载中...", "restore": "恢复", "newClient": "新客户", "export": "导出"
+    "loading": "加载中...", "restore": "恢复", "restored": "已恢复",
+    "newClient": "新客户", "export": "导出", "add": "添加",
+    "search": "搜索...", "searchEnter": "搜索 (Enter)...", "clear": "清除",
+    "copy": "复制", "view": "查看", "hardDelete": "彻底删除",
+    "deletedBadge": "已删除", "deleted": "已删除", "updated": "已更新",
+    "hardDeleted": "已彻底删除", "confirm": "确认", "yes": "是",
+    "whoWhen": "操作人 / 时间", "optional": "— 可选", "select": "— 请选择 —",
+    "selectClient": "— 请选择客户 —", "date": "日期", "sum": "金额",
+    "status": "状态", "comment": "备注", "actions": "操作", "apply": "应用",
+    "new": "新", "debtors": "欠款客户", "creditors": "贷方",
+    "cannotUndo": "此操作无法撤销。",
+    "hardDeleteConfirm": "确定彻底删除？此操作无法撤销。",
+    "download": "下载", "print": "打印",
+    "pdf": "PDF", "excel": "Excel", "word": "Word",
+    "saveChanges": "保存更改", "shortcutHint": "Ctrl+Enter — 保存 · Esc — 关闭"
   },
   "nav": {
     "section": "主要模块",
@@ -33,5 +47,8 @@
     "recentSalesSub": "系统最近录入的货运单", "noSales": "暂无销售记录",
     "thDate": "日期", "thWaybill": "货运单 №", "thClient": "客户名称", "thSum": "金额"
   },
-  "units": { "uzs": "UZS", "count": "件" }
+  "units": {
+    "uzs": "UZS", "usd": "USD", "som": "苏姆", "count": "件", "pcs": "件",
+    "kg": "千克", "m2": "平方米", "m3": "立方米", "sqm": "平方米", "cbm": "立方米", "tonna": "吨"
+  }
 }

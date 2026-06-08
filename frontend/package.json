@@ -11,6 +11,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "i18n:check": "node scripts/check-locales.mjs",
+    "i18n:keys": "node scripts/check-keys.mjs",
+    "i18n:merge": "node scripts/merge-locales.mjs",
     "test:format": "node --test src/lib/format.test.js"
   },
   "dependencies": {

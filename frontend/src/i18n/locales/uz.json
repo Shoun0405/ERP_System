@@ -2,7 +2,21 @@
   "common": {
     "save": "Saqlash", "saving": "Saqlanmoqda...", "cancel": "Bekor", "delete": "O'chirish",
     "edit": "Tahrirlash", "close": "Yopish", "all": "Barchasi", "notFound": "Topilmadi",
-    "loading": "Yuklanmoqda...", "restore": "Tiklash", "newClient": "Yangi Mijoz", "export": "Eksport"
+    "loading": "Yuklanmoqda...", "restore": "Tiklash", "restored": "Tiklandi",
+    "newClient": "Yangi Mijoz", "export": "Eksport", "add": "Qo'shish",
+    "search": "Qidirish...", "searchEnter": "Qidirish (Enter)...", "clear": "Tozalash",
+    "copy": "Nusxa olish", "view": "Ko'rish", "hardDelete": "Butunlay o'chirish",
+    "deletedBadge": "O'chirilgan", "deleted": "O'chirildi", "updated": "Yangilandi",
+    "hardDeleted": "Butunlay o'chirildi", "confirm": "Tasdiqlash", "yes": "Ha",
+    "whoWhen": "Kim / Qachon", "optional": "— ixtiyoriy", "select": "— Tanlang —",
+    "selectClient": "— Mijozni tanlang —", "date": "Sana", "sum": "Summa",
+    "status": "Holati", "comment": "Izoh", "actions": "Amallar", "apply": "Qo'llash",
+    "new": "Yangi", "debtors": "Qarzdorlar", "creditors": "Haqdorlar",
+    "cannotUndo": "Bu amalni qaytarib bo'lmaydi.",
+    "hardDeleteConfirm": "Butunlay o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.",
+    "download": "Yuklab olish", "print": "Chop etish",
+    "pdf": "PDF", "excel": "Excel", "word": "Word",
+    "saveChanges": "O'zgarishlarni saqlash", "shortcutHint": "Ctrl+Enter — saqlash · Esc — yopish"
   },
   "nav": {
     "section": "Asosiy Bo'limlar",
@@ -33,5 +47,8 @@
     "recentSalesSub": "Tizimga kiritilgan oxirgi yuk xatlari", "noSales": "Hozircha sotuvlar kiritilmagan",
     "thDate": "Sana", "thWaybill": "Yuk xati №", "thClient": "Mijoz nomi", "thSum": "Summa"
   },
-  "units": { "uzs": "UZS", "count": "ta" }
+  "units": {
+    "uzs": "UZS", "usd": "USD", "som": "so'm", "count": "ta", "pcs": "dona",
+    "kg": "kg", "m2": "m²", "m3": "m³", "sqm": "kv.m", "cbm": "kub.m", "tonna": "tonna"
+  }
 }

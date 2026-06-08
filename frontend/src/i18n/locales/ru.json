@@ -2,7 +2,21 @@
   "common": {
     "save": "Сохранить", "saving": "Сохранение...", "cancel": "Отмена", "delete": "Удалить",
     "edit": "Изменить", "close": "Закрыть", "all": "Все", "notFound": "Не найдено",
-    "loading": "Загрузка...", "restore": "Восстановить", "newClient": "Новый клиент", "export": "Экспорт"
+    "loading": "Загрузка...", "restore": "Восстановить", "restored": "Восстановлено",
+    "newClient": "Новый клиент", "export": "Экспорт", "add": "Добавить",
+    "search": "Поиск...", "searchEnter": "Поиск (Enter)...", "clear": "Очистить",
+    "copy": "Копировать", "view": "Просмотр", "hardDelete": "Удалить полностью",
+    "deletedBadge": "Удалён", "deleted": "Удалено", "updated": "Обновлено",
+    "hardDeleted": "Удалено полностью", "confirm": "Подтвердить", "yes": "Да",
+    "whoWhen": "Кто / Когда", "optional": "— необязательно", "select": "— Выберите —",
+    "selectClient": "— Выберите клиента —", "date": "Дата", "sum": "Сумма",
+    "status": "Статус", "comment": "Комментарий", "actions": "Действия", "apply": "Применить",
+    "new": "Новый", "debtors": "Должники", "creditors": "Кредиторы",
+    "cannotUndo": "Это действие нельзя отменить.",
+    "hardDeleteConfirm": "Удалить полностью? Это действие нельзя отменить.",
+    "download": "Скачать", "print": "Печать",
+    "pdf": "PDF", "excel": "Excel", "word": "Word",
+    "saveChanges": "Сохранить изменения", "shortcutHint": "Ctrl+Enter — сохранить · Esc — закрыть"
   },
   "nav": {
     "section": "Основные разделы",
@@ -33,5 +47,8 @@
     "recentSalesSub": "Последние внесённые накладные", "noSales": "Продажи пока не внесены",
     "thDate": "Дата", "thWaybill": "Накладная №", "thClient": "Клиент", "thSum": "Сумма"
   },
-  "units": { "uzs": "UZS", "count": "шт" }
+  "units": {
+    "uzs": "UZS", "usd": "USD", "som": "сум", "count": "шт", "pcs": "шт",
+    "kg": "кг", "m2": "м²", "m3": "м³", "sqm": "кв.м", "cbm": "куб.м", "tonna": "тонна"
+  }
 }
