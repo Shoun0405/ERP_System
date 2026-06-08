@@ -19,3 +19,9 @@ test('fmtDate — locale bo\'yicha maydon tartibi', () => {
   assert.match(fmtDate(d), /^12/);                    // ru → kun oldinda
   setFormatLocale('uz-UZ');
 });
+
+test('fmtDate — yaroqsiz/bo\'sh sana → tire', () => {
+  assert.equal(fmtDate(null), '—');
+  assert.equal(fmtDate(''), '—');
+  assert.equal(fmtDate('invalid'), '—');              // RangeError bermasligi kerak
+});

@@ -26,8 +26,16 @@ export const getFormatLocale = () => currentTag;
 
 export const fmt        = (n) => (!n && n !== 0) ? '0' : num(currentTag).format(Math.round(n));
 export const fmtOrDash  = (n) => (!n && n !== 0) ? '—' : num(currentTag).format(Math.round(n));
-export const fmtDate    = (d) => d ? dateF(currentTag).format(new Date(d)) : '—';
-export const fmtDateTime = (d) => d ? dateTimeF(currentTag).format(new Date(d)) : '—';
+export const fmtDate = (d) => {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? '—' : dateF(currentTag).format(dt);
+};
+export const fmtDateTime = (d) => {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? '—' : dateTimeF(currentTag).format(dt);
+};
 
 // Foydalanuvchi id'sidan deterministik rang (audit "kim" ustuni). Faqat UI.
 export const userColor = (id) => {

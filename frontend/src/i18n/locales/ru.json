@@ -8,7 +8,7 @@
     "section": "Основные разделы",
     "dashboard": "Главная", "clients": "Клиенты", "products": "Товары",
     "contracts": "Договоры", "sales": "Продажи", "payments": "Поступления",
-    "interactions": "Контакты", "reports": "Отчёты", "settings": "Настройки",
+    "interactions": "Взаимодействия", "reports": "Отчёты", "settings": "Настройки",
     "users": "Пользователи", "audit": "Журнал аудита"
   },
   "titles": {
