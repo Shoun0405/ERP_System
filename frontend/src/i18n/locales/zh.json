@@ -722,7 +722,7 @@
     "specShort": "规格 №{{number}}",
     "facturaIssued": "已开发票",
     "facturaNotIssued": "未开发票",
-    "exportUsd": "出口 (USD)",
+    "exportUsd": "导出 (USD)",
     "cardTotalSum": "合计金额",
     "cardTotalVolume": "合计体积 (立方米)",
     "cardTotalWeight": "合计重量 (千克)",
@@ -846,7 +846,7 @@
       "products": "产品",
       "contracts": "合同",
       "sales": "销售",
-      "payments": "付款",
+      "payments": "收款",
       "interactions": "互动",
       "reports": "报表",
       "settings": "设置"
