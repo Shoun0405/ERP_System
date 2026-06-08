@@ -33,8 +33,8 @@ eksport + zaif `xlsx` butunlay olib tashlandi (H-6, backend `exceljs` ga ko'chir
 locale-aware (Intl, til bo'yicha sana/raqam — zh yil oldinda). 13 sahifa/komponent migratsiya qilindi
 (652 matn), rus ko'pligi (`_one/_few/_many`) qo'llandi. Sales print shabloni o'zbekcha qoldirildi (hujjat).
 Noto Sans SC fonti faqat zh tanlanganda yuklanadi. Tekshiruvlar: parity 734 kalit × 3 til, statik t() kalit
-tekshiruvi, lint 0 xato, build OK, format unit-test 3/3, til almashtirgich E2E o'tdi. Branch:
-`feat/i18n-multilanguage`. Spec/reja: `docs/superpowers/{specs,plans}/2026-06-08-i18n-multilanguage*`.
+tekshiruvi, lint 0 xato, build OK, format unit-test 3/3, til almashtirgich E2E o'tdi. `main`'ga merge
+qilindi (eski branch `feat/i18n-multilanguage` o'chirildi). Spec/reja: `docs/superpowers/{specs,plans}/2026-06-08-i18n-multilanguage*`.
 ZH tarjima sifatini (atamalar) foydalanuvchi ko'rigidan o'tkazishi tavsiya etiladi. **Eslatma:** yangi npm
 paketlar qo'shildi — dev serverni qayta ishga tushirish kerak (Vite dep re-optimize).
 
