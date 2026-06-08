@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import i18n from '../i18n';
 
 // Dev: VITE_API_URL=http://localhost:3001 (.env)
 // Production (Variant A): VITE_API_URL bo'sh → same-origin relative URL
@@ -17,14 +18,14 @@ api.interceptors.response.use(
       if (!window.location.pathname.includes('/login')) {
         // Silent redirect on initial /me check, but toast for other protected endpoints
         if (err.config && !err.config.url.endsWith('/me')) {
-          toast.error('Sessiya muddati tugadi. Iltimos, qayta tizimga kiring.');
+          toast.error(i18n.t('errors.session'));
         }
         window.location.href = '/login';
       }
     } else if (!err.config?.skipErrorToast) {
       // Blob yuklab olishlar xatoni o'zi parse qiladi (lib/download.js) —
       // bu yerda umumiy toast ko'rsatmaymiz (ikki marta chiqmasligi uchun).
-      const msg = err.response?.data?.error || err.message || 'Server xatosi';
+      const msg = err.response?.data?.error || err.message || i18n.t('errors.server');
       toast.error(msg);
     }
     return Promise.reject(err);

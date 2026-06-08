@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Login() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -12,14 +15,14 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      toast.error('Iltimos, barcha maydonlarni to\'ldiring!');
+      toast.error(t('login.fillAll'));
       return;
     }
     setLoading(true);
     try {
       const res = await api.post('/api/auth/login', { username, password });
       if (res.data.success) {
-        toast.success('Xush kelibsiz!');
+        toast.success(t('login.welcome'));
         window.location.href = '/';
       }
     } catch {
@@ -69,6 +72,8 @@ export default function Login() {
           style={{ background: 'linear-gradient(90deg, transparent, var(--accent), transparent)' }}
         />
 
+        <div className="absolute top-4 right-4"><LanguageSwitcher /></div>
+
         {/* Brand */}
         <div className="text-center mb-8">
           <div
@@ -81,10 +86,10 @@ export default function Login() {
             <span className="text-xl font-bold tracking-tighter" style={{ color: 'var(--accent-text)' }}>N</span>
           </div>
           <h2 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
-            NexERP Tizimiga Kirish
+            {t('login.title')}
           </h2>
           <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
-            Davom etish uchun hisob ma&#8217;lumotlaringizni kiriting
+            {t('login.subtitle')}
           </p>
         </div>
 
@@ -92,7 +97,7 @@ export default function Login() {
           {/* Username */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider block" style={{ color: 'var(--text-2)' }}>
-              Foydalanuvchi nomi
+              {t('login.usernameLabel')}
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3" style={{ color: 'var(--text-3)' }}>
@@ -102,7 +107,7 @@ export default function Login() {
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="Masalan: admin"
+                placeholder={t('login.usernamePlaceholder')}
                 className="w-full h-10 pl-10 pr-4 rounded-lg text-xs"
                 style={{
                   background: 'var(--surface-2)',
@@ -118,7 +123,7 @@ export default function Login() {
           {/* Password */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold uppercase tracking-wider block" style={{ color: 'var(--text-2)' }}>
-              Parol
+              {t('login.passwordLabel')}
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3" style={{ color: 'var(--text-3)' }}>
@@ -159,15 +164,15 @@ export default function Login() {
                 style={{ accentColor: 'var(--accent)' }}
                 defaultChecked
               />
-              <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>Eslab qolish</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>{t('login.remember')}</span>
             </label>
             <button
               type="button"
-              onClick={() => toast('Parolni tiklash uchun administrator bilan bog\'laning.', { icon: '🔑' })}
+              onClick={() => toast(t('login.forgotMsg'), { icon: '🔑' })}
               className="text-[11px] cursor-pointer transition hover:underline bg-transparent border-0 p-0"
               style={{ color: 'var(--text-3)' }}
             >
-              Parolni unutdingizmi?
+              {t('login.forgot')}
             </button>
           </div>
 
@@ -188,7 +193,7 @@ export default function Login() {
               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                Tizimga Kirish
+                {t('login.submit')}
                 <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </>
             )}
@@ -201,7 +206,7 @@ export default function Login() {
           style={{ borderTop: '1px solid var(--border)', color: 'var(--text-3)' }}
         >
           <ShieldCheck size={12} className="text-emerald-500" />
-          <span>SSL Himoyalangan &amp; Shifrlangan Aloqa</span>
+          <span>{t('login.ssl')}</span>
         </div>
       </div>
     </div>

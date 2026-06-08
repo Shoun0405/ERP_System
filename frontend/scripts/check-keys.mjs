@@ -39,7 +39,8 @@ for (const fp of files) {
   let m;
   while ((m = re.exec(code))) {
     const key = m[1];
-    if (!key.includes('.')) continue; // namespace'siz literal — kalit emas
+    if (!key.includes('.')) continue;  // namespace'siz literal — kalit emas
+    if (key.endsWith('.')) continue;   // dinamik prefiks: t('ns.x.' + var) — leaf emas
     if (!has(key)) {
       if (!missing.has(key)) missing.set(key, new Set());
       missing.get(key).add(path.relative(root, fp));

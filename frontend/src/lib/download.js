@@ -3,6 +3,7 @@
 // JSON ko'rsatish o'rniga react-hot-toast orqali tushunarli xabar chiqadi.
 import api from './api';
 import toast from 'react-hot-toast';
+import i18n from '../i18n';
 
 async function fetchBlob(url) {
   // skipErrorToast: interceptor umumiy toast chiqarmasin — pastda o'zimiz parse qilamiz
@@ -18,7 +19,7 @@ function filenameFromHeaders(headers, fallback) {
 
 // Blob ichidagi JSON xatoni o'qib, toast ko'rsatadi
 async function showBlobError(err) {
-  let msg = 'Yuklab olishda xato yuz berdi';
+  let msg = i18n.t('errors.downloadFailed');
   try {
     const data = err.response?.data;
     if (data instanceof Blob) {
@@ -33,7 +34,7 @@ async function showBlobError(err) {
 
 // Faylni diskka yuklab olish (Word va h.k.)
 export async function downloadFile(url, fallbackName) {
-  const tid = toast.loading('Tayyorlanmoqda...');
+  const tid = toast.loading(i18n.t('errors.preparing'));
   try {
     const { data, headers } = await fetchBlob(url);
     const name = filenameFromHeaders(headers, fallbackName);
@@ -54,7 +55,7 @@ export async function downloadFile(url, fallbackName) {
 
 // Faylni yangi tabda ochish (PDF ko'rish / chop etish)
 export async function openFile(url) {
-  const tid = toast.loading('Tayyorlanmoqda...');
+  const tid = toast.loading(i18n.t('errors.preparing'));
   try {
     const { data } = await fetchBlob(url);
     const objUrl = URL.createObjectURL(data);

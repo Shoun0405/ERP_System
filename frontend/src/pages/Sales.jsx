@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -249,6 +250,7 @@ function PrintableInvoices({ sales, company }) {
 // 1-qator: artikul + Birlik/Miqdor/1 t narxi + Jami.
 // 2-qator: rangli o'lchov chiplari (dona/kg/m³/m²) + narx/m³ & narx/m².
 function ProductRow({ row, products, onUpdate, onRemove, idx, isUsd, canRemove }) {
+  const { t } = useTranslation();
   const handleProductChange = (productId) => {
     const p = products.find(x => x.id === productId);
     if (!p) return;
@@ -273,7 +275,7 @@ function ProductRow({ row, products, onUpdate, onRemove, idx, isUsd, canRemove }
 
   const s = 'w-full px-2 py-1.5 border border-[var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]';
   const p = products.find(x => x.id === row.productId);
-  const cur = isUsd ? 'USD' : "so'm";
+  const cur = isUsd ? 'USD' : t('units.som');
 
   // 1 dona / 1 kg narxi ko'rsatilmaydi (narx 1 tonna uchun berilgan). Faqat m³/m².
   const perSqm = row.totalSqm > 0 ? row.rowAmount / row.totalSqm : 0;
@@ -285,25 +287,25 @@ function ProductRow({ row, products, onUpdate, onRemove, idx, isUsd, canRemove }
         <td className="px-2 py-2 text-center text-xs text-[var(--text-3)] font-medium align-middle">{idx + 1}</td>
         <td className="px-2 py-2 align-middle">
           <select data-testid="row-product" value={row.productId} onChange={e => handleProductChange(e.target.value)} className={`${s} font-semibold`}>
-            <option value="">— Mahsulot tanlang —</option>
+            <option value="">{t('sales.selectProduct')}</option>
             {products.map(pr => <option key={pr.id} value={pr.id}>{pr.article}</option>)}
           </select>
         </td>
         <td className="px-2 py-2 w-24 align-middle">
           <select value={row.unit} onChange={e => handleChange('unit', e.target.value)} className={s}>
-            <option value="dona">dona</option>
-            <option value="kg">kg</option>
-            <option value="kv.m">kv.m</option>
-            <option value="kub.m">kub.m</option>
+            <option value="dona">{t('units.pcs')}</option>
+            <option value="kg">{t('units.kg')}</option>
+            <option value="kv.m">{t('units.sqm')}</option>
+            <option value="kub.m">{t('units.cbm')}</option>
           </select>
         </td>
         <td className="px-2 py-2 w-20 align-middle">
           <input data-testid="row-amount" type="number" min="0" step="any" value={row.amount || ''}
-            onChange={e => handleChange('amount', e.target.value)} className={s} placeholder="Miqdor" />
+            onChange={e => handleChange('amount', e.target.value)} className={s} placeholder={t('sales.quantity')} />
         </td>
         <td className="px-2 py-2 w-32 align-middle">
           <input type="number" min="0" value={row.price || ''}
-            onChange={e => handleChange('price', e.target.value)} className={s} placeholder="1 tonna narxi" />
+            onChange={e => handleChange('price', e.target.value)} className={s} placeholder={t('sales.priceTonPlaceholder')} />
         </td>
         <td className="px-3 py-2 w-32 text-right align-middle">
           <span className="text-sm font-bold text-[var(--text)] whitespace-nowrap">
@@ -323,18 +325,18 @@ function ProductRow({ row, products, onUpdate, onRemove, idx, isUsd, canRemove }
           <td colSpan={6} className="px-2 pb-3 pt-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold bg-[var(--accent-bg)] text-[var(--accent)]">
-                <Hash size={11} /> {row.totalPieces} dona
+                <Hash size={11} /> {row.totalPieces} {t('units.pcs')}
               </span>
-              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400">{fmt(row.totalKg)} kg</span>
-              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">{Number(row.totalCbm || 0).toFixed(2)} m³</span>
-              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400">{fmt(row.totalSqm)} m²</span>
+              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400">{fmt(row.totalKg)} {t('units.kg')}</span>
+              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">{Number(row.totalCbm || 0).toFixed(2)} {t('units.m3')}</span>
+              <span className="rounded-md px-2 py-1 text-xs font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400">{fmt(row.totalSqm)} {t('units.m2')}</span>
               <span className="ml-auto flex items-center gap-2">
                 <span className="inline-flex items-baseline gap-1.5 rounded-md px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-3)]">narx/m³</span>
+                  <span className="text-[11px] text-[var(--text-3)]">{t('sales.pricePerCbm')}</span>
                   <b className="text-sm text-emerald-600 dark:text-emerald-400">{fmt(perCbm)}</b>
                 </span>
                 <span className="inline-flex items-baseline gap-1.5 rounded-md px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-3)]">narx/m²</span>
+                  <span className="text-[11px] text-[var(--text-3)]">{t('sales.pricePerSqm')}</span>
                   <b className="text-sm text-blue-600 dark:text-blue-400">{fmt(perSqm)}</b>
                 </span>
               </span>
@@ -348,6 +350,7 @@ function ProductRow({ row, products, onUpdate, onRemove, idx, isUsd, canRemove }
 
 // ─── SaleForm (inline accordion) ────────────────────────────────────────────
 function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initialValues = null }) {
+  const { t } = useTranslation();
   const editing = Boolean(editSale);
 
   const [form, setForm] = useState(() => {
@@ -482,18 +485,18 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
   const addRow = () => setForm(f => ({ ...f, rows: [...f.rows, { ...EMPTY_ROW }] }));
 
   const save = async () => {
-    if (!form.clientId)   return toast.error('Mijozni tanlang');
-    if (!form.nakladnoy)  return toast.error('Yuk xati raqamini kiriting');
-    if (!form.sellerName) return toast.error('Sotuvchi ismini kiriting');
+    if (!form.clientId)   return toast.error(t('sales.errClientRequired'));
+    if (!form.nakladnoy)  return toast.error(t('sales.errNakladnoyRequired'));
+    if (!form.sellerName) return toast.error(t('sales.errSellerRequired'));
     if (form.rows.some(r => !r.productId || r.totalPieces <= 0)) {
-      return toast.error('Barcha qatorlarni to\'ldiring');
+      return toast.error(t('sales.errFillRows'));
     }
     const selContract = contracts.find(c => c.id === form.contractId);
     if (selContract && form.date < selContract.date.slice(0, 10)) {
-      return toast.error('Yuk xati sanasi shartnoma sanasidan oldin bo\'lmasligi kerak');
+      return toast.error(t('sales.errDateBeforeContract'));
     }
     if (isUsd && (!form.exchangeRate || Number(form.exchangeRate) <= 0)) {
-      return toast.error('USD shartnoma uchun kursni kiriting');
+      return toast.error(t('sales.errRateRequired'));
     }
     setSaving(true);
     try {
@@ -520,10 +523,10 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       let res;
       if (editing) {
         res = await api.put(`/api/sales/${editSale.id}`, payload);
-        toast.success('Yuk xati yangilandi');
+        toast.success(t('sales.updated'));
       } else {
         res = await api.post('/api/sales', payload);
-        toast.success('Yuk xati saqlandi');
+        toast.success(t('sales.saved'));
       }
       onSaved(res.data);
     } finally { setSaving(false); }
@@ -537,7 +540,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
     <div data-testid="sale-form" className="mini-card rounded-xl p-5 mb-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
-          <FileText size={15} className="text-[var(--accent)]" /> {editing ? "Yuk Xatini Tahrirlash" : "Yangi Yuk Xati"}
+          <FileText size={15} className="text-[var(--accent)]" /> {editing ? t('sales.editTitle') : t('sales.newTitle')}
         </h3>
         <button onClick={onCancel} className="text-[var(--text-3)] hover:text-[var(--text)]"><X size={16} /></button>
       </div>
@@ -545,80 +548,80 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       {/* Basic fields */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><User size={11} className="inline mr-1"/>Mijoz *</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><User size={11} className="inline mr-1"/>{t('sales.clientLabel')}</label>
           <select data-testid="sale-client" value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} className={inp}>
-            <option value="">— Tanlang —</option>
+            <option value="">{t('common.select')}</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Shartnoma</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('sales.contract')}</label>
           <select data-testid="sale-contract" value={form.contractId}
             onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))}
             disabled={!form.clientId} className={inp}>
-            <option value="">— Ixtiyoriy —</option>
+            <option value="">{t('sales.optionalSelect')}</option>
             {contracts.map(c => <option key={c.id} value={c.id}>№{c.number}</option>)}
           </select>
         </div>
 
         <div>
           <label className="text-xs font-medium text-[var(--text-3)] block mb-1 flex items-center gap-1">
-            Spetsifikatsiya
+            {t('sales.specification')}
             {form.contractId && (
-              <span className="text-[var(--text-3)] font-normal">(mahsulotlar to'ldiriladi)</span>
+              <span className="text-[var(--text-3)] font-normal">{t('sales.specFillHint')}</span>
             )}
           </label>
           <select value={form.specId}
             onChange={e => setForm(f => ({ ...f, specId: e.target.value }))}
             disabled={!form.contractId} className={inp}>
-            <option value="">— Ixtiyoriy —</option>
+            <option value="">{t('sales.optionalSelect')}</option>
             {specs.map(s => (
               <option key={s.id} value={s.id}>
-                Spets №{s.number} — {fmt(s.totalValue)} so'm
+                {t('sales.specOption', { number: s.number, value: fmt(s.totalValue) })}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Calendar size={11} className="inline mr-1"/>Sana *</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Calendar size={11} className="inline mr-1"/>{t('sales.dateLabel')}</label>
           <input type="date" value={form.date}
             min={contracts.find(c => c.id === form.contractId)?.date?.slice(0, 10) || undefined}
             onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp} />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Hash size={11} className="inline mr-1"/>Yuk xati № *</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Hash size={11} className="inline mr-1"/>{t('sales.nakladnoyLabel')}</label>
           <input data-testid="sale-nakladnoy" type="text" value={form.nakladnoy} placeholder="НГ-1234"
             onChange={e => setForm(f => ({ ...f, nakladnoy: e.target.value }))} className={inp} />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sotuvchi *</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('sales.sellerLabel')}</label>
           {clientSellers.length > 0 ? (
             <select data-testid="sale-seller" value={form.sellerName} onChange={e => setForm(f => ({ ...f, sellerName: e.target.value }))} className={inp}>
-              <option value="">— Sotuvchini tanlang —</option>
+              <option value="">{t('sales.selectSeller')}</option>
               {clientSellers.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           ) : (
-            <input data-testid="sale-seller" type="text" value={form.sellerName} placeholder="F.I.O."
+            <input data-testid="sale-seller" type="text" value={form.sellerName} placeholder={t('sales.fioPlaceholder')}
               onChange={e => setForm(f => ({ ...f, sellerName: e.target.value }))} className={inp} />
           )}
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Truck size={11} className="inline mr-1"/>Transport</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1"><Truck size={11} className="inline mr-1"/>{t('sales.transport')}</label>
           <input type="text" value={form.transportNum} placeholder="01 A 123 BC"
             onChange={e => setForm(f => ({ ...f, transportNum: e.target.value }))} className={inp} />
         </div>
 
         {isUsd && (
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Kurs (USD→UZS) *</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('sales.rateLabel')}</label>
             <input type="number" min="0" step="any" value={form.exchangeRate} placeholder="12700"
               onChange={e => setForm(f => ({ ...f, exchangeRate: e.target.value }))} className={inp} />
-            <p className="text-[10px] text-[var(--accent)] mt-1">Narxlar USD da kiritiladi</p>
+            <p className="text-[10px] text-[var(--accent)] mt-1">{t('sales.pricesInUsd')}</p>
           </div>
         )}
       </div>
@@ -627,11 +630,11 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       <div>
         <div className="flex justify-between items-center mb-2">
           <p className="text-sm font-semibold text-[var(--text-2)] flex items-center gap-2">
-            <Package size={14} className="text-[var(--accent)]" /> Mahsulotlar <span className="text-[var(--text-3)] font-normal">({form.rows.length})</span>
+            <Package size={14} className="text-[var(--accent)]" /> {t('sales.products')} <span className="text-[var(--text-3)] font-normal">({form.rows.length})</span>
           </p>
           <button type="button" onClick={addRow}
             className="text-xs text-[var(--accent)] hover:opacity-80 font-medium flex items-center gap-1">
-            <Plus size={13} /> Qator qo'shish
+            <Plus size={13} /> {t('sales.addRow')}
           </button>
         </div>
         <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]">
@@ -639,11 +642,11 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
             <thead className="bg-[var(--surface-2)] border-b border-[var(--border)]">
               <tr>
                 <th className="px-2 py-2 w-8 text-center text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">#</th>
-                <th className="px-2 py-2 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Mahsulot</th>
-                <th className="px-2 py-2 w-24 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Birlik</th>
-                <th className="px-2 py-2 w-20 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Miqdor</th>
-                <th className="px-2 py-2 w-32 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">1 t narxi</th>
-                <th className="px-3 py-2 w-32 text-right text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">Jami</th>
+                <th className="px-2 py-2 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">{t('sales.product')}</th>
+                <th className="px-2 py-2 w-24 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">{t('sales.unit')}</th>
+                <th className="px-2 py-2 w-20 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">{t('sales.quantity')}</th>
+                <th className="px-2 py-2 w-32 text-left text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">{t('sales.priceTon')}</th>
+                <th className="px-3 py-2 w-32 text-right text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wide">{t('sales.total')}</th>
                 <th className="px-1 py-2 w-8" />
               </tr>
             </thead>
@@ -661,14 +664,14 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       {/* Pastki yig'indi: jami dona/kg/m³/m² + summa */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-[var(--text-2)]">Jami:</span>
-          <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-bold bg-[var(--accent-bg)] text-[var(--accent)]"><Hash size={12} /> {fmt(totals.pieces)} dona</span>
-          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">{fmt(totals.kg)} kg</span>
-          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">{totals.cbm.toFixed(2)} m³</span>
-          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">{fmt(totals.sqm)} m²</span>
+          <span className="text-xs font-semibold text-[var(--text-2)]">{t('sales.total')}:</span>
+          <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-bold bg-[var(--accent-bg)] text-[var(--accent)]"><Hash size={12} /> {fmt(totals.pieces)} {t('units.pcs')}</span>
+          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">{fmt(totals.kg)} {t('units.kg')}</span>
+          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">{totals.cbm.toFixed(2)} {t('units.m3')}</span>
+          <span className="rounded-md px-2.5 py-1 text-sm font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">{fmt(totals.sqm)} {t('units.m2')}</span>
         </div>
         <div className="rounded-lg px-5 py-2 text-right" style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
-          <p className="text-[11px] opacity-80 leading-none mb-0.5">Jami summa</p>
+          <p className="text-[11px] opacity-80 leading-none mb-0.5">{t('sales.totalSum')}</p>
           {isUsd ? (
             <>
               <p className="text-lg font-bold leading-none">{fmt(totalAmount)} <span className="text-xs font-normal opacity-80">USD</span></p>
@@ -685,12 +688,12 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
       {/* Tugmalar */}
       <div className="flex justify-end gap-2">
         <button onClick={onCancel} className="px-4 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
-          Bekor (Esc)
+          {t('sales.cancelEsc')}
         </button>
         <button onClick={save} disabled={saving}
           className="px-6 py-2 btn-primary disabled:opacity-60 text-sm font-medium rounded-md flex items-center gap-2">
           {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-          {editing ? "Yangilash" : "Yuk xatini saqlash"}
+          {editing ? t('sales.updateBtn') : t('sales.saveBtn')}
         </button>
       </div>
     </div>
@@ -699,6 +702,7 @@ function SaleForm({ onSaved, onCancel, clients, products, editSale = null, initi
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function Sales({ user }) {
+  const { t } = useTranslation();
   const canCreate = user?.role === 'admin' || user?.permissions?.sales?.create !== false;
   const canUpdate = user?.role === 'admin' || user?.permissions?.sales?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.sales?.delete === true;
@@ -757,7 +761,7 @@ export default function Sales({ user }) {
   // Print handle
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: bulkPrintSales.length > 0 ? 'Ommaviy yuk xatlari' : `Yuk xati ${detail?.nakladnoy || ''}`,
+    documentTitle: bulkPrintSales.length > 0 ? t('sales.bulkDocTitle') : t('sales.docTitle', { nakladnoy: detail?.nakladnoy || '' }),
   });
 
   // Trigger bulk printing when state populated
@@ -852,17 +856,17 @@ export default function Sales({ user }) {
       await api.delete(`/api/sales/${delId}`);
       setDelId(null);
       fetchSales();
-      toast.success('Yuk xati o\'chirildi');
+      toast.success(t('sales.deleted'));
     } catch { /* Toast handled by interceptor */ }
   };
 
   const handleRestore = async (rec) => {
-    try { await api.post(`/api/sales/${rec.id}/restore`); toast.success('Tiklandi'); fetchSales(); }
+    try { await api.post(`/api/sales/${rec.id}/restore`); toast.success(t('common.restored')); fetchSales(); }
     catch { /* interceptor toast */ }
   };
   const handleHardDelete = async (rec) => {
-    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
-    try { await api.delete(`/api/sales/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); fetchSales(); }
+    if (!window.confirm(t('common.hardDeleteConfirm'))) return;
+    try { await api.delete(`/api/sales/${rec.id}/hard`); toast.success(t('common.hardDeleted')); fetchSales(); }
     catch { /* interceptor toast */ }
   };
 
@@ -871,7 +875,7 @@ export default function Sales({ user }) {
     try {
       const { data } = await api.put(`/api/sales/${saleId}`, { facturaStatus: newStatus });
       setSales(prev => prev.map(s => s.id === saleId ? { ...s, facturaStatus: data.facturaStatus } : s));
-      toast.success("Faktura holati o'zgartirildi");
+      toast.success(t('sales.facturaChanged'));
     } catch { /* Toast handled by interceptor */ }
     finally {
       setActiveStatusDropdown(null);
@@ -903,7 +907,7 @@ export default function Sales({ user }) {
   const handleBulkDelete = async () => {
     try {
       await api.post('/api/sales/bulk-delete', { ids: selectedSales });
-      toast.success("Yuk xatlari o'chirildi");
+      toast.success(t('sales.bulkDeleted'));
       setSelectedSales([]);
       setBulkDelOpen(false);
       fetchSales();
@@ -913,7 +917,7 @@ export default function Sales({ user }) {
   const handleBulkFactura = async (status) => {
     try {
       await api.post('/api/sales/bulk-factura', { ids: selectedSales, status });
-      toast.success("Faktura holatlari yangilandi");
+      toast.success(t('sales.bulkFacturaUpdated'));
       setSelectedSales([]);
       fetchSales();
     } catch { /* interceptor shows toast */ }
@@ -928,7 +932,7 @@ export default function Sales({ user }) {
       );
       setBulkPrintSales(detailedSales);
     } catch {
-      toast.error("Ommaviy yuk xatlarini chop etish uchun yuklashda xatolik yuz berdi");
+      toast.error(t('sales.bulkPrintError'));
     } finally {
       setLoading(false);
     }
@@ -941,7 +945,7 @@ export default function Sales({ user }) {
       openFile(url);
     } else {
       const ext = type === 'zip' ? 'zip' : 'xlsx';
-      downloadFile(url, `savdolar-hisoboti.${ext}`);
+      downloadFile(url, `${t('sales.reportFileName')}.${ext}`);
     }
   };
 
@@ -961,7 +965,7 @@ export default function Sales({ user }) {
       });
       inlineForm.open();
     } catch {
-      toast.error("Yuk xatini nusxalashda xatolik yuz berdi");
+      toast.error(t('sales.copyError'));
     } finally {
       setLoading(false);
     }
@@ -1008,14 +1012,14 @@ export default function Sales({ user }) {
         {/* Left Side: Title & Action Button */}
         <div className="flex items-center gap-4 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">Savdolar</h2>
-            <p className="text-[11px] font-semibold text-[var(--text-3)]">{total} ta yuk xati</p>
+            <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">{t('sales.pageTitle')}</h2>
+            <p className="text-[11px] font-semibold text-[var(--text-3)]">{t('sales.countLabel', { count: total })}</p>
           </div>
           {canCreate && (
             <button onClick={inlineForm.toggle}
               className="px-3.5 py-2 btn-primary rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]">
               <Plus size={16} strokeWidth={2.2} />
-              {inlineForm.isOpen ? 'Yopish' : 'Yangi Yuk Xati'}
+              {inlineForm.isOpen ? t('common.close') : t('sales.newTitle')}
             </button>
           )}
         </div>
@@ -1026,7 +1030,7 @@ export default function Sales({ user }) {
           {/* Search bar */}
           <div className="relative w-full sm:w-48 shrink-0">
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-            <input type="text" placeholder="Qidirish (Enter)..." {...searchInput}
+            <input type="text" placeholder={t('common.searchEnter')} {...searchInput}
               className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]" />
           </div>
 
@@ -1034,21 +1038,21 @@ export default function Sales({ user }) {
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
               className="px-2.5 py-1.5 border border-[var(--border)] rounded-xl text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text-2)] max-w-[130px] font-semibold cursor-pointer">
-              <option value="">Mijozlar</option>
+              <option value="">{t('sales.filterClients')}</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
 
             <select value={filterContract} onChange={e => setFilterContract(e.target.value)} disabled={!filterClient}
               className="px-2.5 py-1.5 border border-[var(--border)] rounded-xl text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text-2)] disabled:opacity-50 max-w-[130px] font-semibold cursor-pointer">
-              <option value="">Shartnomalar</option>
+              <option value="">{t('sales.filterContracts')}</option>
               {filterContracts.map(c => <option key={c.id} value={c.id}>№{c.number}</option>)}
             </select>
 
             <select value={filterSpec} onChange={e => setFilterSpec(e.target.value)} disabled={!filterContract}
               className="px-2.5 py-1.5 border border-[var(--border)] rounded-xl text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text-2)] disabled:opacity-50 max-w-[130px] font-semibold cursor-pointer">
-              <option value="">Spetsifikatsiyalar</option>
+              <option value="">{t('sales.filterSpecs')}</option>
               {filterSpecs.map(s => (
-                <option key={s.id} value={s.id}>Spets №{s.number}</option>
+                <option key={s.id} value={s.id}>{t('sales.specShort', { number: s.number })}</option>
               ))}
             </select>
           </div>
@@ -1056,7 +1060,7 @@ export default function Sales({ user }) {
           {/* Clear button */}
           {hasFilter && (
             <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-0.5 transition shrink-0 cursor-pointer">
-              <X size={13} /> Tozalash
+              <X size={13} /> {t('common.clear')}
             </button>
           )}
         </div>
@@ -1065,20 +1069,20 @@ export default function Sales({ user }) {
       {/* Submenu Quick Filters */}
       <div className="flex items-center border-b border-[var(--border)] gap-2">
         {[
-          { key: 'barchasi', label: 'Barchasi' },
-          { key: 'yuborildi', label: 'Faktura berilgan' },
-          { key: 'yuborilmagan', label: 'Faktura berilmagan' }
-        ].map(t => (
+          { key: 'barchasi', label: t('common.all') },
+          { key: 'yuborildi', label: t('sales.facturaIssued') },
+          { key: 'yuborilmagan', label: t('sales.facturaNotIssued') }
+        ].map(tab => (
           <button
-            key={t.key}
-            onClick={() => { setCurrencyTab('UZS'); setFacturaFilter(t.key); }}
+            key={tab.key}
+            onClick={() => { setCurrencyTab('UZS'); setFacturaFilter(tab.key); }}
             className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
-              currencyTab === 'UZS' && facturaFilter === t.key
+              currencyTab === 'UZS' && facturaFilter === tab.key
                 ? 'border-[var(--accent)] text-[var(--accent)]'
                 : 'border-transparent text-[var(--text-3)] hover:text-[var(--text)] hover:border-[var(--border)]'
             }`}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
         {/* Eksport (USD) — valyuta ko'rinishi, faktura filtrlari yonida */}
@@ -1090,7 +1094,7 @@ export default function Sales({ user }) {
               : 'border-transparent text-[var(--text-3)] hover:text-[var(--text)] hover:border-[var(--border)]'
           }`}
         >
-          <Globe size={13} /> Eksport (USD)
+          <Globe size={13} /> {t('sales.exportUsd')}
         </button>
       </div>
 
@@ -1131,7 +1135,7 @@ export default function Sales({ user }) {
                 <FileSpreadsheet size={18} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Summa</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">{t('sales.cardTotalSum')}</p>
                 <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">{fmt(totalAmount)} UZS</p>
               </div>
             </div>
@@ -1142,8 +1146,8 @@ export default function Sales({ user }) {
                 <Package size={18} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Hajm (Kub.m)</p>
-                <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">{totalCbm.toFixed(2)} m³</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">{t('sales.cardTotalVolume')}</p>
+                <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">{totalCbm.toFixed(2)} {t('units.m3')}</p>
               </div>
             </div>
 
@@ -1153,9 +1157,9 @@ export default function Sales({ user }) {
                 <Truck size={18} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Og'irlik (Kg)</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">{t('sales.cardTotalWeight')}</p>
                 <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">
-                  {Math.round(totalKg).toLocaleString('ru-RU')} kg
+                  {fmt(totalKg)} {t('units.kg')}
                 </p>
               </div>
             </div>
@@ -1166,9 +1170,9 @@ export default function Sales({ user }) {
                 <FileText size={18} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">Jami Yuza (Kv.m)</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-3)]">{t('sales.cardTotalArea')}</p>
                 <p className="text-sm md:text-base font-bold text-[var(--text)] truncate">
-                  {Math.round(totalSqm).toLocaleString('ru-RU')} m²
+                  {fmt(totalSqm)} {t('units.m2')}
                 </p>
               </div>
             </div>
@@ -1192,15 +1196,15 @@ export default function Sales({ user }) {
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold text-[var(--text-3)] w-12 text-center">#</th>
                 {[
-                  { label: 'Sana', col: 'date', align: 'left w-24' },
-                  { label: 'Yuk xati №', col: 'nakladnoy', align: 'left font-mono w-28' },
-                  { label: 'Mijoz', col: 'client', align: 'left w-44' },
-                  { label: 'Mahsulotlar', col: null, align: 'left' },
-                  { label: 'Shartnoma', col: 'contract', align: 'left text-xs' },
-                  { label: 'Spets', col: 'spec', align: 'left text-xs' },
-                  { label: 'Sotuvchi', col: 'sellerName', align: 'left text-xs text-[var(--text-3)]' },
-                  { label: 'Faktura', col: 'facturaStatus', align: 'left text-xs' },
-                  { label: 'Jami Summa', col: 'totalAmount', align: 'right font-bold' }
+                  { label: t('sales.thDate'), col: 'date', align: 'left w-24' },
+                  { label: t('sales.thNakladnoy'), col: 'nakladnoy', align: 'left font-mono w-28' },
+                  { label: t('sales.thClient'), col: 'client', align: 'left w-44' },
+                  { label: t('sales.thProducts'), col: null, align: 'left' },
+                  { label: t('sales.thContract'), col: 'contract', align: 'left text-xs' },
+                  { label: t('sales.thSpec'), col: 'spec', align: 'left text-xs' },
+                  { label: t('sales.thSeller'), col: 'sellerName', align: 'left text-xs text-[var(--text-3)]' },
+                  { label: t('sales.thFactura'), col: 'facturaStatus', align: 'left text-xs' },
+                  { label: t('sales.thTotalSum'), col: 'totalAmount', align: 'right font-bold' }
                 ].map(({ label, col, align }) => (
                   <th key={label}
                     className={`px-4 py-3 text-${align.split(' ')[0]} text-xs font-semibold select-none uppercase tracking-wider
@@ -1219,11 +1223,11 @@ export default function Sales({ user }) {
                 ))}
                 {currencyTab === 'USD' && (
                   <>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kurs</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">USD jami</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">{t('sales.thRate')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">{t('sales.thUsdTotal')}</th>
                   </>
                 )}
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kim / Qachon</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">{t('common.whoWhen')}</th>
                 <th className="px-4 py-3 w-24"></th>
               </tr>
             </thead>
@@ -1241,7 +1245,7 @@ export default function Sales({ user }) {
               ) : sales.length === 0 ? (
                 <tr>
                   <td colSpan={tableColSpan} className="px-4 py-12 text-center text-[var(--text-3)] text-sm">
-                    {hasFilter ? 'Topilmadi' : 'Hozircha yuk xatlari yo\'q'}
+                    {hasFilter ? t('common.notFound') : t('sales.empty')}
                   </td>
                 </tr>
               ) : sales.map((s, idx) => (
@@ -1268,7 +1272,7 @@ export default function Sales({ user }) {
                         <span key={pIdx} className="inline-flex items-center gap-1 text-[10px] bg-[var(--surface-2)] border border-[var(--border)] px-1.5 py-0.5 rounded font-mono text-[var(--text)] whitespace-nowrap shadow-sm">
                           <Package size={10} className="text-[var(--accent)] shrink-0" />
                           <span>{p.product?.article || p.productId?.slice(0, 8)}</span>
-                          <span className="text-[var(--text-3)] font-semibold">({p.totalPieces} dona)</span>
+                          <span className="text-[var(--text-3)] font-semibold">({p.totalPieces} {t('units.pcs')})</span>
                         </span>
                       ))}
                     </div>
@@ -1309,7 +1313,7 @@ export default function Sales({ user }) {
                             : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                         }`}
                       >
-                        {s.facturaStatus === 'yuborildi' ? 'Yuborildi' : 'Yuborilmagan'}
+                        {s.facturaStatus === 'yuborildi' ? t('sales.invoiceSent') : t('sales.invoiceNotSent')}
                         <ChevronDown size={11} />
                       </button>
 
@@ -1341,7 +1345,7 @@ export default function Sales({ user }) {
                               className="w-full px-3 py-2 text-left hover:bg-[var(--surface-2)] flex items-center gap-1.5 text-emerald-700 font-semibold cursor-pointer"
                             >
                               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                              Yuborildi
+                              {t('sales.invoiceSent')}
                             </button>
                             <button
                               onClick={(e) => {
@@ -1351,7 +1355,7 @@ export default function Sales({ user }) {
                               className="w-full px-3 py-2 text-left hover:bg-[var(--surface-2)] flex items-center gap-1.5 text-rose-700 font-semibold cursor-pointer"
                             >
                               <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
-                              Yuborilmagan
+                              {t('sales.invoiceNotSent')}
                             </button>
                           </div>
                         </>
@@ -1368,9 +1372,9 @@ export default function Sales({ user }) {
                       if (totalCbm === 0 && totalKg === 0 && totalSqm === 0) return null;
                       return (
                         <div className="text-[10px] text-[var(--text-3)] font-normal mt-0.5 whitespace-nowrap">
-                          {totalCbm > 0 && `${totalCbm.toFixed(2)} m³`}
-                          {totalKg > 0 && `${totalCbm > 0 ? ' | ' : ''}${Math.round(totalKg).toLocaleString('ru-RU')} kg`}
-                          {totalSqm > 0 && `${(totalCbm > 0 || totalKg > 0) ? ' | ' : ''}${Math.round(totalSqm).toLocaleString('ru-RU')} m²`}
+                          {totalCbm > 0 && `${totalCbm.toFixed(2)} ${t('units.m3')}`}
+                          {totalKg > 0 && `${totalCbm > 0 ? ' | ' : ''}${fmt(totalKg)} ${t('units.kg')}`}
+                          {totalSqm > 0 && `${(totalCbm > 0 || totalKg > 0) ? ' | ' : ''}${fmt(totalSqm)} ${t('units.m2')}`}
                         </div>
                       );
                     })()}
@@ -1389,11 +1393,11 @@ export default function Sales({ user }) {
                   <td className="px-4 py-3.5">
                     {s.deletedAt ? (
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+                        <span className="text-[10px] text-red-500 font-semibold">{t('common.deletedBadge')}</span>
                         {canHardDelete && (
                           <>
-                            <button onClick={() => handleRestore(s)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
-                            <button onClick={() => handleHardDelete(s)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition" title="Butunlay o'chirish">
+                            <button onClick={() => handleRestore(s)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title={t('common.restore')}>{t('common.restore')}</button>
+                            <button onClick={() => handleHardDelete(s)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition" title={t('common.hardDelete')}>
                               <Trash2 size={15} strokeWidth={1.8} />
                             </button>
                           </>
@@ -1402,24 +1406,24 @@ export default function Sales({ user }) {
                     ) : (
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => openDetail(s)}
-                          className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Ko'rish">
+                          className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title={t('common.view')}>
                           <Eye size={15} strokeWidth={1.8} />
                         </button>
                         {canUpdate && (
                           <button onClick={() => setEditSale(s)}
-                            className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title="Tahrirlash">
+                            className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] rounded-md transition" title={t('common.edit')}>
                             <Pencil size={15} strokeWidth={1.8} />
                           </button>
                         )}
                         {canCreate && (
                           <button onClick={() => handleCopyAndAdd(s)}
-                            className="p-1.5 text-[var(--text-3)] hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition" title="Nusxa olib qo'shish">
+                            className="p-1.5 text-[var(--text-3)] hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition" title={t('sales.copyAndAdd')}>
                             <Download size={15} strokeWidth={1.8} className="rotate-180" />
                           </button>
                         )}
                         {canDelete && (
                           <button onClick={() => setDelId(s.id)}
-                            className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish">
+                            className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title={t('common.delete')}>
                             <Trash2 size={15} strokeWidth={1.8} />
                           </button>
                         )}
@@ -1441,30 +1445,30 @@ export default function Sales({ user }) {
       {selectedSales.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-4 duration-300">
           <span className="text-xs font-semibold text-zinc-300 border-r border-zinc-700 pr-6">
-            {selectedSales.length} ta yuk xati belgilandi
+            {t('sales.selectedCount', { count: selectedSales.length })}
           </span>
           <div className="flex items-center gap-3">
             <button onClick={handleBulkPrint} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs font-medium transition">
-              <Printer size={13} /> Chop etish
+              <Printer size={13} /> {t('common.print')}
             </button>
             <button onClick={() => handleBulkExport('pdf')} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs font-medium transition text-red-400">
-              <FileText size={13} /> PDF Yuklash
+              <FileText size={13} /> {t('sales.downloadPdf')}
             </button>
             <button onClick={() => handleBulkExport('excel')} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs font-medium transition text-emerald-400">
-              <FileSpreadsheet size={13} /> Excel Yuklash
+              <FileSpreadsheet size={13} /> {t('sales.downloadExcel')}
             </button>
             <button onClick={() => handleBulkExport('zip')} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs font-medium transition text-amber-400">
-              <FileArchive size={13} /> ZIP (PDF) Yuklash
+              <FileArchive size={13} /> {t('sales.downloadZip')}
             </button>
             <button onClick={() => handleBulkFactura('yuborildi')} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 rounded-full text-xs font-medium transition text-emerald-100">
-              <CheckCircle2 size={13} /> Faktura: Yuborildi
+              <CheckCircle2 size={13} /> {t('sales.facturaSent')}
             </button>
             <button onClick={() => handleBulkFactura('yuborilmagan')} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-full text-xs font-medium transition text-red-100">
-              <XCircle size={13} /> Faktura: Yuborilmagan
+              <XCircle size={13} /> {t('sales.facturaNotSent')}
             </button>
             {canDelete && (
               <button onClick={() => setBulkDelOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-red-700 rounded-full text-xs font-medium transition text-zinc-300 hover:text-white">
-                <Trash2 size={13} /> O'chirish
+                <Trash2 size={13} /> {t('common.delete')}
               </button>
             )}
           </div>
@@ -1478,13 +1482,13 @@ export default function Sales({ user }) {
       {delId && (
         <div className="modal-overlay">
           <div className="modal-card p-6 w-full max-w-sm space-y-4">
-            <p className="font-semibold text-[var(--text)]">Yuk xatini o'chirish</p>
-            <p className="text-sm text-[var(--text-3)]">Bu yuk xati tizimdan butunlay o'chiriladi. Bu amalni qaytarib bo'lmaydi.</p>
+            <p className="font-semibold text-[var(--text)]">{t('sales.deleteTitle')}</p>
+            <p className="text-sm text-[var(--text-3)]">{t('sales.deleteConfirm')}</p>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setDelId(null)}
-                className="px-3 py-2 text-sm border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)]">Bekor</button>
+                className="px-3 py-2 text-sm border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)]">{t('common.cancel')}</button>
               <button onClick={handleDelete}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">O'chirish</button>
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">{t('common.delete')}</button>
             </div>
           </div>
         </div>
@@ -1494,13 +1498,13 @@ export default function Sales({ user }) {
       {bulkDelOpen && (
         <div className="modal-overlay">
           <div className="modal-card p-6 w-full max-w-sm space-y-4">
-            <p className="font-semibold text-[var(--text)]">{selectedSales.length} ta yuk xatini o'chirish</p>
-            <p className="text-sm text-[var(--text-3)]">Belgilangan {selectedSales.length} ta yuk xati tizimdan butunlay o'chiriladi. Bu amalni qaytarib bo'lmaydi.</p>
+            <p className="font-semibold text-[var(--text)]">{t('sales.bulkDeleteTitle', { count: selectedSales.length })}</p>
+            <p className="text-sm text-[var(--text-3)]">{t('sales.bulkDeleteConfirm', { count: selectedSales.length })}</p>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setBulkDelOpen(false)}
-                className="px-3 py-2 text-sm border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)]">Bekor</button>
+                className="px-3 py-2 text-sm border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)]">{t('common.cancel')}</button>
               <button onClick={handleBulkDelete}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">O'chirish</button>
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">{t('common.delete')}</button>
             </div>
           </div>
         </div>
@@ -1511,11 +1515,11 @@ export default function Sales({ user }) {
         <div className="modal-overlay">
           <div className="modal-card w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-[var(--border)] flex justify-between items-center sticky top-0 bg-[var(--surface)]">
-              <h3 className="text-lg font-bold text-[var(--text)]">Yuk xati: {detail.nakladnoy}</h3>
+              <h3 className="text-lg font-bold text-[var(--text)]">{t('sales.detailTitle', { nakladnoy: detail.nakladnoy })}</h3>
               <div className="flex items-center gap-2">
                 <button onClick={handlePrint}
                   className="px-3 py-1.5 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] flex items-center gap-1.5">
-                  <Printer size={14} /> Chop etish
+                  <Printer size={14} /> {t('common.print')}
                 </button>
                 <button onClick={() => setDetail(null)}
                   className="text-[var(--text-3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface-2)]">
@@ -1525,22 +1529,22 @@ export default function Sales({ user }) {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-[var(--text-3)]">Mijoz:</span> <span className="font-medium">{detail.client?.name}</span></div>
-                <div><span className="text-[var(--text-3)]">Sana:</span> <span className="font-medium">{fmtDate(detail.date)}</span></div>
-                <div><span className="text-[var(--text-3)]">Sotuvchi:</span> <span className="font-medium">{detail.sellerName}</span></div>
-                <div><span className="text-[var(--text-3)]">Transport:</span> <span className="font-medium">{detail.transportNum || '—'}</span></div>
+                <div><span className="text-[var(--text-3)]">{t('sales.detailClient')}</span> <span className="font-medium">{detail.client?.name}</span></div>
+                <div><span className="text-[var(--text-3)]">{t('sales.detailDate')}</span> <span className="font-medium">{fmtDate(detail.date)}</span></div>
+                <div><span className="text-[var(--text-3)]">{t('sales.detailSeller')}</span> <span className="font-medium">{detail.sellerName}</span></div>
+                <div><span className="text-[var(--text-3)]">{t('sales.detailTransport')}</span> <span className="font-medium">{detail.transportNum || '—'}</span></div>
                 {detail.contract && (
-                  <div><span className="text-[var(--text-3)]">Shartnoma:</span> <span className="font-mono font-medium">№{detail.contract.number}</span></div>
+                  <div><span className="text-[var(--text-3)]">{t('sales.detailContract')}</span> <span className="font-mono font-medium">№{detail.contract.number}</span></div>
                 )}
                 {detail.spec && (
-                  <div><span className="text-[var(--text-3)]">Spetsifikatsiya:</span> <span className="font-medium">№{detail.spec.number}</span></div>
+                  <div><span className="text-[var(--text-3)]">{t('sales.detailSpec')}</span> <span className="font-medium">№{detail.spec.number}</span></div>
                 )}
                 <div>
-                  <span className="text-[var(--text-3)]">Faktura statusi:</span>{' '}
+                  <span className="text-[var(--text-3)]">{t('sales.detailFacturaStatus')}</span>{' '}
                   <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
                     detail.facturaStatus === 'yuborildi' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
                   }`}>
-                    {detail.facturaStatus === 'yuborildi' ? 'Yuborildi' : 'Yuborilmagan'}
+                    {detail.facturaStatus === 'yuborildi' ? t('sales.invoiceSent') : t('sales.invoiceNotSent')}
                   </span>
                 </div>
               </div>
@@ -1549,12 +1553,12 @@ export default function Sales({ user }) {
                   <thead className="bg-[var(--surface-2)] border-b border-[var(--border)]">
                     <tr>
                       <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)] w-10">#</th>
-                      <th className="px-4 py-2.5 text-left font-semibold text-[var(--text-3)]">Mahsulot</th>
-                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">Dona</th>
-                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">m³</th>
-                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">kg</th>
-                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">m²</th>
-                      <th className="px-4 py-2.5 text-right font-semibold text-[var(--text-3)]">Jami ({curOf(detail)})</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-[var(--text-3)]">{t('sales.product')}</th>
+                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">{t('units.pcs')}</th>
+                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">{t('units.m3')}</th>
+                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">{t('units.kg')}</th>
+                      <th className="px-4 py-2.5 text-center font-semibold text-[var(--text-3)]">{t('units.m2')}</th>
+                      <th className="px-4 py-2.5 text-right font-semibold text-[var(--text-3)]">{t('sales.totalWithCur', { cur: curOf(detail) })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
@@ -1575,9 +1579,9 @@ export default function Sales({ user }) {
                 </table>
               </div>
               <div className="flex flex-col items-end">
-                <p className="text-lg font-bold text-[var(--text)]">Jami: {fmt(dispAmount(detail, detail.totalAmount))} {curOf(detail)}</p>
+                <p className="text-lg font-bold text-[var(--text)]">{t('sales.total')}: {fmt(dispAmount(detail, detail.totalAmount))} {curOf(detail)}</p>
                 {detail.currency === 'USD' && Number(detail.exchangeRate) > 0 && (
-                  <p className="text-xs text-[var(--text-3)] mt-0.5">≈ {fmt(detail.totalAmount)} UZS (kurs {fmt(detail.exchangeRate)})</p>
+                  <p className="text-xs text-[var(--text-3)] mt-0.5">≈ {fmt(detail.totalAmount)} UZS {t('sales.rateNote', { rate: fmt(detail.exchangeRate) })}</p>
                 )}
               </div>
             </div>

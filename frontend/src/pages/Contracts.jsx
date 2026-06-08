@@ -6,6 +6,7 @@ import {
   ShoppingCart, RefreshCw, Search, Printer, Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import api, { API } from '../lib/api';
 import { downloadFile, openFile } from '../lib/download';
 import { fmt, fmtDate } from '../lib/format';
@@ -18,26 +19,27 @@ import Pagination from '../components/Pagination';
 import AuditCell from '../components/AuditCell';
 import { useUsersLookup } from '../hooks/useUsersLookup';
 
-const STATUS_LABELS = { yangi: 'Yangi', amalda: 'Amalda', yopilgan: 'Yopilgan' };
 const STATUS_COLORS = {
   yangi:    'bg-[oklch(0.96_0.03_250)] text-[var(--accent)] border-[oklch(0.88_0.05_250)] border',
   amalda:   'bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.10_155)] border-[oklch(0.88_0.06_155)] border',
   yopilgan: 'bg-[var(--surface-2)] text-[var(--text-3)] border border-[var(--border)]',
 };
 const UNITS = ['kv.m', 'kub.m', 'kg'];
+const UNIT_KEYS = { 'kv.m': 'units.sqm', 'kub.m': 'units.cbm', kg: 'units.kg' };
 const TODAY = new Date().toISOString().slice(0, 10);
 
 // ─── QuickAddClientModal ────────────────────────────────────────────────────
 function QuickAddClientModal({ onSaved, onClose }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({ name: '', inn: '' });
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!form.name.trim()) return toast.error('Nom majburiy');
+    if (!form.name.trim()) return toast.error(t('contracts.val.nameRequired'));
     setSaving(true);
     try {
       const { data } = await api.post('/api/clients', { name: form.name, inn: form.inn || '' });
-      toast.success('Mijoz qo\'shildi');
+      toast.success(t('contracts.toast.clientAdded'));
       onSaved(data);
     } finally { setSaving(false); }
   };
@@ -48,24 +50,24 @@ function QuickAddClientModal({ onSaved, onClose }) {
     <div className="modal-overlay">
       <div className="modal-card p-6 w-full max-w-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-[var(--text)]">Yangi mijoz</h3>
+          <h3 className="font-semibold text-[var(--text)]">{t('common.newClient')}</h3>
           <button onClick={onClose} className="text-[var(--text-3)] hover:text-[var(--text-2)]"><X size={18} /></button>
         </div>
         <input
-          autoFocus placeholder="Mijoz nomi *"
+          autoFocus placeholder={t('contracts.clientNamePh')}
           value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
           className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none"
         />
         <input
-          placeholder="INN"
+          placeholder={t('contracts.inn')}
           value={form.inn} onChange={e => setForm(f => ({ ...f, inn: e.target.value }))}
           className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none"
         />
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-3 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">Bekor</button>
+          <button onClick={onClose} className="px-3 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">{t('common.cancel')}</button>
           <button onClick={save} disabled={saving}
             className="px-4 py-2 text-sm btn-primary rounded-md disabled:opacity-60">
-            {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </div>
@@ -75,6 +77,7 @@ function QuickAddClientModal({ onSaved, onClose }) {
 
 // ─── SpecProductRow ─────────────────────────────────────────────────────────
 function SpecProductRow({ row, products, vatRate = VAT_RATE, onChange, onRemove }) {
+  const { t } = useTranslation();
   const rowTotal = calcRowTotal(Number(row.quantity) || 0, Number(row.unitPriceVat) || 0);
   const vatAmt   = calcVat(rowTotal, vatRate);
 
@@ -88,7 +91,7 @@ function SpecProductRow({ row, products, vatRate = VAT_RATE, onChange, onRemove 
           onChange={e => update('productId', e.target.value)}
           className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-[var(--accent)] outline-none"
         >
-          <option value="">— Mahsulot —</option>
+          <option value="">{t('contracts.productPh')}</option>
           {products.map(p => (
             <option key={p.id} value={p.id}>{p.article}</option>
           ))}
@@ -100,7 +103,7 @@ function SpecProductRow({ row, products, vatRate = VAT_RATE, onChange, onRemove 
           onChange={e => update('unit', e.target.value)}
           className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-[var(--accent)] outline-none"
         >
-          {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+          {UNITS.map(u => <option key={u} value={u}>{t(UNIT_KEYS[u])}</option>)}
         </select>
       </td>
       <td className="py-2 pr-2">
@@ -128,6 +131,7 @@ function SpecProductRow({ row, products, vatRate = VAT_RATE, onChange, onRemove 
 
 // ─── SpecForm (inline — shartnoma ichida) ──────────────────────────────────
 function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, products, vatRate = VAT_RATE, contractTotalValue = 0, otherSpecsTotal = 0, onSaved, onCancel }) {
+  const { t } = useTranslation();
   const editing = Boolean(spec);
   const [date, setDate]   = useState(spec?.date?.slice(0, 10) || TODAY);
   const [notes, setNotes] = useState(spec?.notes || '');
@@ -149,12 +153,12 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
   const totalValue = rows.reduce((s, r) => s + calcRowTotal(Number(r.quantity)||0, Number(r.unitPriceVat)||0), 0);
 
   const save = async () => {
-    if (rows.length === 0) return toast.error('Kamida 1 ta mahsulot kerak');
-    if (rows.some(r => !r.productId)) return toast.error('Mahsulotni tanlang');
+    if (rows.length === 0) return toast.error(t('contracts.val.minOneProduct'));
+    if (rows.some(r => !r.productId)) return toast.error(t('contracts.val.selectProduct'));
     // Spetslar yig'indisi shartnoma summasidan oshsa — ogohlantirish (bloklamaydi)
     const projected = otherSpecsTotal + totalValue;
     if (contractTotalValue > 0 && projected > contractTotalValue) {
-      toast(`Diqqat: spetslar yig'indisi (${fmt(projected)}) shartnoma summasidan (${fmt(contractTotalValue)}) oshib ketdi`,
+      toast(t('contracts.warn.specsExceedContract', { spec: fmt(projected), total: fmt(contractTotalValue) }),
         { icon: '⚠️', duration: 5000 });
     }
     setSaving(true);
@@ -172,11 +176,11 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
       };
       if (editing) {
         const { data } = await api.put(`/api/specs/${spec.id}`, payload);
-        toast.success('Spetsifikatsiya yangilandi');
+        toast.success(t('contracts.toast.specUpdated'));
         onSaved(data);
       } else {
         const { data } = await api.post('/api/specs', payload);
-        toast.success(`Shartnoma № ${contractNumber || ''} bo'yicha Spetsifikatsiya № ${data.number} qo'shildi`);
+        toast.success(t('contracts.toast.specAdded', { number: contractNumber || '', spec: data.number }));
         onSaved(data);
       }
     } finally { setSaving(false); }
@@ -185,21 +189,21 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
   return (
     <div className="mt-3 border border-[var(--border)] rounded-lg p-4 bg-[var(--surface-2)] space-y-3">
       <div className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-2 flex-wrap">
-        <span className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">Spetsifikatsiya</span>
+        <span className="text-[10px] text-[var(--text-3)] uppercase tracking-wider font-semibold">{t('contracts.spec')}</span>
         <span className="text-[var(--accent)] font-mono font-bold text-sm bg-[var(--accent-bg)] px-2 py-0.5 rounded border border-[var(--border)]">
-          {editing ? `№ ${spec?.number}` : `Keyingi № ${nextNumber || '—'}`}
+          {editing ? `№ ${spec?.number}` : t('contracts.nextNumber', { number: nextNumber || '—' })}
         </span>
       </div>
 
       <div className="flex gap-3">
         <div>
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sana</label>
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('common.date')}</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             className="border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
         </div>
         <div className="flex-1">
-          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Izoh</label>
-          <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ixtiyoriy..."
+          <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('common.comment')}</label>
+          <input value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('contracts.optionalPh')}
             className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
         </div>
       </div>
@@ -214,12 +218,12 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
           </colgroup>
           <thead>
             <tr className="text-[var(--text-3)]">
-              <th className="text-left pb-1.5 pr-2 font-medium">Mahsulot</th>
-              <th className="text-left pb-1.5 pr-2 font-medium">Birlik</th>
-              <th className="text-right pb-1.5 pr-2 font-medium">Soni</th>
-              <th className="text-right pb-1.5 pr-2 font-medium">Narx (QQS bilan)</th>
-              <th className="text-right pb-1.5 pr-2 font-medium">QQS</th>
-              <th className="text-right pb-1.5 pr-2 font-medium">Jami</th>
+              <th className="text-left pb-1.5 pr-2 font-medium">{t('contracts.col.product')}</th>
+              <th className="text-left pb-1.5 pr-2 font-medium">{t('contracts.col.unit')}</th>
+              <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.col.qty')}</th>
+              <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.col.priceVat')}</th>
+              <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.vat')}</th>
+              <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.col.total')}</th>
               <th></th>
             </tr>
           </thead>
@@ -236,30 +240,30 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
           </tbody>
         </table>
         {rows.length === 0 && (
-          <p className="text-xs text-[var(--text-3)] py-2 text-center">Mahsulot qo'shing</p>
+          <p className="text-xs text-[var(--text-3)] py-2 text-center">{t('contracts.addProduct')}</p>
         )}
       </div>
 
       <div className="flex items-center justify-between">
         <button onClick={addRow}
           className="text-xs text-[var(--accent)] hover:opacity-80 flex items-center gap-1">
-          <Plus size={13} /> Mahsulot qo'shish
+          <Plus size={13} /> {t('contracts.addProductBtn')}
         </button>
         {rows.length > 0 && (
           <span className="text-sm font-bold text-[var(--text)]">
-            Jami: {fmt(totalValue)} so'm
+            {t('contracts.totalSum', { sum: fmt(totalValue) })}
           </span>
         )}
       </div>
 
       <div className="flex gap-2 justify-end pt-1 border-t border-[var(--border)]">
         <button onClick={onCancel} className="px-3 py-1.5 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
-          Bekor
+          {t('common.cancel')}
         </button>
         <button onClick={save} disabled={saving}
           className="px-4 py-1.5 text-sm btn-primary rounded-md disabled:opacity-60 flex items-center gap-1.5">
           {saving ? <RefreshCw size={13} className="animate-spin" /> : <Check size={13} />}
-          {editing ? 'Yangilash' : 'Spets saqlash'}
+          {editing ? t('contracts.update') : t('contracts.saveSpec')}
         </button>
       </div>
     </div>
@@ -268,6 +272,7 @@ function SpecForm({ contractId, spec, copiedSpec, nextNumber, contractNumber, pr
 
 // ─── ContractRow (ro'yxat qatori + expand) ─────────────────────────────────
 function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, onHardDelete, onSpecSaved, onSpecDeleted, user, auditUsers }) {
+  const { t } = useTranslation();
   const canUpdate = user?.role === 'admin' || user?.permissions?.contracts?.update !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.contracts?.delete === true;
   const canHardDelete = user?.role === 'superAdmin';
@@ -336,7 +341,7 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
     try {
       await api.delete(`/api/specs/${specId}`);
       setSpecs(prev => prev.filter(s => s.id !== specId));
-      toast.success('Spets o\'chirildi');
+      toast.success(t('contracts.toast.specDeleted'));
       onSpecDeleted();
     } catch { /* toast shown by interceptor */ }
     setDelSpecId(null);
@@ -369,12 +374,12 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
             className={`text-xs font-medium px-2 py-1 rounded-full transition-colors ${
               expanded ? 'bg-[var(--accent-bg)] text-[var(--accent)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--accent-bg)] hover:text-[var(--accent)]'
             }`}>
-            {c.specCount} spets
+            {t('contracts.specCount', { count: c.specCount })}
           </button>
         </td>
         <td className="px-4 py-3 text-sm text-right font-medium">
           {c.invoiceAmount > c.totalValue && c.totalValue > 0 ? (
-            <span title="Spetslar yig'indisi shartnoma summasidan oshib ketgan"
+            <span title={t('contracts.invoiceExceedsTitle')}
               className="inline-flex items-center justify-end gap-1 text-amber-600 font-semibold">
               <AlertTriangle size={13} /> {fmt(c.invoiceAmount)}
             </span>
@@ -384,18 +389,18 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
         </td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || STATUS_COLORS.yangi}`}>
-            {STATUS_LABELS[c.status] || c.status}
+            {c.status === 'yangi' || c.status === 'amalda' || c.status === 'yopilgan' ? t(`contracts.status.${c.status}`) : c.status}
           </span>
         </td>
         <td className="px-4 py-3" onClick={e => e.stopPropagation()}><AuditCell record={c} users={auditUsers}/></td>
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           {c.deletedAt ? (
             <div className="flex items-center justify-end gap-2">
-              <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+              <span className="text-[10px] text-red-500 font-semibold">{t('common.deletedBadge')}</span>
               {canHardDelete && (
                 <>
-                  <button onClick={() => onRestore(c)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
-                  <button onClick={() => onHardDelete(c)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title="Butunlay o'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                  <button onClick={() => onRestore(c)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title={t('common.restore')}>{t('common.restore')}</button>
+                  <button onClick={() => onHardDelete(c)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title={t('common.hardDelete')}><Trash2 size={15} strokeWidth={1.8}/></button>
                 </>
               )}
             </div>
@@ -414,34 +419,34 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
               {canUpdate && (
                 <button onClick={() => { setMenuOpen(false); onEdit(c); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
-                  <Pencil size={15} strokeWidth={1.8} /> Tahrirlash
+                  <Pencil size={15} strokeWidth={1.8} /> {t('common.edit')}
                 </button>
               )}
               {canDelete && (
                 <button onClick={() => { setMenuOpen(false); onDelete(c); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                  <Trash2 size={15} strokeWidth={1.8} /> O'chirish
+                  <Trash2 size={15} strokeWidth={1.8} /> {t('common.delete')}
                 </button>
               )}
               <button
                 onClick={() => { setMenuOpen(false); openFile(`${API}/api/export/contracts/${c.id}/pdf`); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)] text-left">
-                <FileText size={15} strokeWidth={1.8} className="text-red-500" /> PDF yuklab olish
+                <FileText size={15} strokeWidth={1.8} className="text-red-500" /> {t('contracts.export.pdf')}
               </button>
               <button
                 onClick={() => { setMenuOpen(false); downloadFile(`${API}/api/export/contracts/${c.id}/word`, `shartnoma-${c.number}.docx`); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)] text-left">
-                <FileType size={15} strokeWidth={1.8} className="text-blue-500" /> Word (.docx) yuklash
+                <FileType size={15} strokeWidth={1.8} className="text-blue-500" /> {t('contracts.export.word')}
               </button>
               <button
                 onClick={() => { setMenuOpen(false); openFile(`${API}/api/export/contracts/${c.id}/pdf-with-specs`); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)] text-left">
-                <FileDown size={15} strokeWidth={1.8} className="text-[var(--accent)]" /> Barcha spetsifikatsiyalar bilan PDF
+                <FileDown size={15} strokeWidth={1.8} className="text-[var(--accent)]" /> {t('contracts.export.pdfWithSpecs')}
               </button>
               <a href={`${API}/api/export/contracts/${c.id}/excel`}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                 onClick={() => setMenuOpen(false)}>
-                <FileSpreadsheet size={15} strokeWidth={1.8} className="text-emerald-600" /> Excel yuklab olish
+                <FileSpreadsheet size={15} strokeWidth={1.8} className="text-emerald-600" /> {t('contracts.export.excel')}
               </a>
             </div>
           )}
@@ -458,20 +463,20 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
               <div className="flex items-center gap-4 px-4 py-2.5 border-b border-[var(--border)]">
                 <button onClick={() => { setAddingSpec(true); setEditSpec(null); setCopiedSpec(null); }}
                   className="flex items-center gap-1 text-xs text-[var(--accent)] hover:opacity-80 font-medium bg-[var(--accent-bg)] px-2.5 py-1 rounded-md">
-                  <Plus size={13} /> Spets qo'shish
+                  <Plus size={13} /> {t('contracts.addSpec')}
                 </button>
                 <span className="text-xs font-semibold text-[var(--text-3)] uppercase tracking-wide">
-                  Spetsifikatsiyalar
+                  {t('contracts.specsTitle')}
                 </span>
               </div>
 
               {loadingSpec && (
-                <div className="py-6 text-center text-sm text-[var(--text-3)]">Yuklanmoqda...</div>
+                <div className="py-6 text-center text-sm text-[var(--text-3)]">{t('common.loading')}</div>
               )}
 
               {!loadingSpec && specs?.length === 0 && !addingSpec && !copiedSpec && (
                 <div className="py-6 text-center text-sm text-[var(--text-3)]">
-                  Hozircha spets yo'q
+                  {t('contracts.noSpecs')}
                 </div>
               )}
 
@@ -481,12 +486,12 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
                     <div className="flex items-center gap-3 py-1">
                       <AlertTriangle size={15} className="text-amber-500" />
                       <span className="text-sm text-[var(--text-2)]">
-                        Spets №{spec.number} o'chirilsinmi?
+                        {t('contracts.confirmDeleteSpec', { number: spec.number })}
                       </span>
                       <button onClick={() => deleteSpec(spec.id)}
-                        className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">Ha</button>
+                        className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">{t('common.yes')}</button>
                       <button onClick={() => setDelSpecId(null)}
-                        className="px-3 py-1 text-xs border border-[var(--border)] rounded hover:bg-[var(--surface-2)]">Yo'q</button>
+                        className="px-3 py-1 text-xs border border-[var(--border)] rounded hover:bg-[var(--surface-2)]">{t('contracts.no')}</button>
                     </div>
                   ) : editSpec?.id === spec.id ? (
                     <SpecForm
@@ -520,25 +525,25 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
                                 specNumber:     spec.number,
                               },
                             })}
-                            title="Bu spets bo'yicha savdo yaratish"
+                            title={t('contracts.createSaleFromSpec')}
                             className="flex items-center gap-1 px-2 py-1 text-xs text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 font-medium mr-2">
-                            <ShoppingCart size={13} /> Savdo
+                            <ShoppingCart size={13} /> {t('contracts.sale')}
                           </button>
-                          
+
                           {/* Export / Print Icons */}
-                          <button onClick={() => openFile(`${API}/api/export/specs/${spec.id}/pdf`)} title="PDF ko'rish/yuklash" className="p-1 text-[var(--text-3)] hover:text-red-500 rounded hover:bg-[var(--surface-2)] transition">
+                          <button onClick={() => openFile(`${API}/api/export/specs/${spec.id}/pdf`)} title={t('contracts.export.pdfView')} className="p-1 text-[var(--text-3)] hover:text-red-500 rounded hover:bg-[var(--surface-2)] transition">
                             <FileText size={13} />
                           </button>
-                          <button onClick={() => downloadFile(`${API}/api/export/specs/${spec.id}/word`, `spetsifikatsiya-${spec.number}.docx`)} title="Word (.docx) yuklash" className="p-1 text-[var(--text-3)] hover:text-blue-500 rounded hover:bg-[var(--surface-2)] transition">
+                          <button onClick={() => downloadFile(`${API}/api/export/specs/${spec.id}/word`, `spetsifikatsiya-${spec.number}.docx`)} title={t('contracts.export.word')} className="p-1 text-[var(--text-3)] hover:text-blue-500 rounded hover:bg-[var(--surface-2)] transition">
                             <FileType size={13} />
                           </button>
-                          <a href={`${API}/api/export/specs/${spec.id}/excel`} title="Excel yuklash" className="p-1 text-[var(--text-3)] hover:text-emerald-600 rounded hover:bg-[var(--surface-2)] transition">
+                          <a href={`${API}/api/export/specs/${spec.id}/excel`} title={t('contracts.export.excel')} className="p-1 text-[var(--text-3)] hover:text-emerald-600 rounded hover:bg-[var(--surface-2)] transition">
                             <FileSpreadsheet size={13} />
                           </a>
-                          <button onClick={() => openFile(`${API}/api/export/specs/${spec.id}/pdf`)} title="Chop etish" className="p-1 text-[var(--text-3)] hover:text-[var(--text)] rounded hover:bg-[var(--surface-2)] transition">
+                          <button onClick={() => openFile(`${API}/api/export/specs/${spec.id}/pdf`)} title={t('common.print')} className="p-1 text-[var(--text-3)] hover:text-[var(--text)] rounded hover:bg-[var(--surface-2)] transition">
                             <Printer size={13} />
                           </button>
-                          <button onClick={() => { setCopiedSpec(spec); setAddingSpec(true); }} title="Nusxalash" className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] rounded hover:bg-[var(--surface-2)] transition">
+                          <button onClick={() => { setCopiedSpec(spec); setAddingSpec(true); }} title={t('common.copy')} className="p-1 text-[var(--text-3)] hover:text-[var(--accent)] rounded hover:bg-[var(--surface-2)] transition">
                             <Copy size={13} />
                           </button>
 
@@ -554,11 +559,11 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
                             >
                               <button onClick={() => { setEditSpec(spec); setSpecMenuId(null); setAddingSpec(false); }}
                                 className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-[var(--surface-2)]">
-                                <Pencil size={13} /> Tahrirlash
+                                <Pencil size={13} /> {t('common.edit')}
                               </button>
                               <button onClick={() => { setDelSpecId(spec.id); setSpecMenuId(null); }}
                                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                                <Trash2 size={13} /> O'chirish
+                                <Trash2 size={13} /> {t('common.delete')}
                               </button>
                             </div>
                           )}
@@ -571,11 +576,11 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
                           <table className="w-full text-left border border-[var(--border)] rounded-lg overflow-hidden">
                             <thead>
                               <tr className="bg-[var(--surface-2)] border-b border-[var(--border)] text-[10px] text-[var(--text-3)] font-semibold uppercase">
-                                <th className="px-3 py-1.5 w-1/3">Mahsulot</th>
-                                <th className="px-3 py-1.5">O'lchov birligi</th>
-                                <th className="px-3 py-1.5 text-right">Miqdor (Soni)</th>
-                                <th className="px-3 py-1.5 text-right">Narxi (QQS bilan)</th>
-                                <th className="px-3 py-1.5 text-right">Jami summa</th>
+                                <th className="px-3 py-1.5 w-1/3">{t('contracts.col.product')}</th>
+                                <th className="px-3 py-1.5">{t('contracts.col.unitLong')}</th>
+                                <th className="px-3 py-1.5 text-right">{t('contracts.col.qtyLong')}</th>
+                                <th className="px-3 py-1.5 text-right">{t('contracts.col.priceVat')}</th>
+                                <th className="px-3 py-1.5 text-right">{t('contracts.col.totalSum')}</th>
                               </tr>
                             </thead>
                             <tbody className="text-xs divide-y divide-[var(--border)] bg-[var(--surface)]">
@@ -596,11 +601,11 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
                       {/* Spets jami — summa va yetkazilgan pastda */}
                       <div className="pl-4 pr-12 flex items-center justify-end gap-8 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-[var(--text-3)]">Yetkazilgan:</span>
+                          <span className="text-xs text-[var(--text-3)]">{t('contracts.deliveredLabel')}</span>
                           <span className="font-semibold text-[var(--accent)]">{fmt(spec.deliveredAmount || 0)} UZS</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-[var(--text-3)]">Summa:</span>
+                          <span className="text-xs text-[var(--text-3)]">{t('contracts.sumLabel')}</span>
                           <span className="font-bold text-[var(--text)]">{fmt(spec.totalValue)} UZS</span>
                         </div>
                       </div>
@@ -636,6 +641,7 @@ function ContractRow({ c, idx, products, vatRate, onEdit, onDelete, onRestore, o
 
 // ─── ContractForm (inline accordion) ───────────────────────────────────────
 function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate = VAT_RATE }) {
+  const { t } = useTranslation();
   const editing = Boolean(editContract);
   const [clients, setClients]       = useState([]);
   const [clientSearch, setClientSearch] = useState(editContract?.client?.name || '');
@@ -704,31 +710,31 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
   };
 
   const save = async () => {
-    if (!clientId) return toast.error('Mijozni tanlang');
-    if (!seller)  return toast.error('Sotuvchini tanlang');
-    if (!date)    return toast.error('Sanani kiriting');
+    if (!clientId) return toast.error(t('common.selectClient'));
+    if (!seller)  return toast.error(t('contracts.val.selectSeller'));
+    if (!date)    return toast.error(t('contracts.val.enterDate'));
     // Tahrirda biznes ogohlantirishlari (bloklamaydi)
     if (editing) {
       const tv        = Number(totalValue) || 0;
       const delivered = editContract.deliveredAmount || 0;
       const paid      = editContract.paidAmount || 0;
       if (tv > 0 && tv < delivered) {
-        toast(`Diqqat: shartnoma summasi (${fmt(tv)}) yetkazilgan summadan (${fmt(delivered)}) past`,
+        toast(t('contracts.warn.totalBelowDelivered', { tv: fmt(tv), delivered: fmt(delivered) }),
           { icon: '⚠️', duration: 5000 });
       }
       if (status === 'yopilgan' && delivered - paid > 0) {
-        toast(`Diqqat: shartnomada qarz qolgan (${fmt(delivered - paid)}), lekin 'Yopilgan' qilinmoqda`,
+        toast(t('contracts.warn.closingWithDebt', { tv: fmt(delivered - paid) }),
           { icon: '⚠️', duration: 5000 });
       }
     }
     // Spets tekshiruvi — agar bo'lim ochiq va qatorlar bor bo'lsa
     if (showSpec && specRows.length > 0) {
-      if (specRows.some(r => !r.productId))   return toast.error('Barcha qatorlarda mahsulot tanlang');
-      if (specRows.some(r => !Number(r.quantity)))      return toast.error('Soni kiritilmagan');
-      if (specRows.some(r => !Number(r.unitPriceVat)))  return toast.error('Narx kiritilmagan');
+      if (specRows.some(r => !r.productId))   return toast.error(t('contracts.val.selectProductAllRows'));
+      if (specRows.some(r => !Number(r.quantity)))      return toast.error(t('contracts.val.qtyMissing'));
+      if (specRows.some(r => !Number(r.unitPriceVat)))  return toast.error(t('contracts.val.priceMissing'));
       const tv = Number(totalValue) || 0;
       if (tv > 0 && specTotal > tv) {
-        toast(`Diqqat: spetsifikatsiya summasi (${fmt(specTotal)}) shartnoma summasidan (${fmt(tv)}) oshib ketdi`,
+        toast(t('contracts.warn.specExceedsContract', { spec: fmt(specTotal), total: fmt(tv) }),
           { icon: '⚠️', duration: 5000 });
       }
     }
@@ -747,7 +753,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
       let res;
       if (editing) {
         res = await api.put(`/api/contracts/${editContract.id}`, payload);
-        toast.success('Shartnoma yangilandi');
+        toast.success(t('contracts.toast.updated'));
       } else {
         res = await api.post('/api/contracts', payload);
         // Spets bo'lsa — shartnomadan keyin saqlaymiz
@@ -763,9 +769,9 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
               unitPriceVat: Number(r.unitPriceVat),
             })),
           });
-          toast.success(`Shartnoma № ${res.data.number} va spetsifikatsiya yaratildi`);
+          toast.success(t('contracts.toast.createdWithSpec', { number: res.data.number }));
         } else {
-          toast.success(`Shartnoma № ${res.data.number} yaratildi`);
+          toast.success(t('contracts.toast.created', { number: res.data.number }));
         }
       }
       onSaved(res.data);
@@ -782,7 +788,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
       <div className="mini-card rounded-xl p-5 mb-4 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[var(--text)]">
-            {editing ? `Shartnoma №${editContract.number} tahrirlash` : 'Yangi shartnoma'}
+            {editing ? t('contracts.editTitle', { number: editContract.number }) : t('contracts.newContract')}
           </h3>
           <button onClick={onCancel} className="text-[var(--text-3)] hover:text-[var(--text-2)]"><X size={16} /></button>
         </div>
@@ -790,13 +796,13 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
         <div className="grid grid-cols-2 gap-4">
           {/* Mijoz */}
           <div className="col-span-2 md:col-span-1" ref={clientDropRef}>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Mijoz *</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.clientLabel')}</label>
             <div className="relative">
               <input
                 value={clientSearch}
                 onChange={e => { setClientSearch(e.target.value); setClientDropOpen(true); setClientId(''); setSeller(''); }}
                 onFocus={() => setClientDropOpen(true)}
-                placeholder="Mijoz qidiring..."
+                placeholder={t('contracts.clientSearchPh')}
                 className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]"
               />
               {clientDropOpen && (
@@ -810,7 +816,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
                   ))}
                   <button onClick={() => { setClientDropOpen(false); setShowAddClient(true); }}
                     className="w-full text-left px-3 py-2 text-sm text-[var(--accent)] hover:bg-[var(--accent-bg)] flex items-center gap-1 border-t border-[var(--border)]">
-                    <Plus size={13} /> Yangi mijoz qo'shish
+                    <Plus size={13} /> {t('contracts.addNewClient')}
                   </button>
                 </div>
               )}
@@ -819,7 +825,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
 
           {/* INN (read-only) */}
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">INN</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.inn')}</label>
             <input readOnly
               value={clients.find(c => c.id === clientId)?.inn || ''}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm bg-[var(--surface-2)] text-[var(--text-3)] cursor-default"
@@ -828,7 +834,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
 
           {/* Sotuvchi */}
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sotuvchi *</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.sellerLabel')}</label>
             <select
               required
               value={seller}
@@ -836,7 +842,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
               disabled={!clientId}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]"
             >
-              <option value="">— Sotuvchini tanlang —</option>
+              <option value="">{t('contracts.selectSeller')}</option>
               {(clients.find(c => c.id === clientId)?.seller || editContract?.client?.seller || '')
                 .split(', ')
                 .filter(Boolean)
@@ -844,14 +850,14 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
               }
             </select>
             {clientId && !(clients.find(c => c.id === clientId)?.seller || editContract?.client?.seller) && (
-              <p className="text-[10px] text-red-500 mt-1">Bu mijozga sotuvchilar biriktirilmagan (CRM-sozlamalardan kiriting)</p>
+              <p className="text-[10px] text-red-500 mt-1">{t('contracts.noSellersForClient')}</p>
             )}
           </div>
 
           {/* Shartnoma raqami */}
           {!editing && (
             <div>
-              <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Shartnoma raqami</label>
+              <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.contractNumber')}</label>
               <div className="flex gap-2 items-center">
                 <input
                   value={useAuto ? autoNumber : number}
@@ -865,7 +871,7 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
                 <label className="flex items-center gap-1.5 text-xs text-[var(--text-3)] cursor-pointer whitespace-nowrap">
                   <input type="checkbox" checked={useAuto} onChange={e => setUseAuto(e.target.checked)}
                     className="rounded" />
-                  Avto
+                  {t('contracts.auto')}
                 </label>
               </div>
             </div>
@@ -873,14 +879,14 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
 
           {/* Sana */}
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Sana</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('common.date')}</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
           </div>
 
           {/* Umumiy summa */}
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Umumiy summa (so'm)</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.totalSumLabel')}</label>
             <input type="number" min="0" step="0.01"
               value={totalValue}
               onChange={e => setTotalValue(e.target.value)}
@@ -891,30 +897,30 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
 
           {/* Status */}
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Status</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('common.status')}</label>
             <select value={status} onChange={e => setStatus(e.target.value)}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]">
-              <option value="yangi">Yangi</option>
-              <option value="amalda">Amalda</option>
-              <option value="yopilgan">Yopilgan</option>
+              <option value="yangi">{t('contracts.status.yangi')}</option>
+              <option value="amalda">{t('contracts.status.amalda')}</option>
+              <option value="yopilgan">{t('contracts.status.yopilgan')}</option>
             </select>
           </div>
 
           {/* Valyuta */}
           <div>
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Valyuta</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.currency')}</label>
             <select value={currency} onChange={e => setCurrency(e.target.value)}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]">
-              <option value="UZS">UZS (so'm)</option>
-              <option value="USD">USD (dollar)</option>
+              <option value="UZS">{t('contracts.currencyUzs')}</option>
+              <option value="USD">{t('contracts.currencyUsd')}</option>
             </select>
           </div>
 
           {/* Izoh */}
           <div className="col-span-2">
-            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Izoh</label>
+            <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('common.comment')}</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
-              rows={2} placeholder="Ixtiyoriy..."
+              rows={2} placeholder={t('contracts.optionalPh')}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)] resize-none" />
           </div>
         </div>
@@ -929,10 +935,10 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
             >
               <span className="flex items-center gap-2">
                 <Plus size={15} className={`transition-transform ${showSpec ? 'rotate-45' : ''}`} />
-                Spetsifikatsiya qo'shish
+                {t('contracts.addSpecSection')}
                 {specRows.length > 0 && (
                   <span className="bg-[var(--accent-bg)] text-[var(--accent)] text-xs px-2 py-0.5 rounded-full">
-                    {specRows.length} mahsulot · {fmt(specTotal)} so'm
+                    {t('contracts.specBadge', { count: specRows.length, sum: fmt(specTotal) })}
                   </span>
                 )}
               </span>
@@ -945,14 +951,14 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
               <div className="p-4 space-y-3">
                 <div className="flex gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Spets sanasi</label>
+                    <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.specDate')}</label>
                     <input type="date" value={specDate} onChange={e => setSpecDate(e.target.value)}
                       className="border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs font-medium text-[var(--text-3)] block mb-1">Spets izohi</label>
+                    <label className="text-xs font-medium text-[var(--text-3)] block mb-1">{t('contracts.specNotes')}</label>
                     <input value={specNotes} onChange={e => setSpecNotes(e.target.value)}
-                      placeholder="Ixtiyoriy..."
+                      placeholder={t('contracts.optionalPh')}
                       className="w-full border border-[var(--border)] rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[var(--accent)] outline-none bg-[var(--surface)]" />
                   </div>
                 </div>
@@ -967,12 +973,12 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
                     </colgroup>
                     <thead>
                       <tr className="text-[var(--text-3)]">
-                        <th className="text-left pb-1.5 pr-2 font-medium">Mahsulot</th>
-                        <th className="text-left pb-1.5 pr-2 font-medium">Birlik</th>
-                        <th className="text-right pb-1.5 pr-2 font-medium">Soni</th>
-                        <th className="text-right pb-1.5 pr-2 font-medium">Narx (QQS bilan)</th>
-                        <th className="text-right pb-1.5 pr-2 font-medium">QQS</th>
-                        <th className="text-right pb-1.5 pr-2 font-medium">Jami</th>
+                        <th className="text-left pb-1.5 pr-2 font-medium">{t('contracts.col.product')}</th>
+                        <th className="text-left pb-1.5 pr-2 font-medium">{t('contracts.col.unit')}</th>
+                        <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.col.qty')}</th>
+                        <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.col.priceVat')}</th>
+                        <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.vat')}</th>
+                        <th className="text-right pb-1.5 pr-2 font-medium">{t('contracts.col.total')}</th>
                         <th></th>
                       </tr>
                     </thead>
@@ -989,18 +995,18 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
                     </tbody>
                   </table>
                   {specRows.length === 0 && (
-                    <p className="text-xs text-[var(--text-3)] py-2 text-center">Mahsulot qo'shing</p>
+                    <p className="text-xs text-[var(--text-3)] py-2 text-center">{t('contracts.addProduct')}</p>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between">
                   <button type="button" onClick={addSpecRow}
                     className="text-xs text-[var(--accent)] hover:opacity-80 flex items-center gap-1">
-                    <Plus size={13} /> Mahsulot qo'shish
+                    <Plus size={13} /> {t('contracts.addProductBtn')}
                   </button>
                   {specRows.length > 0 && (
                     <span className="text-sm font-bold text-[var(--text)]">
-                      Jami: {fmt(specTotal)} so'm
+                      {t('contracts.totalSum', { sum: fmt(specTotal) })}
                     </span>
                   )}
                 </div>
@@ -1012,12 +1018,12 @@ function ContractForm({ onSaved, onCancel, editContract, products = [], vatRate 
         <div className="flex gap-2 justify-end pt-1">
           <button onClick={onCancel}
             className="px-4 py-2 text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-md">
-            Bekor (Esc)
+            {t('contracts.cancelEsc')}
           </button>
           <button onClick={save} disabled={saving}
             className="px-5 py-2 text-sm btn-primary rounded-md disabled:opacity-60 flex items-center gap-1.5">
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-            {editing ? 'Yangilash' : 'Shartnoma yaratish'}
+            {editing ? t('contracts.update') : t('contracts.createContract')}
           </button>
         </div>
       </div>
@@ -1034,6 +1040,7 @@ const fmtInn = (inn) => {
 };
 
 export default function Contracts({ user }) {
+  const { t } = useTranslation();
   // Mijoz/tahrirlash/o'chirish ruxsatlari ContractRow ichida tekshiriladi
   const canCreate = user?.role === 'admin' || user?.permissions?.contracts?.create !== false;
   const auditUsers = useUsersLookup();
@@ -1110,19 +1117,19 @@ export default function Contracts({ user }) {
   const deleteContract = async () => {
     try {
       await api.delete(`/api/contracts/${delContract.id}`);
-      toast.success('Shartnoma o\'chirildi');
+      toast.success(t('contracts.toast.deleted'));
       setDelContract(null);
       load(page);
     } catch { /* toast shown by interceptor */ }
   };
 
   const handleRestore = async (rec) => {
-    try { await api.post(`/api/contracts/${rec.id}/restore`); toast.success('Tiklandi'); load(page); }
+    try { await api.post(`/api/contracts/${rec.id}/restore`); toast.success(t('common.restored')); load(page); }
     catch { /* interceptor toast */ }
   };
   const handleHardDelete = async (rec) => {
-    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
-    try { await api.delete(`/api/contracts/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); load(page); }
+    if (!window.confirm(t('common.hardDeleteConfirm'))) return;
+    try { await api.delete(`/api/contracts/${rec.id}/hard`); toast.success(t('common.hardDeleted')); load(page); }
     catch { /* interceptor toast */ }
   };
 
@@ -1133,18 +1140,18 @@ export default function Contracts({ user }) {
         <div className="modal-overlay">
           <div className="bg-[var(--surface)] rounded-xl shadow-2xl p-6 w-full max-w-sm border border-[var(--border)] text-center animate-in">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-sm font-bold text-[var(--text)] mb-1">Shartnomani o'chirish</h3>
+            <h3 className="text-sm font-bold text-[var(--text)] mb-1">{t('contracts.deleteTitle')}</h3>
             <p className="text-xs text-[var(--text-3)] mb-6">
               №{delContract.number} — {delContract.client?.name}
             </p>
             <div className="flex gap-2">
               <button onClick={() => setDelContract(null)}
                 className="flex-1 px-3 py-1.5 text-xs border border-[var(--border)] rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-2)] transition">
-                Bekor
+                {t('common.cancel')}
               </button>
               <button onClick={deleteContract}
                 className="flex-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                O'chirish
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -1155,14 +1162,14 @@ export default function Contracts({ user }) {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text)]">Shartnomalar</h2>
-            <p className="text-xs text-[var(--text-3)] mt-0.5">Jami: {total} ta</p>
+            <h2 className="text-lg font-semibold text-[var(--text)]">{t('contracts.title')}</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{t('contracts.totalCount', { count: total })}</p>
           </div>
           {canCreate && (
             <button onClick={() => { form.isOpen ? form.close() : form.open(); setEditContract(null); }}
               className="flex items-center gap-1.5 px-3 py-1.5 btn-primary text-xs font-medium rounded-lg transition shadow-sm">
               <Plus size={16} strokeWidth={2.2} />
-              {form.isOpen ? 'Yopish' : 'Yangi shartnoma'}
+              {form.isOpen ? t('common.close') : t('contracts.newContract')}
             </button>
           )}
         </div>
@@ -1171,21 +1178,21 @@ export default function Contracts({ user }) {
       {/* Submenu Quick Filters */}
       <div className="flex border-b border-[var(--border)] gap-2">
         {[
-          { key: 'barchasi', label: 'Barchasi' },
-          { key: 'qarzdorlar', label: 'Qarzdorlar' },
-          { key: 'haqdorlar', label: 'Haqdorlar' },
-          { key: 'yangi', label: 'Yangi' }
-        ].map(t => (
+          { key: 'barchasi', label: t('common.all') },
+          { key: 'qarzdorlar', label: t('common.debtors') },
+          { key: 'haqdorlar', label: t('common.creditors') },
+          { key: 'yangi', label: t('contracts.status.yangi') }
+        ].map(tab => (
           <button
-            key={t.key}
-            onClick={() => setDebtFilter(t.key)}
+            key={tab.key}
+            onClick={() => setDebtFilter(tab.key)}
             className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all duration-200 -mb-[1px] ${
-              debtFilter === t.key
+              debtFilter === tab.key
                 ? 'border-[var(--accent)] text-[var(--accent)]'
                 : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)] hover:border-[var(--border)]'
             }`}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -1227,16 +1234,16 @@ export default function Contracts({ user }) {
             <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <input
               {...searchInput}
-              placeholder="Qidirish: mijoz, INN, raqam (Enter)..."
+              placeholder={t('contracts.searchPh')}
               className="w-full pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition text-[var(--text)] placeholder-[var(--text-3)]"
             />
           </div>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
             className="border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
-            <option value="">Barcha status</option>
-          <option value="yangi">Yangi</option>
-          <option value="amalda">Amalda</option>
-          <option value="yopilgan">Yopilgan</option>
+            <option value="">{t('contracts.allStatus')}</option>
+          <option value="yangi">{t('contracts.status.yangi')}</option>
+          <option value="amalda">{t('contracts.status.amalda')}</option>
+          <option value="yopilgan">{t('contracts.status.yopilgan')}</option>
         </select>
       </div>
     </div>
@@ -1249,16 +1256,16 @@ export default function Contracts({ user }) {
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] w-10">#</th>
                 {[
-                  { label: 'Mijoz',      col: 'client',      align: 'left'   },
-                  { label: 'INN',        col: null,          align: 'left'   },
-                  { label: 'Raqam',      col: 'number',      align: 'left'   },
-                  { label: 'Sana',       col: 'date',        align: 'left'   },
-                  { label: 'Summa',      col: 'totalValue',  align: 'right'  },
-                  { label: "To'landi",   col: null,          align: 'right'  },
-                  { label: 'Yetkazildi', col: null,          align: 'right'  },
-                  { label: 'Spets',      col: null,          align: 'center' },
-                  { label: 'Faktura',    col: null,          align: 'right'  },
-                  { label: 'Status',     col: 'status',      align: 'center' },
+                  { label: t('contracts.col.client'),     col: 'client',      align: 'left'   },
+                  { label: t('contracts.inn'),            col: null,          align: 'left'   },
+                  { label: t('contracts.col.number'),     col: 'number',      align: 'left'   },
+                  { label: t('common.date'),              col: 'date',        align: 'left'   },
+                  { label: t('common.sum'),               col: 'totalValue',  align: 'right'  },
+                  { label: t('contracts.col.paid'),       col: null,          align: 'right'  },
+                  { label: t('contracts.col.delivered'),  col: null,          align: 'right'  },
+                  { label: t('contracts.col.spec'),       col: null,          align: 'center' },
+                  { label: t('contracts.col.invoice'),    col: null,          align: 'right'  },
+                  { label: t('common.status'),            col: 'status',      align: 'center' },
                 ].map(({ label, col, align }) => (
                   <th key={label}
                     className={`px-4 py-3 text-${align} text-xs font-semibold select-none
@@ -1275,7 +1282,7 @@ export default function Contracts({ user }) {
                     </span>
                   </th>
                 ))}
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] whitespace-nowrap">Kim / Qachon</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-3)] whitespace-nowrap">{t('common.whoWhen')}</th>
                 <th className="px-4 py-3 w-10"></th>
               </tr>
             </thead>
@@ -1293,7 +1300,7 @@ export default function Contracts({ user }) {
               ) : contracts.length === 0 ? (
                 <tr>
                   <td colSpan={13} className="px-4 py-12 text-center text-sm text-[var(--text-3)]">
-                    Shartnomalar topilmadi
+                    {t('contracts.notFound')}
                   </td>
                 </tr>
               ) : (

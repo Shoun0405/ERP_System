@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { fmtDate } from '../lib/format';
 import { Plus, X, Trash2, Edit2, Shield, UserCheck, UserX, Key, Search } from 'lucide-react';
 
 const DEFAULT_PERMISSIONS = {
@@ -15,20 +17,12 @@ const DEFAULT_PERMISSIONS = {
   settings:     { read: false, create: false, update: false, delete: false },
 };
 
-const MODULE_LABELS = {
-  clients:      'Mijozlar',
-  products:     'Mahsulotlar',
-  contracts:    'Shartnomalar',
-  sales:        'Savdolar',
-  payments:     'To\'lovlar',
-  interactions: 'Muloqotlar',
-  reports:      'Hisobotlar',
-  settings:     'Sozlamalar',
-};
+const MODULE_KEYS = ['clients', 'products', 'contracts', 'sales', 'payments', 'interactions', 'reports', 'settings'];
 
 const EMPTY_FORM = { username: '', password: '', fullName: '', role: 'seller', isActive: true, permissions: null };
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -98,11 +92,11 @@ export default function UsersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.fullName.trim() || !form.username.trim()) {
-      toast.error('Barcha majburiy maydonlarni to\'ldiring');
+      toast.error(t('users.fillRequired'));
       return;
     }
     if (modal === 'add' && !form.password) {
-      toast.error('Parol kiritish majburiy');
+      toast.error(t('users.passwordRequired'));
       return;
     }
 
@@ -110,7 +104,7 @@ export default function UsersPage() {
     try {
       if (modal === 'add') {
         await api.post('/api/users', form);
-        toast.success('Yangi foydalanuvchi yaratildi');
+        toast.success(t('users.created'));
       } else {
         // Send fields for update
         const payload = {
@@ -123,7 +117,7 @@ export default function UsersPage() {
           payload.password = form.password;
         }
         await api.put(`/api/users/${editId}`, payload);
-        toast.success('Foydalanuvchi yangilandi');
+        toast.success(t('users.updated'));
       }
       setModal(null);
       fetchUsers();
@@ -137,7 +131,7 @@ export default function UsersPage() {
   const handleDelete = async () => {
     try {
       await api.delete(`/api/users/${delId}`);
-      toast.success('Foydalanuvchi o\'chirildi');
+      toast.success(t('users.deleted'));
       setDelId(null);
       fetchUsers();
     } catch {
@@ -154,15 +148,15 @@ export default function UsersPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Foydalanuvchilar (RBAC)</h2>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">Tizim foydalanuvchilari va ularning kirish huquqlarini boshqarish</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">{t('users.title')}</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">{t('users.subtitle')}</p>
         </div>
         <button
           onClick={handleOpenAdd}
           className="btn btn-accent flex items-center gap-2 text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer"
         >
           <Plus size={16} strokeWidth={2.2} />
-          Foydalanuvchi qo'shish
+          {t('users.addUser')}
         </button>
       </div>
 
@@ -174,7 +168,7 @@ export default function UsersPage() {
           </span>
           <input
             type="text"
-            placeholder="Foydalanuvchi nomi yoki to'liq ismi..."
+            placeholder={t('users.searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] w-full placeholder-[var(--text-3)]"
@@ -188,12 +182,12 @@ export default function UsersPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
-                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">To'liq ismi</th>
-                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">Login (username)</th>
-                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">Roli</th>
-                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">Holati</th>
-                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">Yaratilgan sana</th>
-                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider text-right">Amallar</th>
+                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('users.colFullName')}</th>
+                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('users.colLogin')}</th>
+                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('users.colRole')}</th>
+                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('common.status')}</th>
+                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('users.colCreatedAt')}</th>
+                <th className="px-5 py-3 text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
@@ -207,7 +201,7 @@ export default function UsersPage() {
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-5 py-12 text-center text-xs text-[var(--text-3)] font-medium">Foydalanuvchilar topilmadi</td>
+                  <td colSpan="6" className="px-5 py-12 text-center text-xs text-[var(--text-3)] font-medium">{t('users.empty')}</td>
                 </tr>
               ) : (
                 filteredUsers.map(u => (
@@ -225,7 +219,7 @@ export default function UsersPage() {
                               : 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
                       }`}>
                         <Shield size={11} strokeWidth={2.5} />
-                        {u.role === 'superAdmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : u.role === 'seller' ? 'Sotuvchi' : 'Foydalanuvchi'}
+                        {u.role === 'superAdmin' ? t('users.role.superAdmin') : u.role === 'admin' ? t('users.role.admin') : u.role === 'seller' ? t('users.role.seller') : t('users.role.user')}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-xs">
@@ -237,31 +231,31 @@ export default function UsersPage() {
                         {u.isActive ? (
                           <>
                             <UserCheck size={11} strokeWidth={2.5} />
-                            Faol
+                            {t('users.active')}
                           </>
                         ) : (
                           <>
                             <UserX size={11} strokeWidth={2.5} />
-                            Faolsiz
+                            {t('users.inactive')}
                           </>
                         )}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-xs text-[var(--text-2)]">
-                      {new Date(u.createdAt).toLocaleDateString('uz-UZ')}
+                      {fmtDate(u.createdAt)}
                     </td>
                     <td className="px-5 py-3 text-xs text-right space-x-1">
                       <button
                         onClick={() => handleOpenEdit(u)}
                         className="p-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition"
-                        title="Tahrirlash"
+                        title={t('common.edit')}
                       >
                         <Edit2 size={15} strokeWidth={2} />
                       </button>
                       <button
                         onClick={() => setDelId(u.id)}
                         className="p-1 text-red-500 hover:text-red-700 transition"
-                        title="O'chirish"
+                        title={t('common.delete')}
                       >
                         <Trash2 size={15} strokeWidth={2} />
                       </button>
@@ -280,7 +274,7 @@ export default function UsersPage() {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in my-8">
             <div className="flex justify-between items-center px-6 py-4 border-b border-[var(--border)] bg-[var(--surface-2)]">
               <h3 className="text-sm font-semibold text-[var(--text)]">
-                {modal === 'add' ? "Yangi foydalanuvchi qo'shish" : "Foydalanuvchini tahrirlash"}
+                {modal === 'add' ? t('users.modalAddTitle') : t('users.modalEditTitle')}
               </h3>
               <button
                 onClick={() => setModal(null)}
@@ -296,32 +290,32 @@ export default function UsersPage() {
                 {/* Left Column: General Info */}
                 <div className="space-y-4">
                   <div className="border-b border-[var(--border)] pb-2 mb-2">
-                    <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Asosiy ma'lumotlar</h4>
+                    <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{t('users.sectionBasic')}</h4>
                   </div>
 
                   {/* Full Name */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">Foydalanuvchi to'liq ismi *</label>
+                    <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">{t('users.fullNameLabel')} *</label>
                     <input
                       type="text"
                       required
                       value={form.fullName}
                       onChange={e => setForm({ ...form, fullName: e.target.value })}
-                      placeholder="Masalan: Davlat Sher"
+                      placeholder={t('users.fullNamePlaceholder')}
                       className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
                   </div>
 
                   {/* Username */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">Login (username) *</label>
+                    <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">{t('users.colLogin')} *</label>
                     <input
                       type="text"
                       required
                       disabled={modal === 'edit'}
                       value={form.username}
                       onChange={e => setForm({ ...form, username: e.target.value.trim() })}
-                      placeholder="Masalan: davlatsher"
+                      placeholder={t('users.usernamePlaceholder')}
                       className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
@@ -330,9 +324,9 @@ export default function UsersPage() {
                   <div className="space-y-1">
                     <div className="flex justify-between items-center">
                       <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">
-                        Parol {modal === 'add' ? '*' : '(o\'zgartirish uchun)'}
+                        {t('users.passwordLabel')} {modal === 'add' ? '*' : t('users.passwordForChange')}
                       </label>
-                      {modal === 'edit' && <span className="text-[9px] text-[var(--text-3)] lowercase">yangilash ixtiyoriy</span>}
+                      {modal === 'edit' && <span className="text-[9px] text-[var(--text-3)] lowercase">{t('users.passwordUpdateOptional')}</span>}
                     </div>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -343,7 +337,7 @@ export default function UsersPage() {
                         required={modal === 'add'}
                         value={form.password}
                         onChange={e => setForm({ ...form, password: e.target.value })}
-                        placeholder={modal === 'add' ? "Kamida 6 ta belgi" : "O'zgarishsiz qoldirish uchun bo'sh qoldiring"}
+                        placeholder={modal === 'add' ? t('users.passwordPlaceholderAdd') : t('users.passwordPlaceholderEdit')}
                         className="w-full pl-9 pr-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                       />
                     </div>
@@ -351,16 +345,16 @@ export default function UsersPage() {
 
                   {/* Role Select */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">Foydalanuvchi roli</label>
+                    <label className="text-[11px] font-semibold text-[var(--text-2)] uppercase">{t('users.roleLabel')}</label>
                     <select
                       value={form.role}
                       onChange={e => setForm({ ...form, role: e.target.value })}
                       className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     >
-                      <option value="seller">Sotuvchi (Seller)</option>
-                      <option value="admin">Administrator (Admin)</option>
-                      <option value="superAdmin">Super Admin (butunlay o'chirish)</option>
-                      <option value="user">Oddiy foydalanuvchi (User)</option>
+                      <option value="seller">{t('users.roleOption.seller')}</option>
+                      <option value="admin">{t('users.roleOption.admin')}</option>
+                      <option value="superAdmin">{t('users.roleOption.superAdmin')}</option>
+                      <option value="user">{t('users.roleOption.user')}</option>
                     </select>
                   </div>
 
@@ -374,7 +368,7 @@ export default function UsersPage() {
                       className="w-4 h-4 rounded text-[var(--accent)] border-[var(--border)] focus:ring-[var(--accent)] cursor-pointer"
                     />
                     <label htmlFor="isActive" className="text-xs font-semibold text-[var(--text)] cursor-pointer select-none">
-                      Foydalanuvchi faol holatda
+                      {t('users.isActiveLabel')}
                     </label>
                   </div>
                 </div>
@@ -382,15 +376,15 @@ export default function UsersPage() {
                 {/* Right Column: Permission Matrix Grid */}
                 <div className="space-y-4">
                   <div className="border-b border-[var(--border)] pb-2 mb-2">
-                    <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Huquqlar matritsasi (Permission Matrix)</h4>
+                    <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{t('users.permissionMatrix')}</h4>
                   </div>
 
                   <div className="flex flex-col">
                     <p className="text-[11px] text-[var(--text-3)] mb-4 leading-relaxed">
-                      Chap tomonda tizim modullari va o'ng tomonda ustunlarda ularga tegishli ruxsatnomalar ("ptichka").
+                      {t('users.permissionHint')}
                       {form.role === 'admin' && (
                         <span className="block mt-1 font-semibold text-amber-600 dark:text-amber-400">
-                          ⚠️ Diqqat: Admin foydalanuvchilarga barcha huquqlar avtomatik beriladi!
+                          {t('users.adminWarning')}
                         </span>
                       )}
                     </p>
@@ -399,17 +393,17 @@ export default function UsersPage() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-[var(--surface-2)] border-b border-[var(--border)]">
-                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider">Modul</th>
-                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">Ko'rish</th>
-                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">Qo'shish</th>
-                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">O'zgartirish</th>
-                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">O'chirish</th>
+                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider">{t('users.colModule')}</th>
+                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">{t('users.perm.read')}</th>
+                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">{t('users.perm.create')}</th>
+                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">{t('users.perm.update')}</th>
+                            <th className="p-2.5 text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider text-center">{t('users.perm.delete')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] text-xs">
-                          {Object.entries(MODULE_LABELS).map(([modKey, modLabel]) => (
+                          {MODULE_KEYS.map((modKey) => (
                             <tr key={modKey} className="hover:bg-[var(--surface-2)] transition-colors">
-                              <td className="p-2.5 font-medium text-[var(--text)]">{modLabel}</td>
+                              <td className="p-2.5 font-medium text-[var(--text)]">{t(`users.module.${modKey}`)}</td>
                               {['read', 'create', 'update', 'delete'].map(actKey => {
                                 const isChecked = form.role === 'admin' ? true : !!form.permissions?.[modKey]?.[actKey];
                                 const isDisabled = form.role === 'admin';
@@ -442,14 +436,14 @@ export default function UsersPage() {
                   onClick={() => setModal(null)}
                   className="btn btn-outline text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer"
                 >
-                  Bekor qilish
+                  {t('users.cancelBtn')}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="btn btn-accent text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer disabled:opacity-60"
                 >
-                  {saving ? "Saqlanmoqda..." : "Saqlash"}
+                  {saving ? t('common.saving') : t('common.save')}
                 </button>
               </div>
             </form>
@@ -462,21 +456,21 @@ export default function UsersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl w-full max-w-sm shadow-2xl p-6 space-y-4 animate-in">
             <div>
-              <h3 className="text-sm font-semibold text-[var(--text)]">Rostdan ham o'chirmoqchimisiz?</h3>
-              <p className="text-xs text-[var(--text-3)] mt-1">Ushbu foydalanuvchi tizimdan butunlay o'chiriladi. Bu amalni ortga qaytarib bo'lmaydi!</p>
+              <h3 className="text-sm font-semibold text-[var(--text)]">{t('users.deleteTitle')}</h3>
+              <p className="text-xs text-[var(--text-3)] mt-1">{t('users.deleteBody')}</p>
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t border-[var(--border)]">
               <button
                 onClick={() => setDelId(null)}
                 className="btn btn-outline text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer"
               >
-                Bekor qilish
+                {t('users.cancelBtn')}
               </button>
               <button
                 onClick={handleDelete}
                 className="btn btn-danger text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer"
               >
-                Ha, o'chirish
+                {t('users.confirmDelete')}
               </button>
             </div>
           </div>

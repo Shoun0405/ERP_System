@@ -1,8 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-const WEEKDAYS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
-const MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
 
 const pad = n => String(n).padStart(2, '0');
 const toYMD = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -19,6 +17,9 @@ const parseYMD = (s) => {
  * ikkalasi to'lgach yangi bosish — yangi oraliqni boshlaydi.
  */
 export default function Calendar({ from, to, onChange }) {
+  const { t } = useTranslation();
+  const WEEKDAYS = t('calendar.weekdays', { returnObjects: true });
+  const MONTHS = t('calendar.months', { returnObjects: true });
   const fromD = parseYMD(from);
   const toD = parseYMD(to);
   const fromT = fromD ? fromD.getTime() : null;

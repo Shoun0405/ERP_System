@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import { fmt, fmtDate } from '../lib/format';
 import TrendChart from '../components/TrendChart';
@@ -19,11 +20,11 @@ const WIDGET_DEFAULTS = {
   client_ledger: false,
 };
 const WIDGET_META = [
-  { key: 'kpi_cards',     label: "KPI kartalar (savdo, hujjatlar, top mahsulot)" },
-  { key: 'sales_trend',   label: "Savdo aylanmasi trendc grafigi" },
-  { key: 'top_products',  label: "Top 5 mahsulot (dona bo'yicha)" },
-  { key: 'debtors',       label: "Eng yirik qarzdorlar" },
-  { key: 'client_ledger', label: "Mijoz analitik kartasi (Ledger)" },
+  { key: 'kpi_cards' },
+  { key: 'sales_trend' },
+  { key: 'top_products' },
+  { key: 'debtors' },
+  { key: 'client_ledger' },
 ];
 
 function loadWidgets() {
@@ -34,27 +35,27 @@ function loadWidgets() {
 
 // ── Menu ─────────────────────────────────────────────────────────────────────
 const MENU = [
-  { id: 'home',           label: 'Bosh sahifa',              Icon: LayoutDashboard },
+  { id: 'home',           Icon: LayoutDashboard },
   {
-    group: 'Savdo hisobotlari', Icon: TrendingUp,
+    group: 'sales', Icon: TrendingUp,
     children: [
-      { id: 'sales_period',     label: 'Davriy savdo',          Icon: BarChart3 },
-      { id: 'sales_by_client',  label: "Mijozlar bo'yicha",      Icon: Users },
-      { id: 'sales_by_product', label: "Mahsulotlar bo'yicha",   Icon: Package },
-      { id: 'sales_by_seller',  label: "Sotuvchilar bo'yicha",   Icon: UserCheck },
+      { id: 'sales_period',     Icon: BarChart3 },
+      { id: 'sales_by_client',  Icon: Users },
+      { id: 'sales_by_product', Icon: Package },
+      { id: 'sales_by_seller',  Icon: UserCheck },
     ]
   },
   {
-    group: 'Moliyaviy hisobotlar', Icon: Wallet,
+    group: 'finance', Icon: Wallet,
     children: [
-      { id: 'debtors',          label: 'Qarzdorlar',             Icon: AlertTriangle },
-      { id: 'client_statement', label: 'Mijoz kartasi',          Icon: FileText },
-      { id: 'seller_statement', label: 'Sotuvchi kartasi',       Icon: UserCheck },
-      { id: 'payments',         label: "To'lovlar hisoboti",     Icon: CreditCard },
-      { id: 'vat_report',       label: 'QQS hisoboti',           Icon: Percent },
+      { id: 'debtors',          Icon: AlertTriangle },
+      { id: 'client_statement', Icon: FileText },
+      { id: 'seller_statement', Icon: UserCheck },
+      { id: 'payments',         Icon: CreditCard },
+      { id: 'vat_report',       Icon: Percent },
     ]
   },
-  { id: 'widget_settings', label: 'Bosh sahifa sozlamalari', Icon: Settings2 },
+  { id: 'widget_settings', Icon: Settings2 },
 ];
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ function SkeletonRows({ n = 4 }) {
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function HomeSection({ fromDate, toDate, widgets }) {
+  const { t } = useTranslation();
   const [salesSummary, setSalesSummary]     = useState(null);
   const [topProducts, setTopProducts]       = useState([]);
   const [debtors, setDebtors]               = useState([]);
@@ -139,39 +141,39 @@ function HomeSection({ fromDate, toDate, widgets }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Bosh sahifa" subtitle="Konfiguratsiyalanadigan asosiy ko'rsatkichlar" />
+      <SectionHeader title={t('reports.home.title')} subtitle={t('reports.home.subtitle')} />
 
       {/* KPI Cards */}
       {widgets.kpi_cards && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
             <div className="space-y-1">
-              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Tanlangan Davr Savdosi</h4>
+              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">{t('reports.kpi.periodSales')}</h4>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-extrabold text-[var(--text)] font-mono">{loadS ? '...' : fmt(salesSummary?.totalAmount || 0)}</span>
                 <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">UZS</span>
               </div>
-              <p className="text-[10px] text-[var(--text-3)]">Jami yuk xatlari aylanmasi</p>
+              <p className="text-[10px] text-[var(--text-3)]">{t('reports.kpi.periodSalesSub')}</p>
             </div>
             <div className="icon-badge icon-badge-success p-3 rounded-xl"><TrendingUp size={20} strokeWidth={2.2} /></div>
           </div>
           <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
             <div className="space-y-1">
-              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Hujjatlar Soni</h4>
+              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">{t('reports.kpi.docsCount')}</h4>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-extrabold text-[var(--text)] font-mono">{loadS ? '...' : salesSummary?.salesCount || 0}</span>
-                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">ta</span>
+                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">{t('units.count')}</span>
               </div>
-              <p className="text-[10px] text-[var(--text-3)]">Davrdagi rasmiylashtirilgan yuk xatlari</p>
+              <p className="text-[10px] text-[var(--text-3)]">{t('reports.kpi.docsCountSub')}</p>
             </div>
             <div className="icon-badge icon-badge-info p-3 rounded-xl"><ShoppingBag size={20} strokeWidth={2.2} /></div>
           </div>
           <div className="card flex items-center justify-between p-5 border border-[var(--border)]">
             <div className="space-y-1">
-              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">Top Mahsulot</h4>
+              <h4 className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider">{t('reports.kpi.topProduct')}</h4>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-extrabold text-[var(--text)] font-mono">{loadP ? '...' : topProducts[0] ? fmt(topProducts[0].totalPieces) : '0'}</span>
-                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">dona</span>
+                <span className="text-[10px] font-bold text-[var(--text-3)] uppercase">{t('units.pcs')}</span>
               </div>
               <p className="text-[10px] text-[var(--text-3)]">{topProducts[0]?.article || '—'}</p>
             </div>
@@ -186,14 +188,14 @@ function HomeSection({ fromDate, toDate, widgets }) {
           {widgets.sales_trend && (
             <div className="card lg:col-span-2 flex flex-col border border-[var(--border)]">
               <div className="mb-4">
-                <h3 className="text-xs font-semibold text-[var(--text)]">Savdo aylanmasi dinamikasi</h3>
-                <p className="text-[10px] text-[var(--text-3)] mt-0.5">Kunlik yoki davriy savdo o'zgarishi</p>
+                <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.home.salesDynamics')}</h3>
+                <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('reports.home.salesDynamicsSub')}</p>
               </div>
               <div className="flex-1 bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] flex items-center justify-center min-h-[160px]">
                 {loadS ? (
-                  <div className="text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+                  <div className="text-xs text-[var(--text-3)]">{t('common.loading')}</div>
                 ) : !salesSummary?.salesByDay?.length ? (
-                  <div className="text-xs text-[var(--text-3)]">Tanlangan davrda savdolar mavjud emas</div>
+                  <div className="text-xs text-[var(--text-3)]">{t('reports.noSalesInPeriod')}</div>
                 ) : (
                   <TrendChart
                     data={salesSummary.salesByDay.map(d => ({ amount: d.amount, title: `${fmtDate(d.day)}: ${fmt(d.amount)} UZS` }))}
@@ -206,19 +208,19 @@ function HomeSection({ fromDate, toDate, widgets }) {
           {widgets.top_products && (
             <div className="card border border-[var(--border)] flex flex-col">
               <div className="mb-4">
-                <h3 className="text-xs font-semibold text-[var(--text)]">Top 5 Mahsulot</h3>
-                <p className="text-[10px] text-[var(--text-3)] mt-0.5">Dona bo'yicha eng ko'p sotilganlar</p>
+                <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.home.top5Products')}</h3>
+                <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('reports.home.top5ProductsSub')}</p>
               </div>
               <div className="space-y-4 flex-1">
                 {loadP ? <SkeletonRows n={4} /> : topProducts.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-[var(--text-3)]">Sotilgan mahsulotlar yo'q</div>
+                  <div className="text-center py-8 text-xs text-[var(--text-3)]">{t('reports.noSoldProducts')}</div>
                 ) : topProducts.map(p => {
                   const ratio = p.totalPieces / (topProducts[0]?.totalPieces || 1);
                   return (
                     <div key={p.id} className="space-y-1">
                       <div className="flex justify-between items-baseline">
                         <span className="text-xs font-medium text-[var(--text)] truncate max-w-[160px]">{p.article}</span>
-                        <span className="text-[10.5px] font-bold font-mono text-[var(--text-2)]">{fmt(p.totalPieces)} dona</span>
+                        <span className="text-[10.5px] font-bold font-mono text-[var(--text-2)]">{fmt(p.totalPieces)} {t('units.pcs')}</span>
                       </div>
                       <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
                         <div className="h-full bg-indigo-500 opacity-90 transition-all duration-500" style={{ width: `${ratio * 100}%` }} />
@@ -238,14 +240,14 @@ function HomeSection({ fromDate, toDate, widgets }) {
           {widgets.debtors && (
             <div className="card border border-[var(--border)] flex flex-col">
               <div className="mb-4">
-                <h3 className="text-xs font-semibold text-[var(--text)]">Eng yirik qarzdorlar</h3>
-                <p className="text-[10px] text-[var(--text-3)] mt-0.5">Faol debitor qarzdorliklar</p>
+                <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.home.topDebtors')}</h3>
+                <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('reports.home.topDebtorsSub')}</p>
               </div>
               <div className="space-y-3.5 flex-1">
                 {loadD ? [...Array(4)].map((_, i) => (
                   <div key={i} className="h-8 bg-[var(--surface-2)] animate-pulse rounded" />
                 )) : debtors.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-[var(--text-3)]">Faol qarzdorliklar yo'q</div>
+                  <div className="text-center py-8 text-xs text-[var(--text-3)]">{t('reports.noActiveDebts')}</div>
                 ) : debtors.slice(0, 5).map(d => {
                   const ratio = d.debt / (debtors[0]?.debt || 1);
                   return (
@@ -268,11 +270,11 @@ function HomeSection({ fromDate, toDate, widgets }) {
             <div className={`card border border-[var(--border)] flex flex-col p-0 ${widgets.debtors ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
               <div className="px-5 py-3 border-b border-[var(--border)] flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[var(--surface-2)] rounded-t-xl gap-2">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text)]">Mijozning analitik aylanma kartasi</h3>
-                  <p className="text-[10px] text-[var(--text-3)] mt-0.5">Xronologik savdolar, to'lovlar va balans</p>
+                  <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.home.ledgerTitle')}</h3>
+                  <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('reports.home.ledgerSub')}</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[10px] font-bold text-[var(--text-2)] uppercase">Mijoz:</span>
+                  <span className="text-[10px] font-bold text-[var(--text-2)] uppercase">{t('reports.clientLabel')}</span>
                   <select
                     value={selClientId}
                     onChange={e => setSelClientId(e.target.value)}
@@ -284,18 +286,18 @@ function HomeSection({ fromDate, toDate, widgets }) {
               </div>
               <div className="flex-1 overflow-x-auto min-h-[200px]">
                 {loadLS ? (
-                  <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+                  <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
                 ) : !clientStatement?.statement?.length ? (
-                  <div className="p-8 text-center text-xs text-[var(--text-3)]">Aylanmalar topilmadi</div>
+                  <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('reports.noLedgerEntries')}</div>
                 ) : (
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                        <th className="px-4 py-2">Sana</th>
-                        <th className="px-4 py-2">Tavsif</th>
-                        <th className="px-4 py-2 text-right">Debet</th>
-                        <th className="px-4 py-2 text-right">Kredit</th>
-                        <th className="px-4 py-2 text-right">Balans</th>
+                        <th className="px-4 py-2">{t('common.date')}</th>
+                        <th className="px-4 py-2">{t('reports.desc')}</th>
+                        <th className="px-4 py-2 text-right">{t('reports.debit')}</th>
+                        <th className="px-4 py-2 text-right">{t('reports.credit')}</th>
+                        <th className="px-4 py-2 text-right">{t('reports.balance')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
@@ -322,6 +324,7 @@ function HomeSection({ fromDate, toDate, widgets }) {
 
 // ── DAVRIY SAVDO ──────────────────────────────────────────────────────────────
 function SalesPeriodSection({ fromDate, toDate }) {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -337,30 +340,30 @@ function SalesPeriodSection({ fromDate, toDate }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Davriy savdo" subtitle="Tanlangan davr bo'yicha savdo tahlili va kunlik dinamika" />
+      <SectionHeader title={t('reports.menu.sales_period')} subtitle={t('reports.salesPeriod.subtitle')} />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami savdo summasi</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.totalSalesAmount')}</p>
           <p className="text-xl font-extrabold font-mono text-[var(--text)]">
             {loading ? '...' : fmt(data?.totalAmount || 0)} <span className="text-xs font-semibold text-[var(--text-3)]">UZS</span>
           </p>
         </div>
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Hujjatlar soni</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.docsCount')}</p>
           <p className="text-xl font-extrabold font-mono text-[var(--text)]">
-            {loading ? '...' : data?.salesCount || 0} <span className="text-xs font-semibold text-[var(--text-3)]">ta</span>
+            {loading ? '...' : data?.salesCount || 0} <span className="text-xs font-semibold text-[var(--text-3)]">{t('units.count')}</span>
           </p>
         </div>
       </div>
 
       <div className="card border border-[var(--border)]">
-        <h3 className="text-xs font-semibold text-[var(--text)] mb-3">Kunlik savdo trendc</h3>
+        <h3 className="text-xs font-semibold text-[var(--text)] mb-3">{t('reports.dailySalesTrend')}</h3>
         <div className="bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] min-h-[200px] flex items-center justify-center">
           {loading ? (
-            <div className="text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+            <div className="text-xs text-[var(--text-3)]">{t('common.loading')}</div>
           ) : !data?.salesByDay?.length ? (
-            <div className="text-xs text-[var(--text-3)]">Tanlangan davrda savdolar mavjud emas</div>
+            <div className="text-xs text-[var(--text-3)]">{t('reports.noSalesInPeriod')}</div>
           ) : (
             <TrendChart
               data={data.salesByDay.map(d => ({ amount: d.amount, title: `${fmtDate(d.day)}: ${fmt(d.amount)} UZS` }))}
@@ -373,22 +376,22 @@ function SalesPeriodSection({ fromDate, toDate }) {
       {!loading && !!data?.salesByDay?.length && (
         <div className="card border border-[var(--border)] p-0">
           <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
-            <h3 className="text-xs font-semibold text-[var(--text)]">Kunlik jadval</h3>
+            <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.dailyTable')}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                  <th className="px-5 py-2">Sana</th>
-                  <th className="px-5 py-2 text-right">Hujjatlar</th>
-                  <th className="px-5 py-2 text-right">Savdo summasi</th>
+                  <th className="px-5 py-2">{t('common.date')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.documents')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.salesAmount')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {data.salesByDay.map((row, i) => (
                   <tr key={i} className="hover:bg-[var(--surface-2)]">
                     <td className="px-5 py-2.5 text-xs font-mono text-[var(--text-2)]">{fmtDate(row.day)}</td>
-                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{row.count} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{row.count} {t('units.count')}</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.amount)} UZS</td>
                   </tr>
                 ))}
@@ -403,6 +406,7 @@ function SalesPeriodSection({ fromDate, toDate }) {
 
 // ── MIJOZLAR BO'YICHA ─────────────────────────────────────────────────────────
 function SalesByClientSection({ fromDate, toDate }) {
+  const { t } = useTranslation();
   const [data, setData]     = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -421,32 +425,32 @@ function SalesByClientSection({ fromDate, toDate }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Mijozlar bo'yicha savdo" subtitle="Tanlangan davrda har bir mijozning savdo ulushi va summasi" />
+      <SectionHeader title={t('reports.salesByClient.title')} subtitle={t('reports.salesByClient.subtitle')} />
 
       <div className="card border border-[var(--border)] p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center">
-          <h3 className="text-xs font-semibold text-[var(--text)]">Mijozlar reytingi</h3>
+          <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.clientRanking')}</h3>
           <div className="flex items-center gap-4">
             {!loading && total > 0 && (
-              <span className="text-[11px] font-bold font-mono text-[var(--text-2)]">Jami: {fmt(total)} UZS</span>
+              <span className="text-[11px] font-bold font-mono text-[var(--text-2)]">{t('reports.total')}: {fmt(total)} UZS</span>
             )}
-            <span className="text-[11px] text-[var(--text-3)]">{data.length} ta mijoz</span>
+            <span className="text-[11px] text-[var(--text-3)]">{t('reports.clientCount', { count: data.length })}</span>
           </div>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
         ) : data.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda savdolar topilmadi</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('reports.noSalesFoundInPeriod')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
                   <th className="px-5 py-2 w-8">#</th>
-                  <th className="px-5 py-2">Mijoz</th>
-                  <th className="px-5 py-2 text-right">Hujjatlar</th>
-                  <th className="px-5 py-2 text-right">Jami summa</th>
-                  <th className="px-5 py-2 w-32">Ulush</th>
+                  <th className="px-5 py-2">{t('reports.client')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.documents')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.totalSum')}</th>
+                  <th className="px-5 py-2 w-32">{t('reports.share')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -457,7 +461,7 @@ function SalesByClientSection({ fromDate, toDate }) {
                       <div className="text-xs font-medium text-[var(--text)]">{row.name}</div>
                       {row.phone && <div className="text-[10px] text-[var(--text-3)] mt-0.5">{row.phone}</div>}
                     </td>
-                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.salesCount} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.salesCount} {t('units.count')}</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
                     <td className="px-5 py-2.5">
                       <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
@@ -470,7 +474,7 @@ function SalesByClientSection({ fromDate, toDate }) {
               {total > 0 && (
                 <tfoot>
                   <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                    <td colSpan="3" className="px-5 py-2.5 text-[var(--text)]">Jami:</td>
+                    <td colSpan="3" className="px-5 py-2.5 text-[var(--text)]">{t('reports.total')}:</td>
                     <td className="px-5 py-2.5 text-right font-mono font-extrabold text-[var(--text)]">{fmt(total)} UZS</td>
                     <td />
                   </tr>
@@ -486,6 +490,7 @@ function SalesByClientSection({ fromDate, toDate }) {
 
 // ── MAHSULOTLAR BO'YICHA ──────────────────────────────────────────────────────
 function SalesByProductSection({ fromDate, toDate }) {
+  const { t } = useTranslation();
   const [data, setData]     = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -503,28 +508,28 @@ function SalesByProductSection({ fromDate, toDate }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Mahsulotlar bo'yicha savdo" subtitle="Tanlangan davrda eng ko'p sotilgan mahsulotlar ro'yxati" />
+      <SectionHeader title={t('reports.salesByProduct.title')} subtitle={t('reports.salesByProduct.subtitle')} />
 
       <div className="card border border-[var(--border)] p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center">
-          <h3 className="text-xs font-semibold text-[var(--text)]">Mahsulotlar reytingi</h3>
-          <span className="text-[11px] text-[var(--text-3)]">{data.length} ta mahsulot</span>
+          <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.productRanking')}</h3>
+          <span className="text-[11px] text-[var(--text-3)]">{t('reports.productCount', { count: data.length })}</span>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
         ) : data.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda mahsulotlar topilmadi</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('reports.noProductsFoundInPeriod')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
                   <th className="px-5 py-2 w-8">#</th>
-                  <th className="px-5 py-2">Artikul</th>
-                  <th className="px-5 py-2 text-right">Dona</th>
-                  <th className="px-5 py-2 text-right">M³ (CBM)</th>
-                  <th className="px-5 py-2 text-right">Jami summa</th>
-                  <th className="px-5 py-2 w-28">Dona ulushi</th>
+                  <th className="px-5 py-2">{t('reports.article')}</th>
+                  <th className="px-5 py-2 text-right">{t('units.pcs')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.cbmCol')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.totalSum')}</th>
+                  <th className="px-5 py-2 w-28">{t('reports.pcsShare')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -553,6 +558,7 @@ function SalesByProductSection({ fromDate, toDate }) {
 
 // ── QARZDORLAR ────────────────────────────────────────────────────────────────
 function DebtorsSection() {
+  const { t } = useTranslation();
   const [data, setData]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -572,39 +578,39 @@ function DebtorsSection() {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Qarzdorlar hisoboti" subtitle="Barcha faol debitor qarzdorliklar — savdo minus to'lov" />
+      <SectionHeader title={t('reports.debtors.title')} subtitle={t('reports.debtors.subtitle')} />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami debitor qarz</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.totalDebt')}</p>
           <p className="text-xl font-extrabold font-mono text-red-500">
             {loading ? '...' : fmt(totalDebt)} <span className="text-xs font-semibold text-[var(--text-3)]">UZS</span>
           </p>
         </div>
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Qarzdorlar soni</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.debtorsCount')}</p>
           <p className="text-xl font-extrabold font-mono text-[var(--text)]">
-            {loading ? '...' : data.length} <span className="text-xs font-semibold text-[var(--text-3)]">ta</span>
+            {loading ? '...' : data.length} <span className="text-xs font-semibold text-[var(--text-3)]">{t('units.count')}</span>
           </p>
         </div>
       </div>
 
       <div className="card border border-[var(--border)] p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center gap-4">
-          <h3 className="text-xs font-semibold text-[var(--text)]">Barcha qarzdorlar</h3>
+          <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.allDebtors')}</h3>
           <input
             type="text"
-            placeholder="Mijoz nomi bo'yicha..."
+            placeholder={t('reports.searchByClientName')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="px-3 py-1.5 border border-[var(--border)] rounded text-xs bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] w-52"
           />
         </div>
         {loading ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-xs text-[var(--text-3)]">
-            {search ? 'Qidiruv bo\'yicha topilmadi' : 'Faol qarzdorliklar mavjud emas'}
+            {search ? t('reports.noSearchResults') : t('reports.noActiveDebtsAvail')}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -612,10 +618,10 @@ function DebtorsSection() {
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
                   <th className="px-5 py-2 w-8">#</th>
-                  <th className="px-5 py-2">Mijoz</th>
-                  <th className="px-5 py-2 text-right">Jami savdo</th>
-                  <th className="px-5 py-2 text-right">To'langan</th>
-                  <th className="px-5 py-2 text-right">Qarz (Balans)</th>
+                  <th className="px-5 py-2">{t('reports.client')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.totalSales')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.paid')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.debtBalance')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -634,7 +640,7 @@ function DebtorsSection() {
               </tbody>
               <tfoot>
                 <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                  <td colSpan="4" className="px-5 py-2.5 text-[var(--text)]">Jami debitor qarz:</td>
+                  <td colSpan="4" className="px-5 py-2.5 text-[var(--text)]">{t('reports.totalDebt')}:</td>
                   <td className="px-5 py-2.5 text-right font-mono font-extrabold text-red-500">{fmt(totalDebt)} UZS</td>
                 </tr>
               </tfoot>
@@ -650,6 +656,7 @@ function DebtorsSection() {
 
 // Bitta shartnoma uchun jadval
 function ContractLedgerTable({ group }) {
+  const { t } = useTranslation();
   const { contract, statement, finalBalance } = group;
   const totalDebit  = statement.reduce((s, i) => s + i.debit, 0);
   const totalCredit = statement.reduce((s, i) => s + i.credit, 0);
@@ -665,7 +672,7 @@ function ContractLedgerTable({ group }) {
             contract ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
                      : 'bg-[var(--border)] text-[var(--text-3)]'
           }`}>
-            {contract ? `Shartnoma` : 'Shartnoma yo\'q'}
+            {contract ? t('reports.contract') : t('reports.noContract')}
           </span>
           {contract && (
             <span className="text-xs font-semibold text-[var(--text)]">
@@ -682,10 +689,10 @@ function ContractLedgerTable({ group }) {
               )}
             </span>
           )}
-          <span className="text-[10px] text-[var(--text-3)]">{statement.length} ta yozuv</span>
+          <span className="text-[10px] text-[var(--text-3)]">{t('reports.recordCount', { count: statement.length })}</span>
         </div>
         <div className={`text-xs font-extrabold font-mono ${finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-          Saldo: {fmt(finalBalance)} UZS
+          {t('reports.saldo')}: {fmt(finalBalance)} UZS
         </div>
       </div>
 
@@ -694,11 +701,11 @@ function ContractLedgerTable({ group }) {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-              <th className="px-5 py-2">Sana</th>
-              <th className="px-5 py-2">Tavsif</th>
-              <th className="px-5 py-2 text-right">Savdo (Debet)</th>
-              <th className="px-5 py-2 text-right">To'lov (Kredit)</th>
-              <th className="px-5 py-2 text-right">Balans</th>
+              <th className="px-5 py-2">{t('common.date')}</th>
+              <th className="px-5 py-2">{t('reports.desc')}</th>
+              <th className="px-5 py-2 text-right">{t('reports.salesDebit')}</th>
+              <th className="px-5 py-2 text-right">{t('reports.paymentCredit')}</th>
+              <th className="px-5 py-2 text-right">{t('reports.balance')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
@@ -720,7 +727,7 @@ function ContractLedgerTable({ group }) {
           </tbody>
           <tfoot>
             <tr className="bg-[var(--surface-2)] font-bold text-xs border-t border-[var(--border)]">
-              <td colSpan="2" className="px-5 py-2 text-[var(--text)]">Jami:</td>
+              <td colSpan="2" className="px-5 py-2 text-[var(--text)]">{t('reports.total')}:</td>
               <td className="px-5 py-2 text-right font-mono text-slate-700 dark:text-slate-300">{fmt(totalDebit)} UZS</td>
               <td className="px-5 py-2 text-right font-mono text-emerald-600">{fmt(totalCredit)} UZS</td>
               <td className={`px-5 py-2 text-right font-mono font-extrabold ${finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
@@ -735,6 +742,7 @@ function ContractLedgerTable({ group }) {
 }
 
 function ClientStatementSection() {
+  const { t } = useTranslation();
   const [clients, setClients]       = useState([]);
   const [selId, setSelId]           = useState('');
   const [byContract, setByContract] = useState(false);
@@ -775,7 +783,7 @@ function ClientStatementSection() {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Mijoz analitik kartasi" subtitle="Xronologik tartibda savdolar, to'lovlar va joriy balans" />
+      <SectionHeader title={t('reports.clientStatement.title')} subtitle={t('reports.clientStatement.subtitle')} />
 
       {/* Controls */}
       <div className="card border border-[var(--border)] p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -792,17 +800,17 @@ function ClientStatementSection() {
           {!byContract && stmt && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-0.5 font-mono">
-                Savdo: {fmt(totalDebit)} UZS
+                {t('reports.sales')}: {fmt(totalDebit)} UZS
               </span>
               <span className="text-[10px] bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-0.5 font-mono text-emerald-600">
-                To'lov: {fmt(totalCredit)} UZS
+                {t('reports.payment')}: {fmt(totalCredit)} UZS
               </span>
               <span className={`text-[10px] rounded px-2 py-0.5 font-mono font-bold border ${
                 stmt.finalBalance > 0
                   ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/30 dark:border-red-800'
                   : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-800'
               }`}>
-                Qarz: {fmt(stmt.finalBalance)} UZS
+                {t('reports.debt')}: {fmt(stmt.finalBalance)} UZS
               </span>
             </div>
           )}
@@ -812,7 +820,7 @@ function ClientStatementSection() {
                 ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/30 dark:border-red-800'
                 : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-800'
             }`}>
-              Jami qarz: {fmt(contractData.totalBalance)} UZS
+              {t('reports.totalDebtBadge')}: {fmt(contractData.totalBalance)} UZS
             </span>
           )}
         </div>
@@ -831,14 +839,14 @@ function ClientStatementSection() {
               byContract ? 'translate-x-4' : 'translate-x-0.5'
             }`} />
           </button>
-          <span className="text-xs font-medium text-[var(--text)]">Shartnomalar bo'yicha</span>
+          <span className="text-xs font-medium text-[var(--text)]">{t('reports.byContracts')}</span>
         </label>
       </div>
 
       {/* Content */}
       {loading ? (
         <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">
-          Yuklanmoqda...
+          {t('common.loading')}
         </div>
       ) : byContract ? (
         /* ── Shartnomalar bo'yicha view ── */
@@ -852,7 +860,7 @@ function ClientStatementSection() {
             {contractData.groups.length > 1 && (
               <div className="card border-2 border-[var(--accent)] p-4 flex justify-between items-center">
                 <span className="text-xs font-bold text-[var(--text)]">
-                  Jami balans ({contractData.groups.length} ta shartnoma bo'yicha):
+                  {t('reports.totalBalanceByContracts', { count: contractData.groups.length })}
                 </span>
                 <span className={`text-base font-extrabold font-mono ${
                   contractData.totalBalance > 0 ? 'text-red-500' : 'text-emerald-600'
@@ -864,7 +872,7 @@ function ClientStatementSection() {
           </div>
         ) : (
           <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">
-            Ushbu mijoz bo'yicha shartnomalar topilmadi
+            {t('reports.noContractsForClient')}
           </div>
         )
       ) : (
@@ -873,17 +881,17 @@ function ClientStatementSection() {
           <div className="overflow-x-auto min-h-[250px]">
             {!stmt?.statement?.length ? (
               <div className="p-10 text-center text-xs text-[var(--text-3)]">
-                Ushbu mijoz bo'yicha aylanmalar topilmadi
+                {t('reports.noLedgerForClient')}
               </div>
             ) : (
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                    <th className="px-5 py-2">Sana</th>
-                    <th className="px-5 py-2">Tavsif (Hujjat)</th>
-                    <th className="px-5 py-2 text-right">Savdo (Debet)</th>
-                    <th className="px-5 py-2 text-right">To'lov (Kredit)</th>
-                    <th className="px-5 py-2 text-right">Balans (Qarz)</th>
+                    <th className="px-5 py-2">{t('common.date')}</th>
+                    <th className="px-5 py-2">{t('reports.descDoc')}</th>
+                    <th className="px-5 py-2 text-right">{t('reports.salesDebit')}</th>
+                    <th className="px-5 py-2 text-right">{t('reports.paymentCredit')}</th>
+                    <th className="px-5 py-2 text-right">{t('reports.balanceDebt')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
@@ -905,7 +913,7 @@ function ClientStatementSection() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                    <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">Jami aylanma yakuni:</td>
+                    <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">{t('reports.ledgerGrandTotal')}:</td>
                     <td className="px-5 py-2.5 text-right font-mono text-slate-700 dark:text-slate-300">{fmt(totalDebit)} UZS</td>
                     <td className="px-5 py-2.5 text-right font-mono text-emerald-600">{fmt(totalCredit)} UZS</td>
                     <td className={`px-5 py-2.5 text-right font-mono font-extrabold ${stmt.finalBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
@@ -924,6 +932,7 @@ function ClientStatementSection() {
 
 // ── SOTUVCHI KARTASI ──────────────────────────────────────────────────────────
 function SellerStatementSection() {
+  const { t } = useTranslation();
   const [summary, setSummary]   = useState([]);
   const [selSeller, setSelSeller] = useState('');
   const [data, setData]         = useState(null);
@@ -956,26 +965,26 @@ function SellerStatementSection() {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Sotuvchi kartasi" subtitle="Sotuvchi bo'yicha qarz/haq va shartnoma kesimida saldo (shartnoma sotuvchisi bo'yicha)" />
+      <SectionHeader title={t('reports.sellerStatement.title')} subtitle={t('reports.sellerStatement.subtitle')} />
 
       {/* Sotuvchilar ro'yxati — qarz/haq */}
       <div className="card border border-[var(--border)] p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
-          <h3 className="text-xs font-semibold text-[var(--text)]">Sotuvchilar bo'yicha saldo</h3>
+          <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.saldoBySeller')}</h3>
         </div>
         {loadSum ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
         ) : summary.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Sotuvchili shartnomalar topilmadi</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('reports.noSellerContracts')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                  <th className="px-5 py-2">Sotuvchi</th>
-                  <th className="px-5 py-2 text-right">Savdo</th>
-                  <th className="px-5 py-2 text-right">To'lov</th>
-                  <th className="px-5 py-2 text-right">Saldo (qarz)</th>
+                  <th className="px-5 py-2">{t('reports.seller')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.sales')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.payment')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.saldoDebt')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -1003,20 +1012,20 @@ function SellerStatementSection() {
       {selSeller && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[var(--text)]">«{selSeller}» — shartnomalar kesimida</h3>
+            <h3 className="text-sm font-bold text-[var(--text)]">{t('reports.sellerByContracts', { seller: selSeller })}</h3>
             {data && (
               <span className={`text-xs rounded px-2 py-0.5 font-mono font-bold border ${
                 data.totalBalance > 0
                   ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/30 dark:border-red-800'
                   : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-800'
               }`}>
-                Jami saldo: {fmt(data.totalBalance)} UZS
+                {t('reports.totalSaldo')}: {fmt(data.totalBalance)} UZS
               </span>
             )}
           </div>
 
           {loading ? (
-            <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+            <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
           ) : data?.groups?.length ? (
             <div className="space-y-4">
               {data.groups.map((group) => (
@@ -1025,7 +1034,7 @@ function SellerStatementSection() {
             </div>
           ) : (
             <div className="card border border-[var(--border)] p-10 text-center text-xs text-[var(--text-3)]">
-              Bu sotuvchi bo'yicha shartnoma harakatlari topilmadi
+              {t('reports.noSellerContractMoves')}
             </div>
           )}
         </div>
@@ -1036,6 +1045,7 @@ function SellerStatementSection() {
 
 // ── TO'LOVLAR HISOBOTI ────────────────────────────────────────────────────────
 function PaymentsSummarySection({ fromDate, toDate }) {
+  const { t } = useTranslation();
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -1051,30 +1061,30 @@ function PaymentsSummarySection({ fromDate, toDate }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="To'lovlar hisoboti" subtitle="Tanlangan davrda qabul qilingan to'lovlar dinamikasi" />
+      <SectionHeader title={t('reports.payments.title')} subtitle={t('reports.payments.subtitle')} />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami to'lovlar</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.totalPayments')}</p>
           <p className="text-xl font-extrabold font-mono text-emerald-600">
             {loading ? '...' : fmt(data?.totalAmount || 0)} <span className="text-xs font-semibold text-[var(--text-3)]">UZS</span>
           </p>
         </div>
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">To'lovlar soni</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.paymentsCount')}</p>
           <p className="text-xl font-extrabold font-mono text-[var(--text)]">
-            {loading ? '...' : data?.paymentsCount || 0} <span className="text-xs font-semibold text-[var(--text-3)]">ta</span>
+            {loading ? '...' : data?.paymentsCount || 0} <span className="text-xs font-semibold text-[var(--text-3)]">{t('units.count')}</span>
           </p>
         </div>
       </div>
 
       <div className="card border border-[var(--border)]">
-        <h3 className="text-xs font-semibold text-[var(--text)] mb-3">Kunlik to'lovlar trendc</h3>
+        <h3 className="text-xs font-semibold text-[var(--text)] mb-3">{t('reports.dailyPaymentsTrend')}</h3>
         <div className="bg-[var(--surface-2)] rounded-xl p-3 border border-[var(--border)] min-h-[180px] flex items-center justify-center">
           {loading ? (
-            <div className="text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+            <div className="text-xs text-[var(--text-3)]">{t('common.loading')}</div>
           ) : !data?.paymentsByDay?.length ? (
-            <div className="text-xs text-[var(--text-3)]">Tanlangan davrda to'lovlar mavjud emas</div>
+            <div className="text-xs text-[var(--text-3)]">{t('reports.noPaymentsInPeriod')}</div>
           ) : (
             <TrendChart
               data={data.paymentsByDay.map(d => ({ amount: d.amount, title: `${fmtDate(d.day)}: ${fmt(d.amount)} UZS` }))}
@@ -1087,22 +1097,22 @@ function PaymentsSummarySection({ fromDate, toDate }) {
       {!loading && !!data?.paymentsByDay?.length && (
         <div className="card border border-[var(--border)] p-0">
           <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
-            <h3 className="text-xs font-semibold text-[var(--text)]">Kunlik jadval</h3>
+            <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.dailyTable')}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                  <th className="px-5 py-2">Sana</th>
-                  <th className="px-5 py-2 text-right">To'lovlar</th>
-                  <th className="px-5 py-2 text-right">Jami summa</th>
+                  <th className="px-5 py-2">{t('common.date')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.paymentsCol')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.totalSum')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {data.paymentsByDay.map((row, i) => (
                   <tr key={i} className="hover:bg-[var(--surface-2)]">
                     <td className="px-5 py-2.5 text-xs font-mono text-[var(--text-2)]">{fmtDate(row.day)}</td>
-                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{row.count} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text)]">{row.count} {t('units.count')}</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-emerald-600">{fmt(row.amount)} UZS</td>
                   </tr>
                 ))}
@@ -1117,6 +1127,7 @@ function PaymentsSummarySection({ fromDate, toDate }) {
 
 // ── SOTUVCHILAR BO'YICHA ──────────────────────────────────────────────────────
 function SalesBySellerSection({ fromDate, toDate }) {
+  const { t } = useTranslation();
   const [data, setData]     = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1135,32 +1146,32 @@ function SalesBySellerSection({ fromDate, toDate }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Sotuvchilar bo'yicha oborot" subtitle="Tanlangan davrda har bir sotuvchining savdo soni va aylanmasi" />
+      <SectionHeader title={t('reports.salesBySeller.title')} subtitle={t('reports.salesBySeller.subtitle')} />
 
       <div className="card border border-[var(--border)] p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl flex justify-between items-center">
-          <h3 className="text-xs font-semibold text-[var(--text)]">Sotuvchilar reytingi</h3>
+          <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.sellerRanking')}</h3>
           <div className="flex items-center gap-4">
             {!loading && total > 0 && (
-              <span className="text-[11px] font-bold font-mono text-[var(--text-2)]">Jami: {fmt(total)} UZS</span>
+              <span className="text-[11px] font-bold font-mono text-[var(--text-2)]">{t('reports.total')}: {fmt(total)} UZS</span>
             )}
-            <span className="text-[11px] text-[var(--text-3)]">{data.length} ta sotuvchi</span>
+            <span className="text-[11px] text-[var(--text-3)]">{t('reports.sellerCount', { count: data.length })}</span>
           </div>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
         ) : data.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda savdolar topilmadi</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('reports.noSalesFoundInPeriod')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
                   <th className="px-5 py-2 w-8">#</th>
-                  <th className="px-5 py-2">Sotuvchi</th>
-                  <th className="px-5 py-2 text-right">Savdolar</th>
-                  <th className="px-5 py-2 text-right">Jami oborot</th>
-                  <th className="px-5 py-2 w-32">Ulush</th>
+                  <th className="px-5 py-2">{t('reports.seller')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.salesCol')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.totalTurnover')}</th>
+                  <th className="px-5 py-2 w-32">{t('reports.share')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -1168,7 +1179,7 @@ function SalesBySellerSection({ fromDate, toDate }) {
                   <tr key={row.sellerName || i} className="hover:bg-[var(--surface-2)]">
                     <td className="px-5 py-2.5 text-[11px] font-mono text-[var(--text-3)]">{i + 1}</td>
                     <td className="px-5 py-2.5 text-xs font-medium text-[var(--text)]">{row.sellerName || '—'}</td>
-                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.salesCount} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.salesCount} {t('units.count')}</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
                     <td className="px-5 py-2.5">
                       <div className="h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
@@ -1181,7 +1192,7 @@ function SalesBySellerSection({ fromDate, toDate }) {
               {total > 0 && (
                 <tfoot>
                   <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                    <td colSpan="3" className="px-5 py-2.5 text-[var(--text)]">Jami:</td>
+                    <td colSpan="3" className="px-5 py-2.5 text-[var(--text)]">{t('reports.total')}:</td>
                     <td className="px-5 py-2.5 text-right font-mono font-extrabold text-[var(--text)]">{fmt(total)} UZS</td>
                     <td />
                   </tr>
@@ -1197,6 +1208,7 @@ function SalesBySellerSection({ fromDate, toDate }) {
 
 // ── QQS HISOBOTI ──────────────────────────────────────────────────────────────
 function VatReportSection({ fromDate, toDate }) {
+  const { t } = useTranslation();
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -1214,60 +1226,60 @@ function VatReportSection({ fromDate, toDate }) {
 
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="QQS hisoboti" subtitle={`Soliq deklaratsiyasi uchun — joriy stavka ${ratePct}% (Sozlamalardan)`} />
+      <SectionHeader title={t('reports.vat.title')} subtitle={t('reports.vat.subtitle', { rate: ratePct })} />
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Jami (QQS bilan)</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.totalWithVat')}</p>
           <p className="text-lg font-extrabold font-mono text-[var(--text)]">
             {loading ? '...' : fmt(data?.totalAmount || 0)} <span className="text-[10px] font-semibold text-[var(--text-3)]">UZS</span>
           </p>
         </div>
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">QQS siz summa</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.amountWithoutVat')}</p>
           <p className="text-lg font-extrabold font-mono text-[var(--text-2)]">
             {loading ? '...' : fmt(data?.netAmount || 0)} <span className="text-[10px] font-semibold text-[var(--text-3)]">UZS</span>
           </p>
         </div>
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">QQS summasi ({ratePct}%)</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.vatAmount', { rate: ratePct })}</p>
           <p className="text-lg font-extrabold font-mono text-indigo-600">
             {loading ? '...' : fmt(data?.vatAmount || 0)} <span className="text-[10px] font-semibold text-[var(--text-3)]">UZS</span>
           </p>
         </div>
         <div className="card p-4 border border-[var(--border)]">
-          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">Hujjatlar soni</p>
+          <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1">{t('reports.docsCount')}</p>
           <p className="text-lg font-extrabold font-mono text-[var(--text)]">
-            {loading ? '...' : data?.salesCount || 0} <span className="text-[10px] font-semibold text-[var(--text-3)]">ta</span>
+            {loading ? '...' : data?.salesCount || 0} <span className="text-[10px] font-semibold text-[var(--text-3)]">{t('units.count')}</span>
           </p>
         </div>
       </div>
 
       <div className="card border border-[var(--border)] p-0">
         <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] rounded-t-xl">
-          <h3 className="text-xs font-semibold text-[var(--text)]">Oylik QQS taqsimoti</h3>
+          <h3 className="text-xs font-semibold text-[var(--text)]">{t('reports.monthlyVatDist')}</h3>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('common.loading')}</div>
         ) : !data?.byMonth?.length ? (
-          <div className="p-8 text-center text-xs text-[var(--text-3)]">Tanlangan davrda savdolar topilmadi</div>
+          <div className="p-8 text-center text-xs text-[var(--text-3)]">{t('reports.noSalesFoundInPeriod')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)] text-[10px] font-semibold text-[var(--text-2)] uppercase tracking-wider">
-                  <th className="px-5 py-2">Oy</th>
-                  <th className="px-5 py-2 text-right">Hujjatlar</th>
-                  <th className="px-5 py-2 text-right">Jami (QQS bilan)</th>
-                  <th className="px-5 py-2 text-right">QQS siz</th>
-                  <th className="px-5 py-2 text-right">QQS summasi</th>
+                  <th className="px-5 py-2">{t('reports.month')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.documents')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.totalWithVat')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.withoutVat')}</th>
+                  <th className="px-5 py-2 text-right">{t('reports.vatSum')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {data.byMonth.map((row) => (
                   <tr key={row.month} className="hover:bg-[var(--surface-2)]">
                     <td className="px-5 py-2.5 text-xs font-mono text-[var(--text-2)]">{row.month}</td>
-                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.count} ta</td>
+                    <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{row.count} {t('units.count')}</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-[var(--text)]">{fmt(row.totalAmount)} UZS</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono text-[var(--text-2)]">{fmt(row.netAmount)} UZS</td>
                     <td className="px-5 py-2.5 text-xs text-right font-mono font-bold text-indigo-600">{fmt(row.vatAmount)} UZS</td>
@@ -1276,7 +1288,7 @@ function VatReportSection({ fromDate, toDate }) {
               </tbody>
               <tfoot>
                 <tr className="bg-[var(--surface-2)] font-bold text-xs border-t-2 border-[var(--border)]">
-                  <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">Jami:</td>
+                  <td colSpan="2" className="px-5 py-2.5 text-[var(--text)]">{t('reports.total')}:</td>
                   <td className="px-5 py-2.5 text-right font-mono font-extrabold text-[var(--text)]">{fmt(data.totalAmount)} UZS</td>
                   <td className="px-5 py-2.5 text-right font-mono text-[var(--text-2)]">{fmt(data.netAmount)} UZS</td>
                   <td className="px-5 py-2.5 text-right font-mono font-extrabold text-indigo-600">{fmt(data.vatAmount)} UZS</td>
@@ -1292,16 +1304,17 @@ function VatReportSection({ fromDate, toDate }) {
 
 // ── SOZLAMALAR ────────────────────────────────────────────────────────────────
 function WidgetSettingsSection({ widgets, onToggle }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6 animate-in">
-      <SectionHeader title="Bosh sahifa sozlamalari" subtitle="Bosh sahifada ko'rsatiladigan widgetlarni yoqing yoki o'chiring" />
+      <SectionHeader title={t('reports.widgetSettings.title')} subtitle={t('reports.widgetSettings.subtitle')} />
 
       <div className="card border border-[var(--border)] max-w-lg">
-        <h3 className="text-xs font-semibold text-[var(--text)] mb-5">Widgetlar</h3>
+        <h3 className="text-xs font-semibold text-[var(--text)] mb-5">{t('reports.widgets')}</h3>
         <div className="space-y-4">
-          {WIDGET_META.map(({ key, label }) => (
+          {WIDGET_META.map(({ key }) => (
             <div key={key} className="flex items-center justify-between gap-4">
-              <span className="text-sm text-[var(--text)]">{label}</span>
+              <span className="text-sm text-[var(--text)]">{t(`reports.widget.${key}`)}</span>
               <button
                 onClick={() => onToggle(key)}
                 className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
@@ -1320,7 +1333,7 @@ function WidgetSettingsSection({ widgets, onToggle }) {
           ))}
         </div>
         <p className="text-[10px] text-[var(--text-3)] mt-5">
-          Sozlamalar brauzer xotirasida (localStorage) saqlanadi
+          {t('reports.widgetSettings.storageNote')}
         </p>
       </div>
     </div>
@@ -1329,11 +1342,12 @@ function WidgetSettingsSection({ widgets, onToggle }) {
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function Reports() {
+  const { t } = useTranslation();
   const { from: fromDate, to: toDate } = useDateFilter();
   const [active, setActive] = useState('home');
   const [openGroups, setOpenGroups] = useState({
-    'Savdo hisobotlari': true,
-    'Moliyaviy hisobotlar': false,
+    sales: true,
+    finance: false,
   });
   const [widgets, setWidgets] = useState(loadWidgets);
 
@@ -1352,7 +1366,7 @@ export default function Reports() {
       {/* ── Sidebar ── */}
       <aside className="w-52 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] sticky top-0 self-start max-h-screen overflow-y-auto">
         <div className="px-3 pt-4 pb-2 text-[9px] font-bold text-[var(--text-3)] uppercase tracking-widest">
-          Hisobotlar bo'limlari
+          {t('reports.sidebarTitle')}
         </div>
         <nav className="px-2 pb-4 space-y-0.5">
           {MENU.map((item) => {
@@ -1368,7 +1382,7 @@ export default function Reports() {
                   }`}
                 >
                   <item.Icon size={14} className="shrink-0" />
-                  <span className="truncate text-xs">{item.label}</span>
+                  <span className="truncate text-xs">{t(`reports.menu.${item.id}`)}</span>
                 </button>
               );
             }
@@ -1381,7 +1395,7 @@ export default function Reports() {
                 >
                   <div className="flex items-center gap-2">
                     <item.Icon size={13} className="shrink-0" />
-                    <span className="truncate">{item.group}</span>
+                    <span className="truncate">{t(`reports.group.${item.group}`)}</span>
                   </div>
                   {openGroups[item.group]
                     ? <ChevronDown size={11} />
@@ -1401,7 +1415,7 @@ export default function Reports() {
                         }`}
                       >
                         <child.Icon size={12} className="shrink-0" />
-                        <span className="truncate text-xs">{child.label}</span>
+                        <span className="truncate text-xs">{t(`reports.menu.${child.id}`)}</span>
                       </button>
                     ))}
                   </div>

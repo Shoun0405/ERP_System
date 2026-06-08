@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api, { API } from '../lib/api';
 import toast from 'react-hot-toast';
 import { useModalKeys } from '../hooks/useModalKeys';
+import { fmtDateTime } from '../lib/format';
 import { Save, Plus, Trash2, Building2, Users, Database, Percent } from 'lucide-react';
 
 const EMPTY = {
@@ -13,6 +15,7 @@ const EMPTY = {
 };
 
 export default function Settings() {
+  const { t } = useTranslation();
   const [data, setData]       = useState(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
@@ -33,7 +36,7 @@ export default function Settings() {
     try {
       await api.put('/api/settings', data);
       setSaved(true);
-      toast.success('Sozlamalar saqlandi');
+      toast.success(t('settings.saved'));
       setTimeout(() => setSaved(false), 2500);
     } catch { /* interceptor shows toast */
     } finally {
@@ -75,11 +78,11 @@ export default function Settings() {
     <div className="p-6 max-w-3xl mx-auto space-y-6 animate-in">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">Sozlamalar</h2>
+          <h2 className="text-lg font-semibold text-[var(--text)]">{t('settings.title')}</h2>
           <p className="text-xs text-[var(--text-3)] mt-0.5">
             {data.updatedAt
-              ? `Oxirgi yangilanish: ${new Date(data.updatedAt).toLocaleString('uz-UZ')}`
-              : 'Tizim konfiguratsiyasi'}
+              ? t('settings.lastUpdate', { date: fmtDateTime(data.updatedAt) })
+              : t('settings.systemConfig')}
           </p>
         </div>
       </div>
@@ -88,40 +91,40 @@ export default function Settings() {
         {/* Kompaniya ma'lumotlari */}
         <div className="mini-card space-y-4">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Building2 size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> Kompaniya ma'lumotlari
+            <Building2 size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> {t('settings.companyInfo')}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Kompaniya nomi</label>
-              <input type="text" value={data.companyName} onChange={e => setData(d => ({ ...d, companyName: e.target.value }))} className={inp} placeholder="MChJ nomi..." />
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.companyName')}</label>
+              <input type="text" value={data.companyName} onChange={e => setData(d => ({ ...d, companyName: e.target.value }))} className={inp} placeholder={t('settings.companyNamePlaceholder')} />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">STIR (INN)</label>
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.inn')}</label>
               <input type="text" value={data.companyInn} onChange={e => setData(d => ({ ...d, companyInn: e.target.value }))} className={inp} placeholder="123456789" />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Telefon</label>
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.phone')}</label>
               <input type="text" value={data.companyPhone} onChange={e => setData(d => ({ ...d, companyPhone: e.target.value }))} className={inp} placeholder="+998 ..." />
             </div>
             <div className="col-span-2">
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Manzil</label>
-              <input type="text" value={data.companyAddress} onChange={e => setData(d => ({ ...d, companyAddress: e.target.value }))} className={inp} placeholder="Shahar, ko'cha, uy..." />
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.address')}</label>
+              <input type="text" value={data.companyAddress} onChange={e => setData(d => ({ ...d, companyAddress: e.target.value }))} className={inp} placeholder={t('settings.addressPlaceholder')} />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Bank nomi</label>
-              <input type="text" value={data.companyBank} onChange={e => setData(d => ({ ...d, companyBank: e.target.value }))} className={inp} placeholder="Ipak Yo'li Banki..." />
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.bankName')}</label>
+              <input type="text" value={data.companyBank} onChange={e => setData(d => ({ ...d, companyBank: e.target.value }))} className={inp} placeholder={t('settings.bankPlaceholder')} />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">MFO</label>
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.mfo')}</label>
               <input type="text" value={data.companyMfo} onChange={e => setData(d => ({ ...d, companyMfo: e.target.value }))} className={inp} placeholder="01234" />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Hisob raqam</label>
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.account')}</label>
               <input type="text" value={data.companyAccount} onChange={e => setData(d => ({ ...d, companyAccount: e.target.value }))} className={inp} placeholder="2020..." />
             </div>
             <div className="col-span-2">
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">Direktor (rahbar)</label>
-              <input type="text" value={data.companyDirector} onChange={e => setData(d => ({ ...d, companyDirector: e.target.value }))} className={inp} placeholder="F.I.O. — shartnomada «в лице директора»" />
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.director')}</label>
+              <input type="text" value={data.companyDirector} onChange={e => setData(d => ({ ...d, companyDirector: e.target.value }))} className={inp} placeholder={t('settings.directorPlaceholder')} />
             </div>
           </div>
         </div>
@@ -129,11 +132,11 @@ export default function Settings() {
         {/* QQS (VAT) stavkasi */}
         <div className="mini-card space-y-4">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Percent size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> QQS (VAT) stavkasi
+            <Percent size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> {t('settings.vat')}
           </h3>
           <div className="flex items-end gap-3">
             <div className="w-40">
-              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">QQS stavkasi (%)</label>
+              <label className="block text-[11px] font-medium text-[var(--text-2)] mb-1">{t('settings.vatRate')}</label>
               <div className="relative">
                 <input
                   type="number" min="0" max="100" step="0.1"
@@ -150,7 +153,7 @@ export default function Settings() {
               </div>
             </div>
             <p className="text-[11px] text-[var(--text-3)] pb-2">
-              Spetsifikatsiya qatorlaridagi QQS summasi shu stavka bo'yicha hisoblanadi (narx ichidan ajratiladi).
+              {t('settings.vatHint')}
             </p>
           </div>
         </div>
@@ -158,7 +161,7 @@ export default function Settings() {
         {/* Sotuvchilar */}
         <div className="mini-card space-y-4">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Users size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> Sotuvchilar ro'yxati
+            <Users size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> {t('settings.sellersTitle')}
           </h3>
           <div className="flex gap-2">
             <input
@@ -166,14 +169,14 @@ export default function Settings() {
               onChange={e => setNewSeller(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSeller())}
               className={`${inp} flex-1`}
-              placeholder="Sotuvchi F.I.O. va Enter bosing..."
+              placeholder={t('settings.sellerPlaceholder')}
             />
             <button type="button" onClick={addSeller} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
-              <Plus size={16} strokeWidth={2.2} /> Qo'shish
+              <Plus size={16} strokeWidth={2.2} /> {t('common.add')}
             </button>
           </div>
           {data.sellers.length === 0 ? (
-            <p className="text-xs text-[var(--text-3)] text-center py-4">Hozircha sotuvchilar yo'q</p>
+            <p className="text-xs text-[var(--text-3)] text-center py-4">{t('settings.noSellers')}</p>
           ) : (
             <div className="space-y-2">
               {data.sellers.map((s, i) => (
@@ -192,9 +195,9 @@ export default function Settings() {
         {/* Ma'lumotlar zaxirasi */}
         <div className="mini-card space-y-3">
           <h3 className="text-xs font-semibold text-[var(--text)] flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <Database size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> Ma'lumotlar zaxirasi
+            <Database size={18} strokeWidth={2.2} className="text-[var(--accent)]" /> {t('settings.backupTitle')}
           </h3>
-          <p className="text-xs text-[var(--text-3)]">PostgreSQL bazasi zaxirasini yuklab olish (pg_dump format):</p>
+          <p className="text-xs text-[var(--text-3)]">{t('settings.backupHint')}</p>
           <div className="flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-1.5">
             <code className="text-xs text-[var(--text-2)] font-mono flex-1">erp_db — PostgreSQL</code>
             <button
@@ -206,7 +209,7 @@ export default function Settings() {
               }}
               className="text-xs text-[var(--accent)] hover:underline font-medium"
             >
-              Yuklab olish
+              {t('common.download')}
             </button>
           </div>
         </div>
@@ -223,7 +226,7 @@ export default function Settings() {
             }`}
           >
             <Save size={16} strokeWidth={2.2} />
-            {saving ? 'Saqlanmoqda...' : saved ? '✓ Saqlandi!' : 'O\'zgarishlarni saqlash'}
+            {saving ? t('common.saving') : saved ? t('settings.savedBtn') : t('common.saveChanges')}
           </button>
         </div>
       </form>

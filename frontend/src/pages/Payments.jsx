@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { useDateFilter } from '../context/DateFilterContext';
@@ -13,6 +14,7 @@ import { Plus, X, Trash2, AlertCircle, Search, Copy } from 'lucide-react';
 function today() { return new Date().toISOString().split('T')[0]; }
 
 export default function Payments({ user }) {
+  const { t } = useTranslation();
   const canCreate = user?.role === 'admin' || user?.permissions?.payments?.create !== false;
   const canDelete = user?.role === 'admin' || user?.permissions?.payments?.delete === true;
   const canHardDelete = user?.role === 'superAdmin';
@@ -70,12 +72,12 @@ export default function Payments({ user }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.clientId)   { toast.error('Mijozni tanlang!'); return; }
-    if (!form.amount || parseFloat(form.amount) <= 0) { toast.error('Summani kiriting!'); return; }
+    if (!form.clientId)   { toast.error(t('payments.selectClientError')); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { toast.error(t('payments.enterAmountError')); return; }
     setSaving(true);
     try {
       await api.post('/api/payments', { ...form, contractId: form.contractId || null });
-      toast.success('To\'lov kiritildi');
+      toast.success(t('payments.saved'));
       setModal(false);
       fetchPayments();
     } catch { /* interceptor shows toast */ } finally { setSaving(false); }
@@ -86,17 +88,17 @@ export default function Payments({ user }) {
       await api.delete(`/api/payments/${delId}`);
       setDelId(null);
       fetchPayments();
-      toast.success('O\'chirildi');
+      toast.success(t('common.deleted'));
     } catch { /* interceptor shows toast */ }
   };
 
   const handleRestore = async (rec) => {
-    try { await api.post(`/api/payments/${rec.id}/restore`); toast.success('Tiklandi'); fetchPayments(); }
+    try { await api.post(`/api/payments/${rec.id}/restore`); toast.success(t('common.restored')); fetchPayments(); }
     catch { /* interceptor toast */ }
   };
   const handleHardDelete = async (rec) => {
-    if (!window.confirm('Butunlay o\'chirilsinmi? Bu amalni qaytarib bo\'lmaydi.')) return;
-    try { await api.delete(`/api/payments/${rec.id}/hard`); toast.success('Butunlay o\'chirildi'); fetchPayments(); }
+    if (!window.confirm(t('common.hardDeleteConfirm'))) return;
+    try { await api.delete(`/api/payments/${rec.id}/hard`); toast.success(t('common.hardDeleted')); fetchPayments(); }
     catch { /* interceptor toast */ }
   };
 
@@ -115,12 +117,12 @@ export default function Payments({ user }) {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text)]">Tushumlar</h2>
-            <p className="text-xs text-[var(--text-3)] mt-0.5">{total} ta to'lov</p>
+            <h2 className="text-lg font-semibold text-[var(--text)]">{t('payments.title')}</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{t('payments.count', { count: total })}</p>
           </div>
           {canCreate && (
             <button onClick={openModal} className="px-3 py-1.5 btn-primary rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
-              <Plus size={16} strokeWidth={2.2}/> Yangi Tushum
+              <Plus size={16} strokeWidth={2.2}/> {t('payments.new')}
             </button>
           )}
         </div>
@@ -132,7 +134,7 @@ export default function Payments({ user }) {
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
             <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
               <Plus size={18} strokeWidth={2.2} className="text-[var(--accent)]"/>
-              Yangi Tushum Kiritish
+              {t('payments.modalTitle')}
             </h3>
             <button onClick={() => setModal(false)} className="text-[var(--text-3)] hover:text-[var(--text-2)] p-1 rounded-md hover:bg-[var(--surface-2)]">
               <X size={18} strokeWidth={2.2}/>
@@ -141,36 +143,36 @@ export default function Payments({ user }) {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Mijoz *</label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">{t('payments.clientLabel')} *</label>
                 <select required value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value, contractId: '' }))} className={inp}>
-                  <option value="">— Mijozni tanlang —</option>
+                  <option value="">{t('common.selectClient')}</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Shartnoma (ixtiyoriy)</label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">{t('payments.contractLabel')}</label>
                 <select value={form.contractId} onChange={e => setForm(f => ({ ...f, contractId: e.target.value }))} className={inp} disabled={!form.clientId}>
-                  <option value="">— Shartnomani tanlang —</option>
-                  {contracts.map(c => <option key={c.id} value={c.id}>№{c.number} ({new Date(c.date).toLocaleDateString('ru-RU')})</option>)}
+                  <option value="">{t('payments.selectContract')}</option>
+                  {contracts.map(c => <option key={c.id} value={c.id}>№{c.number} ({fmtDate(c.date)})</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Sana *</label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">{t('common.date')} *</label>
                 <input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inp}/>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Summa (UZS) *</label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">{t('payments.amountLabel')} *</label>
                 <input type="number" required min="1" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className={inp} placeholder="0"/>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">Izoh</label>
-                <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className={inp} placeholder="To'lov turi, bank, qayd..."/>
+                <label className="block text-xs font-semibold text-[var(--text-2)] mb-1">{t('common.comment')}</label>
+                <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className={inp} placeholder={t('payments.notePlaceholder')}/>
               </div>
             </div>
             <div className="pt-3 border-t border-[var(--border)] flex justify-end gap-2">
-              <button type="button" onClick={() => setModal(false)} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">Bekor</button>
+              <button type="button" onClick={() => setModal(false)} className="px-3 py-1.5 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg border border-[var(--border)] transition">{t('common.cancel')}</button>
               <button type="submit" disabled={saving} className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 disabled:opacity-60 text-[var(--accent-text)] text-xs font-medium rounded-lg transition shadow-sm">
-                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+                {saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>
@@ -181,7 +183,7 @@ export default function Payments({ user }) {
         <div className="mini-card p-0">
           <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-2">
             <AlertCircle size={18} strokeWidth={2} className="text-red-500"/>
-            <h3 className="text-xs font-semibold text-[var(--text)]">Qarzdorlik holati</h3>
+            <h3 className="text-xs font-semibold text-[var(--text)]">{t('payments.debtStatus')}</h3>
           </div>
           <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
             {debtSummary.map(c => (
@@ -206,23 +208,23 @@ export default function Payments({ user }) {
           <div className="flex items-center gap-3 flex-wrap">
             <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
               className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs bg-[var(--surface)] focus:border-[var(--accent)] outline-none transition text-[var(--text)]">
-              <option value="">Barcha mijozlar</option>
+              <option value="">{t('payments.allClients')}</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <div className="relative">
               <Search size={16} strokeWidth={2.2} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]"/>
-              <input type="text" placeholder="Mijoz, izoh (Enter)..." {...searchInput}
+              <input type="text" placeholder={t('payments.searchPlaceholder')} {...searchInput}
                 className="pl-9 pr-4 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs focus:border-[var(--accent)] outline-none transition w-40 text-[var(--text)] placeholder-[var(--text-3)]"/>
             </div>
             {hasFilter && (
               <button onClick={() => { setFilterClient(''); resetSearch(); }}
                 className="text-xs text-[var(--text-3)] hover:text-[var(--text)] flex items-center gap-1">
-                <X size={14} strokeWidth={2}/> Tozalash
+                <X size={14} strokeWidth={2}/> {t('common.clear')}
               </button>
             )}
           </div>
           <div className="text-xs font-semibold text-[var(--text)]">
-            Jami: <span className="text-emerald-600 font-mono">{fmt(totalIn)} UZS</span>
+            {t('payments.total')} <span className="text-emerald-600 font-mono">{fmt(totalIn)} UZS</span>
           </div>
         </div>
 
@@ -230,12 +232,12 @@ export default function Payments({ user }) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Sana</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Mijoz</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Shartnoma</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">Izoh</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider text-right">Summa</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">Kim / Qachon</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">{t('common.date')}</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">{t('payments.clientLabel')}</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">{t('payments.contractCol')}</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider">{t('common.comment')}</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider text-right">{t('common.sum')}</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">{t('common.whoWhen')}</th>
                 <th className="px-6 py-3 w-16"></th>
               </tr>
             </thead>
@@ -246,7 +248,7 @@ export default function Payments({ user }) {
                 ))
               ) : payments.length === 0 ? (
                 <tr><td colSpan="7" className="px-6 py-12 text-center text-[var(--text-3)] text-sm">
-                  {hasFilter ? 'Topilmadi' : 'Hozircha to\'lovlar yo\'q'}
+                  {hasFilter ? t('common.notFound') : t('payments.empty')}
                 </td></tr>
               ) : payments.map(p => (
                 <tr key={p.id} className={`hover:bg-[var(--surface-2)] transition-colors group${p.deletedAt?' opacity-60 bg-red-50 dark:bg-red-950/20':''}`}>
@@ -259,19 +261,19 @@ export default function Payments({ user }) {
                   <td className="px-6 py-4">
                     {p.deletedAt ? (
                       <div className="flex justify-end items-center gap-2">
-                        <span className="text-[10px] text-red-500 font-semibold">O'chirilgan</span>
+                        <span className="text-[10px] text-red-500 font-semibold">{t('common.deletedBadge')}</span>
                         {canHardDelete && (
                           <>
-                            <button onClick={() => handleRestore(p)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title="Tiklash">Tiklash</button>
-                            <button onClick={() => handleHardDelete(p)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition" title="Butunlay o'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                            <button onClick={() => handleRestore(p)} className="text-[10px] text-[var(--accent)] font-semibold hover:underline px-1" title={t('common.restore')}>{t('common.restore')}</button>
+                            <button onClick={() => handleHardDelete(p)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition" title={t('common.hardDelete')}><Trash2 size={15} strokeWidth={1.8}/></button>
                           </>
                         )}
                       </div>
                     ) : (
                       <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title="Nusxa olish"><Copy size={15} strokeWidth={1.8}/></button>
+                        <button onClick={() => handleCopy(p)} className="p-1.5 text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] rounded-md transition" title={t('common.copy')}><Copy size={15} strokeWidth={1.8}/></button>
                         {canDelete && (
-                          <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title="O'chirish"><Trash2 size={15} strokeWidth={1.8}/></button>
+                          <button onClick={() => setDelId(p.id)} className="p-1.5 text-[var(--text-3)] hover:text-red-600 hover:bg-red-50 rounded-md transition" title={t('common.delete')}><Trash2 size={15} strokeWidth={1.8}/></button>
                         )}
                       </div>
                     )}
@@ -290,11 +292,11 @@ export default function Payments({ user }) {
         <div className="modal-overlay">
           <div className="modal-card w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-600"/></div>
-            <h3 className="text-lg font-bold text-[var(--text)] mb-2">To'lovni o'chirish</h3>
-            <p className="text-sm text-[var(--text-3)] mb-6">Bu to'lov yozuvi o'chiriladi.</p>
+            <h3 className="text-lg font-bold text-[var(--text)] mb-2">{t('payments.deleteTitle')}</h3>
+            <p className="text-sm text-[var(--text-3)] mb-6">{t('payments.deleteBody')}</p>
             <div className="flex gap-3">
-              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">Bekor</button>
-              <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">O'chirish</button>
+              <button onClick={() => setDelId(null)} className="flex-1 px-4 py-2 text-sm font-medium border border-[var(--border)] rounded-md hover:bg-[var(--surface-2)] transition">{t('common.cancel')}</button>
+              <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition">{t('common.delete')}</button>
             </div>
           </div>
         </div>
