@@ -15,6 +15,7 @@ import { fmt } from './lib/format';
 import { useTheme } from './hooks/useTheme';
 import TrendChart from './components/TrendChart';
 import PeriodPicker from './components/PeriodPicker';
+import LanguageSwitcher from './components/LanguageSwitcher';
 import { DateFilterProvider } from './context/DateFilterContext';
 
 // Global davr filtri ko'rinadigan sahifalar (1C 8.3 "Период" uslubi)
@@ -251,6 +252,9 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
       <div className="flex items-center gap-4">
         {/* Global davr filtri — faqat sana bilan ishlaydigan sahifalarda */}
         {DATE_ROUTES.includes(location.pathname) && <PeriodPicker />}
+
+        {/* Til almashtirgich */}
+        <LanguageSwitcher />
 
         {/* Theme toggle */}
         <button
