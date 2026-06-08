@@ -9,9 +9,11 @@ import {
   Shield, Menu, ScrollText
 } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import api from './lib/api';
+import i18n from './i18n';
 import { downloadFile } from './lib/download';
-import { fmt } from './lib/format';
+import { fmt, fmtDate } from './lib/format';
 import { useTheme } from './hooks/useTheme';
 import TrendChart from './components/TrendChart';
 import PeriodPicker from './components/PeriodPicker';
@@ -35,20 +37,21 @@ import Reports          from './pages/Reports';
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────
 function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
+  const { t } = useTranslation();
   const location = useLocation();
   // On mobile the drawer always shows the full-width expanded nav
   const width = mobileOpen ? 224 : (collapsed ? 64 : 224);
   const isCollapsed = mobileOpen ? false : collapsed;
   const rawNavItems = [
-    { name: 'Dashboard',    path: '/',               icon: LayoutDashboard },
-    { name: 'Mijozlar',     path: '/clients',        icon: Users,           module: 'clients' },
-    { name: 'Mahsulotlar',  path: '/products',       icon: Box,             module: 'products' },
-    { name: 'Shartnomalar', path: '/contracts',      icon: FileText,        module: 'contracts' },
-    { name: 'Savdolar',     path: '/sales',          icon: ShoppingCart,    module: 'sales' },
-    { name: 'Tushumlar',    path: '/payments',       icon: CreditCard,     module: 'payments' },
-    { name: 'Muloqotlar',   path: '/interactions',   icon: MessageSquare,   module: 'interactions' },
-    { name: 'Hisobotlar',   path: '/reports',        icon: TrendingUp,      module: 'reports' },
-    { name: 'Sozlamalar',   path: '/settings',       icon: Settings,        module: 'settings' },
+    { name: 'nav.dashboard',    path: '/',             icon: LayoutDashboard },
+    { name: 'nav.clients',      path: '/clients',      icon: Users,         module: 'clients' },
+    { name: 'nav.products',     path: '/products',     icon: Box,           module: 'products' },
+    { name: 'nav.contracts',    path: '/contracts',    icon: FileText,      module: 'contracts' },
+    { name: 'nav.sales',        path: '/sales',        icon: ShoppingCart,  module: 'sales' },
+    { name: 'nav.payments',     path: '/payments',     icon: CreditCard,    module: 'payments' },
+    { name: 'nav.interactions', path: '/interactions', icon: MessageSquare, module: 'interactions' },
+    { name: 'nav.reports',      path: '/reports',      icon: TrendingUp,    module: 'reports' },
+    { name: 'nav.settings',     path: '/settings',     icon: Settings,      module: 'settings' },
   ];
 
   const navItems = rawNavItems.filter(item => {
@@ -58,8 +61,8 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
   });
 
   if (user?.role === 'admin') {
-    navItems.push({ name: 'Foydalanuvchilar', path: '/users', icon: Shield });
-    navItems.push({ name: 'Audit jurnali', path: '/audit', icon: ScrollText });
+    navItems.push({ name: 'nav.users', path: '/users', icon: Shield });
+    navItems.push({ name: 'nav.audit', path: '/audit', icon: ScrollText });
   }
 
   return (
@@ -104,7 +107,7 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
             className="text-[10px] font-semibold uppercase tracking-wider px-3 py-1 mb-1"
             style={{ color: 'var(--sb-text-2)' }}
           >
-            Asosiy Bo'limlar
+            {t('nav.section')}
           </div>
         )}
         {navItems.map(item => {
@@ -115,7 +118,7 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
               key={item.path}
               to={item.path}
               onClick={onMobileClose}
-              title={isCollapsed ? item.name : ''}
+              title={isCollapsed ? t(item.name) : ''}
               className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative"
               style={{
                 color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)',
@@ -125,7 +128,7 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
               onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sb-text-2)'; } }}
             >
               <Icon size={19} strokeWidth={isActive ? 2.2 : 1.8} style={{ color: isActive ? 'var(--sb-accent)' : 'var(--sb-text-2)', flexShrink: 0 }} />
-              {!isCollapsed && <span className="truncate">{item.name}</span>}
+              {!isCollapsed && <span className="truncate">{t(item.name)}</span>}
             </Link>
           );
         })}
@@ -144,7 +147,7 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sb-text-2)'; }}
         >
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!isCollapsed && <span>Yopish</span>}
+          {!isCollapsed && <span>{t('common.close')}</span>}
         </button>
       </div>
       </aside>
@@ -154,6 +157,7 @@ function Sidebar({ collapsed, onToggle, user, mobileOpen, onMobileClose }) {
 
 // ─── Top Header ────────────────────────────────────────────────────────────
 function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const searchRef = useRef(null);
@@ -161,17 +165,10 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
   const navigate = useNavigate();
 
   const titles = {
-    '/':             'Dashboard',
-    '/clients':      'Mijozlar (CRM)',
-    '/products':     'Mahsulotlar katalogi',
-    '/contracts':    'Shartnomalar',
-    '/sales':        'Savdolar (Yuk xatlari)',
-    '/payments':     'Tushumlar reyestri',
-    '/interactions': 'Muloqotlar tarixi',
-    '/reports':      'Tizim hisobotlari',
-    '/settings':     'Tizim sozlamalari',
-    '/users':        'Foydalanuvchilar (RBAC)',
-    '/audit':        'Audit jurnali',
+    '/': 'titles.dashboard', '/clients': 'titles.clients', '/products': 'titles.products',
+    '/contracts': 'titles.contracts', '/sales': 'titles.sales', '/payments': 'titles.payments',
+    '/interactions': 'titles.interactions', '/reports': 'titles.reports', '/settings': 'titles.settings',
+    '/users': 'titles.users', '/audit': 'titles.audit',
   };
 
   useEffect(() => {
@@ -206,7 +203,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
   const handleLogout = async () => {
     try {
       await api.post('/api/auth/logout');
-      toast.success('Xavfsiz ravishda tizimdan chiqildi.');
+      toast.success(t('header.logoutOk'));
       window.location.href = '/login';
     } catch {
       // ignore
@@ -223,13 +220,13 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
         <button
           onClick={onMobileMenu}
           className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition shrink-0"
-          title="Menyu"
+          title={t('header.menu')}
         >
           <Menu size={20} strokeWidth={2} />
         </button>
 
         <h1 className="text-sm font-semibold text-[var(--text)] truncate">
-          {titles[location.pathname] || 'NexERP'}
+          {titles[location.pathname] ? t(titles[location.pathname]) : 'NexERP'}
         </h1>
 
         {/* Global Search — mijoz qidirish (Enter → Mijozlar sahifasi) */}
@@ -240,7 +237,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
             type="text"
             value={searchValue}
             onChange={e => setSearchValue(e.target.value)}
-            placeholder="Mijoz qidirish..."
+            placeholder={t('header.searchClients')}
             className="bg-transparent border-none outline-none text-xs w-full text-[var(--text)] placeholder-[var(--text-3)]"
           />
           <kbd className="text-[9px] px-1.5 py-0.5 border border-[var(--border)] rounded bg-[var(--surface)] font-mono text-[var(--text-3)]">
@@ -260,7 +257,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
         <button
           onClick={onToggleTheme}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition"
-          title={theme === 'dark' ? "Yorug' rejim" : "Qorong'u rejim"}
+          title={t(theme === 'dark' ? 'header.lightMode' : 'header.darkMode')}
         >
           {theme === 'dark' ? <Sun size={19} strokeWidth={2} /> : <Moon size={19} strokeWidth={2} />}
         </button>
@@ -277,7 +274,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
               {initials}
             </div>
             <div className="text-left hidden sm:block">
-              <div className="text-xs font-medium text-[var(--text)] leading-none">{user?.username || 'Foydalanuvchi'}</div>
+              <div className="text-xs font-medium text-[var(--text)] leading-none">{user?.username || t('header.userFallback')}</div>
               <div className="text-[10px] text-[var(--text-3)] leading-tight mt-0.5">{emailText}</div>
             </div>
             <ChevronDown size={12} className="text-[var(--text-3)]" />
@@ -287,7 +284,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
             <div className="absolute right-0 top-full mt-1.5 w-48 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl py-1.5 z-50 animate-in">
               <Link to="/settings" className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--text)] hover:bg-[var(--surface-2)]">
                 <Settings size={13} className="text-[var(--text-3)]" />
-                Sozlamalar
+                {t('header.settings')}
               </Link>
               <div className="h-px bg-[var(--border)] my-1" />
               <button 
@@ -295,7 +292,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left cursor-pointer animate-in"
               >
                 <LogOut size={13} className="text-red-500" />
-                Tizimdan chiqish
+                {t('header.logout')}
               </button>
             </div>
           )}
@@ -307,6 +304,7 @@ function TopHeader({ user, theme, onToggleTheme, onMobileMenu }) {
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────
 function Dashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -349,33 +347,9 @@ function Dashboard() {
   }, []);
 
   const cards = stats ? [
-    {
-      title: 'Umumiy Qarzdorlik',
-      value: fmt(stats.totalDebt),
-      unit: 'UZS',
-      sub: 'Faol qarzdorlik oboroti',
-      tone: 'danger',
-      badgeClass: 'icon-badge-danger',
-      icon: TrendingDown,
-    },
-    {
-      title: 'Bugungi Savdo',
-      value: fmt(stats.todayTotal),
-      unit: 'UZS',
-      sub: 'Bugungi yuk xatlari summasi',
-      tone: 'success',
-      badgeClass: 'icon-badge-success',
-      icon: TrendingUp,
-    },
-    {
-      title: 'Faol Mijozlar',
-      value: stats.clientsCount,
-      unit: 'ta',
-      sub: 'CRM ro\'yxatida',
-      tone: 'info',
-      badgeClass: 'icon-badge-info',
-      icon: Users,
-    },
+    { title: 'dashboard.totalDebt', value: fmt(stats.totalDebt), unit: t('units.uzs'), sub: 'dashboard.totalDebtSub', tone: 'danger', badgeClass: 'icon-badge-danger', icon: TrendingDown },
+    { title: 'dashboard.todaySales', value: fmt(stats.todayTotal), unit: t('units.uzs'), sub: 'dashboard.todaySalesSub', tone: 'success', badgeClass: 'icon-badge-success', icon: TrendingUp },
+    { title: 'dashboard.activeClients', value: stats.clientsCount, unit: t('units.count'), sub: 'dashboard.activeClientsSub', tone: 'info', badgeClass: 'icon-badge-info', icon: Users },
   ] : [];
 
   return (
@@ -385,18 +359,18 @@ function Dashboard() {
         {/* Header toolbar */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text)]">Dashboard</h2>
-            <p className="text-xs text-[var(--text-3)] mt-0.5">Tizim holati va real vaqt statistikasi</p>
+            <h2 className="text-lg font-semibold text-[var(--text)]">{t('nav.dashboard')}</h2>
+            <p className="text-xs text-[var(--text-3)] mt-0.5">{t('dashboard.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             <div className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-2)] rounded-lg text-xs font-medium flex items-center gap-2 select-none">
-              <Calendar size={13} /> Bugun · {new Date().toLocaleDateString('uz-UZ')}
+              <Calendar size={13} /> {t('dashboard.today')} · {fmtDate(new Date())}
             </div>
             <button onClick={() => navigate('/clients')} className="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2" style={{ background: 'var(--accent)', color: 'var(--accent-text)', boxShadow: '0 1px 4px var(--accent-bg)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
             >
-              <Plus size={13} /> Yangi Mijoz
+              <Plus size={13} /> {t('common.newClient')}
             </button>
           </div>
         </div>
@@ -417,7 +391,7 @@ function Dashboard() {
                   <div key={i} className="mini-card flex flex-col justify-between group hover:scale-[1.01] hover:shadow-md transition-all duration-200 cursor-default">
                     <div>
                       <div className="flex justify-between items-start mb-3">
-                        <span className="text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider">{c.title}</span>
+                        <span className="text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider">{t(c.title)}</span>
                         <div className={`icon-badge ${c.badgeClass} group-hover:scale-110 transition-transform duration-200`}>
                           <Icon size={20} strokeWidth={2.2} />
                         </div>
@@ -428,7 +402,7 @@ function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-5 border-t border-[var(--border)] pt-3">
-                      <span className="text-[var(--text-3)] text-[10px] font-medium">{c.sub}</span>
+                      <span className="text-[var(--text-3)] text-[10px] font-medium">{t(c.sub)}</span>
                     </div>
                   </div>
                 );
@@ -443,11 +417,11 @@ function Dashboard() {
             <div>
               <div className="flex justify-between items-start border-b border-[var(--border)] pb-3 mb-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-[var(--text)]">Oylik Savdo</h3>
-                  <p className="text-[10px] text-[var(--text-3)] mt-0.5">Oxirgi 6 oydagi sotuv dinamikasi (mln UZS)</p>
+                  <h3 className="text-xs font-semibold text-[var(--text)]">{t('dashboard.monthlySales')}</h3>
+                  <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('dashboard.monthlySalesSub')}</p>
                 </div>
                 <button onClick={handleExportMonthly} className="px-2 py-1 border border-[var(--border)] rounded text-[10px] hover:bg-[var(--surface-2)] text-[var(--text-2)] flex items-center gap-1.5">
-                  <Download size={10} /> Eksport
+                  <Download size={10} /> {t('common.export')}
                 </button>
               </div>
               {loading ? (
@@ -465,8 +439,8 @@ function Dashboard() {
           {/* Top Debtors Rank List */}
           <div className="mini-card p-0 flex flex-col">
             <div className="px-4 py-3 border-b border-[var(--border)]">
-              <h3 className="text-xs font-semibold text-[var(--text)]">Eng yirik qarzdorlar</h3>
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5">Oborot bo'yicha eng yuqori qarzlar</p>
+              <h3 className="text-xs font-semibold text-[var(--text)]">{t('dashboard.topDebtors')}</h3>
+              <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('dashboard.topDebtorsSub')}</p>
             </div>
             <div className="divide-y divide-[var(--border)] flex-1 overflow-y-auto">
               {loading ? (
@@ -477,7 +451,7 @@ function Dashboard() {
                   </div>
                 ))
               ) : stats?.debtors?.length === 0 ? (
-                <div className="px-4 py-8 text-center text-[var(--text-3)] text-xs">Qarzdorlar mavjud emas</div>
+                <div className="px-4 py-8 text-center text-[var(--text-3)] text-xs">{t('dashboard.noDebtors')}</div>
               ) : (
                 stats?.debtors?.map((d, i) => {
                   const maxDebt = stats.debtors[0]?.debt || 1;
@@ -511,21 +485,21 @@ function Dashboard() {
         <div className="mini-card p-0">
           <div className="px-5 py-3 border-b border-[var(--border)] flex justify-between items-center bg-[var(--surface-2)] rounded-t-lg">
             <div>
-              <h3 className="text-xs font-semibold text-[var(--text)]">So'nggi savdolar</h3>
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5">Tizimga kiritilgan oxirgi yuk xatlari</p>
+              <h3 className="text-xs font-semibold text-[var(--text)]">{t('dashboard.recentSales')}</h3>
+              <p className="text-[10px] text-[var(--text-3)] mt-0.5">{t('dashboard.recentSalesSub')}</p>
             </div>
             <Link to="/sales" className="text-[11px] text-[var(--accent)] font-medium hover:underline flex items-center gap-0.5">
-              Barchasi <ArrowUpRight size={11} />
+              {t('common.all')} <ArrowUpRight size={11} />
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider">Sana</th>
-                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider">Yuk xati №</th>
-                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider">Mijoz nomi</th>
-                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider text-right">Summa</th>
+                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('dashboard.thDate')}</th>
+                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('dashboard.thWaybill')}</th>
+                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider">{t('dashboard.thClient')}</th>
+                  <th className="px-5 py-2.5 text-[10.5px] font-semibold text-[var(--text-2)] uppercase tracking-wider text-right">{t('dashboard.thSum')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -539,15 +513,15 @@ function Dashboard() {
                   ))
                 ) : stats?.recentSales?.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-5 py-6 text-center text-[var(--text-3)] text-xs">Hozircha sotuvlar kiritilmagan</td>
+                    <td colSpan="4" className="px-5 py-6 text-center text-[var(--text-3)] text-xs">{t('dashboard.noSales')}</td>
                   </tr>
                 ) : (
                   stats?.recentSales?.map(s => (
                     <tr key={s.id} className="hover:bg-[var(--surface-2)] transition-colors">
-                      <td className="px-5 py-2.5 text-xs text-[var(--text-2)]">{new Date(s.date).toLocaleDateString('uz-UZ')}</td>
+                      <td className="px-5 py-2.5 text-xs text-[var(--text-2)]">{fmtDate(s.date)}</td>
                       <td className="px-5 py-2.5 text-xs font-semibold font-mono text-[var(--text)]">{s.nakladnoy}</td>
                       <td className="px-5 py-2.5 text-xs text-[var(--text)]">{s.client?.name}</td>
-                      <td className="px-5 py-2.5 text-xs text-right font-bold text-emerald-600 font-mono">{fmt(s.totalAmount)} UZS</td>
+                      <td className="px-5 py-2.5 text-xs text-right font-bold text-emerald-600 font-mono">{fmt(s.totalAmount)} {t('units.uzs')}</td>
                     </tr>
                   ))
                 )}
@@ -585,7 +559,7 @@ export default function App() {
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center font-sans">
         <div className="text-center space-y-4">
           <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: 'var(--accent-bg)', borderTopColor: 'var(--accent)' }} />
-          <p className="text-xs text-[var(--text-3)] font-semibold tracking-wider uppercase">Yuklanmoqda...</p>
+          <p className="text-xs text-[var(--text-3)] font-semibold tracking-wider uppercase">{i18n.t('common.loading')}</p>
         </div>
       </div>
     );

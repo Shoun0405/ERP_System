@@ -33,7 +33,7 @@
   --bad:   oklch(0.550 0.230 25);   /* red-600 */
   --bad-bg:oklch(0.960 0.050 25);
 
-  --sans: 'Inter', Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sans: 'Inter', Geist, 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --shadow-sm: 0 1px 3px 0 oklch(0.21 0.04 265 / 0.06);
