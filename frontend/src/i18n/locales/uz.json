@@ -1,0 +1,37 @@
+{
+  "common": {
+    "save": "Saqlash", "saving": "Saqlanmoqda...", "cancel": "Bekor", "delete": "O'chirish",
+    "edit": "Tahrirlash", "close": "Yopish", "all": "Barchasi", "notFound": "Topilmadi",
+    "loading": "Yuklanmoqda...", "restore": "Tiklash", "newClient": "Yangi Mijoz", "export": "Eksport"
+  },
+  "nav": {
+    "section": "Asosiy Bo'limlar",
+    "dashboard": "Dashboard", "clients": "Mijozlar", "products": "Mahsulotlar",
+    "contracts": "Shartnomalar", "sales": "Savdolar", "payments": "Tushumlar",
+    "interactions": "Muloqotlar", "reports": "Hisobotlar", "settings": "Sozlamalar",
+    "users": "Foydalanuvchilar", "audit": "Audit jurnali"
+  },
+  "titles": {
+    "dashboard": "Dashboard", "clients": "Mijozlar (CRM)", "products": "Mahsulotlar katalogi",
+    "contracts": "Shartnomalar", "sales": "Savdolar (Yuk xatlari)", "payments": "Tushumlar reyestri",
+    "interactions": "Muloqotlar tarixi", "reports": "Tizim hisobotlari", "settings": "Tizim sozlamalari",
+    "users": "Foydalanuvchilar (RBAC)", "audit": "Audit jurnali"
+  },
+  "header": {
+    "menu": "Menyu", "searchClients": "Mijoz qidirish...", "userFallback": "Foydalanuvchi",
+    "settings": "Sozlamalar", "logout": "Tizimdan chiqish", "logoutOk": "Xavfsiz ravishda tizimdan chiqildi.",
+    "lightMode": "Yorug' rejim", "darkMode": "Qorong'u rejim"
+  },
+  "dashboard": {
+    "subtitle": "Tizim holati va real vaqt statistikasi", "today": "Bugun",
+    "totalDebt": "Umumiy Qarzdorlik", "totalDebtSub": "Faol qarzdorlik oboroti",
+    "todaySales": "Bugungi Savdo", "todaySalesSub": "Bugungi yuk xatlari summasi",
+    "activeClients": "Faol Mijozlar", "activeClientsSub": "CRM ro'yxatida",
+    "monthlySales": "Oylik Savdo", "monthlySalesSub": "Oxirgi 6 oydagi sotuv dinamikasi (mln UZS)",
+    "topDebtors": "Eng yirik qarzdorlar", "topDebtorsSub": "Oborot bo'yicha eng yuqori qarzlar",
+    "noDebtors": "Qarzdorlar mavjud emas", "recentSales": "So'nggi savdolar",
+    "recentSalesSub": "Tizimga kiritilgan oxirgi yuk xatlari", "noSales": "Hozircha sotuvlar kiritilmagan",
+    "thDate": "Sana", "thWaybill": "Yuk xati №", "thClient": "Mijoz nomi", "thSum": "Summa"
+  },
+  "units": { "uzs": "UZS", "count": "ta" }
+}

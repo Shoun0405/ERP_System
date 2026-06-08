@@ -1,0 +1,37 @@
+{
+  "common": {
+    "save": "保存", "saving": "保存中...", "cancel": "取消", "delete": "删除",
+    "edit": "编辑", "close": "关闭", "all": "全部", "notFound": "未找到",
+    "loading": "加载中...", "restore": "恢复", "newClient": "新客户", "export": "导出"
+  },
+  "nav": {
+    "section": "主要模块",
+    "dashboard": "仪表盘", "clients": "客户", "products": "产品",
+    "contracts": "合同", "sales": "销售", "payments": "收款",
+    "interactions": "联系记录", "reports": "报表", "settings": "设置",
+    "users": "用户", "audit": "审计日志"
+  },
+  "titles": {
+    "dashboard": "仪表盘", "clients": "客户 (CRM)", "products": "产品目录",
+    "contracts": "合同", "sales": "销售 (货运单)", "payments": "收款登记",
+    "interactions": "联系历史", "reports": "系统报表", "settings": "系统设置",
+    "users": "用户 (RBAC)", "audit": "审计日志"
+  },
+  "header": {
+    "menu": "菜单", "searchClients": "搜索客户...", "userFallback": "用户",
+    "settings": "设置", "logout": "退出系统", "logoutOk": "已安全退出系统。",
+    "lightMode": "浅色模式", "darkMode": "深色模式"
+  },
+  "dashboard": {
+    "subtitle": "系统状态与实时统计", "today": "今天",
+    "totalDebt": "总欠款", "totalDebtSub": "活跃应收账款周转",
+    "todaySales": "今日销售", "todaySalesSub": "今日货运单金额",
+    "activeClients": "活跃客户", "activeClientsSub": "CRM 列表中",
+    "monthlySales": "月度销售", "monthlySalesSub": "近 6 个月销售动态 (百万 UZS)",
+    "topDebtors": "最大欠款客户", "topDebtorsSub": "按周转额最高欠款",
+    "noDebtors": "暂无欠款客户", "recentSales": "最近销售",
+    "recentSalesSub": "系统最近录入的货运单", "noSales": "暂无销售记录",
+    "thDate": "日期", "thWaybill": "货运单 №", "thClient": "客户名称", "thSum": "金额"
+  },
+  "units": { "uzs": "UZS", "count": "件" }
+}

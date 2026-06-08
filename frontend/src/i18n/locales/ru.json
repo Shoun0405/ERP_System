@@ -1,0 +1,37 @@
+{
+  "common": {
+    "save": "Сохранить", "saving": "Сохранение...", "cancel": "Отмена", "delete": "Удалить",
+    "edit": "Изменить", "close": "Закрыть", "all": "Все", "notFound": "Не найдено",
+    "loading": "Загрузка...", "restore": "Восстановить", "newClient": "Новый клиент", "export": "Экспорт"
+  },
+  "nav": {
+    "section": "Основные разделы",
+    "dashboard": "Главная", "clients": "Клиенты", "products": "Товары",
+    "contracts": "Договоры", "sales": "Продажи", "payments": "Поступления",
+    "interactions": "Контакты", "reports": "Отчёты", "settings": "Настройки",
+    "users": "Пользователи", "audit": "Журнал аудита"
+  },
+  "titles": {
+    "dashboard": "Главная", "clients": "Клиенты (CRM)", "products": "Каталог товаров",
+    "contracts": "Договоры", "sales": "Продажи (Накладные)", "payments": "Реестр поступлений",
+    "interactions": "История контактов", "reports": "Системные отчёты", "settings": "Системные настройки",
+    "users": "Пользователи (RBAC)", "audit": "Журнал аудита"
+  },
+  "header": {
+    "menu": "Меню", "searchClients": "Поиск клиента...", "userFallback": "Пользователь",
+    "settings": "Настройки", "logout": "Выйти из системы", "logoutOk": "Вы безопасно вышли из системы.",
+    "lightMode": "Светлая тема", "darkMode": "Тёмная тема"
+  },
+  "dashboard": {
+    "subtitle": "Состояние системы и статистика в реальном времени", "today": "Сегодня",
+    "totalDebt": "Общая задолженность", "totalDebtSub": "Оборот активной задолженности",
+    "todaySales": "Продажи сегодня", "todaySalesSub": "Сумма сегодняшних накладных",
+    "activeClients": "Активные клиенты", "activeClientsSub": "В списке CRM",
+    "monthlySales": "Продажи по месяцам", "monthlySalesSub": "Динамика продаж за последние 6 месяцев (млн UZS)",
+    "topDebtors": "Крупнейшие должники", "topDebtorsSub": "Наибольшие долги по обороту",
+    "noDebtors": "Должников нет", "recentSales": "Последние продажи",
+    "recentSalesSub": "Последние внесённые накладные", "noSales": "Продажи пока не внесены",
+    "thDate": "Дата", "thWaybill": "Накладная №", "thClient": "Клиент", "thSum": "Сумма"
+  },
+  "units": { "uzs": "UZS", "count": "шт" }
+}
