@@ -28,14 +28,21 @@ export default function ClientImportModal({ onClose, onDone }) {
       toast.error(t('clients.import.nothingSelected'));
       return;
     }
+    // Faqat haqiqiy data'li (valid/incomplete) qatorlar — error/duplicate data:null,
+    // ular commit'ga tushib opaque "Validatsiya xatosi" bermasin.
+    const clients = preview.rows.filter(r => selected.has(r.rowNum) && r.data).map(r => r.data);
+    if (clients.length === 0) {
+      toast.error(t('clients.import.nothingSelected'));
+      return;
+    }
     setCommitting(true);
     try {
-      const clients = preview.rows.filter(r => selected.has(r.rowNum)).map(r => r.data);
       const { data } = await api.post('/api/clients/import/commit', { clients });
       toast.success(t('clients.import.done', { inserted: data.inserted, skipped: data.skippedDuplicate }));
       onDone();
-    } catch {
-      /* api interceptor toast ko'rsatadi */
+    } catch (err) {
+      // api interceptor faqat err.response bo'lsa toast qiladi; aks holda o'zimiz.
+      if (!err?.response) toast.error(t('errors.server'));
     } finally {
       setCommitting(false);
     }
@@ -54,10 +61,10 @@ export default function ClientImportModal({ onClose, onDone }) {
         headers: { 'Content-Type': XLSX_MIME },
       });
       setPreview(data);
-      // Default: faqat 'valid' belgilangan
+      // Default: faqat 'valid' belgilangan (yangi preview eski tanlovni almashtiradi)
       setSelected(new Set(data.rows.filter(r => r.category === 'valid').map(r => r.rowNum)));
-    } catch {
-      /* api interceptor toast ko'rsatadi */
+    } catch (err) {
+      if (!err?.response) toast.error(t('errors.server'));
     } finally {
       setLoading(false);
       e.target.value = ''; // bir faylni qayta tanlash mumkin bo'lsin

@@ -80,6 +80,10 @@ app.use((err, req, res, next) => {
   if (err.name === 'ZodError') {
     return res.status(400).json({ error: 'Validatsiya xatosi', issues: err.errors });
   }
+  // body-parser (express.raw/json) limit oshsa — generic "Server xatosi" emas, aniq xabar
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: "Fayl juda katta (maks 10MB). Faylni bo'lib yuklang." });
+  }
   res.status(err.status || 500).json({ error: err.publicMessage || 'Server xatosi' });
 });
 

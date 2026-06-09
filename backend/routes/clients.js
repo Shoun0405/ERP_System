@@ -177,14 +177,23 @@ async function loadExistingInns() {
 // POST /api/clients/import/preview — faylni tekshiradi va toifalaydi (DB ga YOZMAYDI)
 router.post('/import/preview', requirePermission('clients', 'create'), rawXlsx, async (req, res, next) => {
   try {
-    if (!req.body || !req.body.length) {
-      return res.status(400).json({ error: 'Fayl yuborilmadi' });
+    // express.raw faqat mos Content-Type da Buffer beradi. Boshqa turdagi tana
+    // (mas. JSON, multipart) kelsa req.body Buffer bo'lmaydi — buni "fayl yo'q" deb
+    // emas, "noto'g'ri format" deb aniq aytamiz.
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      const wrongType = req.body && !Buffer.isBuffer(req.body);
+      return res.status(400).json({
+        error: wrongType ? "Noto'g'ri format. .xlsx fayl yuboring." : 'Fayl yuborilmadi',
+      });
     }
 
     let parsed;
     try {
       parsed = await parseClientsXlsx(req.body);
-    } catch {
+    } catch (e) {
+      // Foydalanuvchiga do'stona 400, lekin haqiqiy sabab (buzilgan zip, OOM, ExcelJS bug)
+      // log/Sentry da ko'rinsin — sokin yutmaymiz.
+      console.error('[clients/import/preview] parse failed:', e);
       return res.status(400).json({ error: "Faylni o'qib bo'lmadi. Shablon .xlsx ekanini tekshiring." });
     }
 

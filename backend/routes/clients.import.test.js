@@ -8,6 +8,7 @@ process.env.NODE_ENV = 'test';
 process.env.TEST_AUTH_BYPASS = '1';
 
 const request = require('supertest');
+const bcrypt = require('bcryptjs');
 const app = require('../app');
 const prisma = require('../prisma');
 
@@ -66,6 +67,23 @@ describe('POST /api/clients/import/preview', () => {
     expect(res.status).toBe(400);
   });
 
+  it("noto'g'ri Content-Type (JSON) → 400", async () => {
+    const res = await request(app)
+      .post('/api/clients/import/preview')
+      .send({ not: 'a file' }); // application/json
+    expect(res.status).toBe(400);
+  });
+
+  it("sarlavha bor, ma'lumot yo'q → 200, summary.total 0", async () => {
+    const buf = await xlsx(HEADERS, []);
+    const res = await request(app)
+      .post('/api/clients/import/preview')
+      .set('Content-Type', XLSX_MIME)
+      .send(buf);
+    expect(res.status).toBe(200);
+    expect(res.body.summary.total).toBe(0);
+  });
+
   it("to'g'ri faylni toifalaydi", async () => {
     const buf = await xlsx(HEADERS, [
       ['Alfa MChJ', `${TST}001`, '901112233', 'Aliyev', 'Toshkent', '20208000000000000001', '00014', 'Ipoteka', 'Vali'],
@@ -103,5 +121,70 @@ describe('POST /api/clients/import/commit', () => {
     expect(res.status).toBe(200);
     expect(res.body.inserted).toBe(0);
     expect(res.body.skippedDuplicate).toBe(1);
+  });
+
+  it("bitta payload ichida takror STIR → faqat bittasi qo'shiladi", async () => {
+    const res = await request(app)
+      .post('/api/clients/import/commit')
+      .send({ clients: [
+        { name: 'Dup A', inn: `${TST}070` },
+        { name: 'Dup B', inn: `${TST}070` },
+      ] });
+    expect(res.status).toBe(200);
+    expect(res.body.inserted).toBe(1);
+    expect(res.body.skippedDuplicate).toBe(1);
+    const count = await prisma.client.count({ where: { inn: `${TST}070` } });
+    expect(count).toBe(1);
+  });
+
+  it("bo'sh clients massivi → 400", async () => {
+    const res = await request(app).post('/api/clients/import/commit').send({ clients: [] });
+    expect(res.status).toBe(400);
+  });
+});
+
+// requirePermission('clients','create') guardini real token bilan tekshiramiz
+// (TEST_AUTH_BYPASS ni x-bypass-auth: false bilan o'chiramiz — rbac.test.mjs naqshi).
+describe('Import RBAC — clients:create huquqi', () => {
+  const password = 'password123';
+  const denyUsername = `imp_deny_${Date.now()}`;
+  let denyId, denyCookie;
+
+  beforeAll(async () => {
+    const hash = await bcrypt.hash(password, 10);
+    const deny = await prisma.user.create({
+      data: {
+        username: denyUsername, password: hash, role: 'user',
+        permissions: { clients: { read: true, create: false, update: false, delete: false } },
+      },
+    });
+    denyId = deny.id;
+    const res = await request(app).post('/api/auth/login').send({ username: denyUsername, password });
+    denyCookie = res.headers['set-cookie'][0];
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { id: denyId } });
+  });
+
+  it('create:false → GET /import/template 403', async () => {
+    const res = await request(app).get('/api/clients/import/template')
+      .set('x-bypass-auth', 'false').set('Cookie', denyCookie);
+    expect(res.status).toBe(403);
+  });
+
+  it('create:false → POST /import/preview 403', async () => {
+    const buf = await xlsx(HEADERS, [['Alfa', `${TST}900`, '', '', '', '', '', '', '']]);
+    const res = await request(app).post('/api/clients/import/preview')
+      .set('x-bypass-auth', 'false').set('Cookie', denyCookie)
+      .set('Content-Type', XLSX_MIME).send(buf);
+    expect(res.status).toBe(403);
+  });
+
+  it('create:false → POST /import/commit 403', async () => {
+    const res = await request(app).post('/api/clients/import/commit')
+      .set('x-bypass-auth', 'false').set('Cookie', denyCookie)
+      .send({ clients: [{ name: 'X', inn: `${TST}901` }] });
+    expect(res.status).toBe(403);
   });
 });

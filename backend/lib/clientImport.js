@@ -23,7 +23,6 @@ const EMPTY_RAW = () => ({
 });
 
 // ExcelJS katak qiymatini matnga aylantiradi. Raqam/forma/rich-text holatlarini ham qamraydi.
-// Uzun raqamlar (STIR/hisob) shablonda matn formatida — shu sabab String() yetarli.
 function cellText(cell) {
   const v = cell == null ? null : cell.value;
   if (v == null) return '';
@@ -32,8 +31,26 @@ function cellText(cell) {
     if (v.result != null) return String(v.result).trim();  // formula natijasi
     return String(v).trim();
   }
+  if (typeof v === 'number') {
+    // Butun sonlarni eksponensial yozuvsiz to'liq string qilamiz (toFixed — ICU shart emas).
+    // Aniqlik yo'qolgan-yo'qolmagani isUnsafeNumericCell() bilan alohida aniqlanadi.
+    return Number.isInteger(v) ? v.toFixed(0) : String(v);
+  }
   return String(v).trim();
 }
+
+// Katak SON bo'lib, JS xavfsiz butun son chegarasidan oshsa (>= 2^53), asl raqamlar
+// (uzun STIR/hisob raqami) aniqligini yo'qotadi. Bunday katakni belgilab, foydalanuvchini
+// MATN formatiga yo'naltiramiz — buzilgan moliyaviy identifikator sokin saqlanmasligi uchun.
+function isUnsafeNumericCell(cell) {
+  const v = cell == null ? null : cell.value;
+  return typeof v === 'number' && !Number.isSafeInteger(v);
+}
+
+const FIELD_LABEL = {
+  name: 'Nomi', inn: 'STIR', phone: 'Telefon', director: 'Direktor', address: 'Manzil',
+  account: 'Hisob raqami', mfo: 'MFO', bank: 'Bank', seller: 'Sotuvchi',
+};
 
 // Buffer (.xlsx) → { headerOk, rows: [{ rowNum, raw }] }
 // headerOk=false agar 'Nomi' ustuni topilmasa.
@@ -57,13 +74,16 @@ async function parseClientsXlsx(buffer) {
   ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // sarlavha
     const raw = EMPTY_RAW();
+    const numericRisk = []; // aniqligini yo'qotgan raqamli kataklar (field nomlari)
     let hasAny = false;
     for (const [col, field] of Object.entries(colField)) {
-      const txt = cellText(row.getCell(Number(col)));
+      const cell = row.getCell(Number(col));
+      const txt = cellText(cell);
       raw[field] = txt;
       if (txt) hasAny = true;
+      if (isUnsafeNumericCell(cell)) numericRisk.push(field);
     }
-    if (hasAny) rows.push({ rowNum: rowNumber, raw });
+    if (hasAny) rows.push({ rowNum: rowNumber, raw, numericRisk });
   });
 
   return { headerOk: true, rows };
@@ -73,10 +93,17 @@ async function parseClientsXlsx(buffer) {
 // existingInns @unique cheklovi bo'yicha — soft-delete qilinganlar ham kiradi.
 function categorize(rows, existingInns) {
   const seen = new Set(); // fayl ichidagi STIR takrorini aniqlash
-  return rows.map(({ rowNum, raw }) => {
+  return rows.map(({ rowNum, raw, numericRisk }) => {
     const name = (raw.name || '').trim();
     if (!name) {
       return { rowNum, name: '', inn: raw.inn || '', category: 'error', reason: "Nomi (tashkilot nomi) bo'sh", data: null };
+    }
+
+    // Aniqligini yo'qotgan raqamli katak (mas. 20 xonali hisob raqami matn emas) → xato.
+    if (numericRisk && numericRisk.length) {
+      const labels = numericRisk.map(f => FIELD_LABEL[f] || f).join(', ');
+      return { rowNum, name, inn: raw.inn || '', category: 'error',
+        reason: `${labels} ustunini MATN formatida kiriting (raqam aniqligi yo'qoldi)`, data: null };
     }
 
     let data;
