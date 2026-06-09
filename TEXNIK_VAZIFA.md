@@ -5,7 +5,7 @@
 
 ---
 
-## Joriy holat (oxirgi yangilanish: 2026-06-08)
+## Joriy holat (oxirgi yangilanish: 2026-06-09)
 
 **To'liq audit o'tkazildi (2026-06-02)** — fayl oxiridagi "🔬 DIAGNOSTIK HISOBOT" bo'limiga qarang.
 3 ta CRITICAL, 6 ta HIGH topildi.
@@ -38,8 +38,21 @@ qilindi (eski branch `feat/i18n-multilanguage` o'chirildi). Spec/reja: `docs/sup
 ZH tarjima sifatini (atamalar) foydalanuvchi ko'rigidan o'tkazishi tavsiya etiladi. **Eslatma:** yangi npm
 paketlar qo'shildi — dev serverni qayta ishga tushirish kerak (Vite dep re-optimize).
 
+**Bajarildi (2026-06-09): Mijozlarni Excel orqali import — DONE ✅.** Clients sahifasiga shablon
+yuklab olish + Excel'dan import qo'shildi. 3 backend endpoint (`GET /api/clients/import/template`
+tayyor `.xlsx` shablon, `POST /import/preview` — `express.raw` bilan faylni tekshirib toifalaydi,
+DB'ga yozmaydi; `POST /import/commit` — tasdiqlangan qatorlarni `createMany({skipDuplicates})` bilan).
+Parse+toifalash mantiqi `backend/lib/clientImport.js` da (valid / incomplete / duplicate-STIR /
+error). Frontend: `ClientImportModal.jsx` — interaktiv preview, **per-qator** ☑ tanlov (foydalanuvchi
+xohlagan qatorni chiqarib tashlaydi), dublikat STIR o'tkaziladi, xato/raqamli-katak qatorlar bloklanadi.
+i18n `clients.import.*` (uz/ru/zh). Adversarial review (3 agent) tuzatishlari: raqamli katak aniqlik
+himoyasi, content-type/413 xabarlari, modal null-data guard. Test: **135/135 backend PASS** (13 yangi —
+unit + RBAC 403 + payload-ichi dublikat), lint 0 xato, build OK, i18n parity.
+Spec/reja: `docs/superpowers/{specs,plans}/2026-06-09-clients-excel-import*`. Branch: `feat/clients-excel-import`.
+
 **Keyingi qadam:** Bosqich 15 (ombor + C-2 race-lock) yoki Bosqich 17 (test qamrovi kengaytirish + CI).
 i18n bo'yicha kelajak: hujjat/print shablonlarini (PDF/Word + Sales print bloki) tarjima qilish (alohida bosqich).
+Excel import kelajagi: mahsulot/to'lov modullari uchun ham shu naqsh (alohida bosqich).
 
 **Bosqich 1–13 HAMMASI BAJARILDI. Bosqich 14 (JWT) — C-1/C-3/H-3/M-1/H-4 BAJARILDI (CSRF ixtiyoriy qoldi).**
 
