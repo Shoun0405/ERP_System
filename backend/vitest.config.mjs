@@ -10,6 +10,6 @@ export default defineConfig({
     pool:          'forks',
     fileParallelism: false,
     forks:         { singleFork: true },
-    include:       ['tests/**/*.test.mjs'],
+    include:       ['tests/**/*.test.mjs', 'lib/**/*.test.js', 'routes/**/*.test.js'],
   },
 });
