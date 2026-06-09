@@ -10,7 +10,8 @@ import AuditCell from '../components/AuditCell';
 import { useUsersLookup } from '../hooks/useUsersLookup';
 import { downloadFile } from '../lib/download';
 import { fmt, fmtDate } from '../lib/format';
-import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, Copy } from 'lucide-react';
+import ClientImportModal from './ClientImportModal';
+import { Search, Plus, X, Edit2, Trash2, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Upload, FileText, Copy } from 'lucide-react';
 
 const EMPTY = { name:'', inn:'', phone:'', director:'', address:'', category:'', status:'Yangi', account:'', mfo:'', bank:'', seller:'', country:'' };
 const SC = {
@@ -252,6 +253,10 @@ export default function Clients({ user }) {
     downloadFile(`/api/export/clients/excel?${qs}`, `mijozlar_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  const [showImport, setShowImport] = useState(false);
+  const handleTemplate = () =>
+    downloadFile('/api/clients/import/template', 'mijozlar-shablon.xlsx');
+
   const toggleSort = col => {
     setSort(s => ({ col, dir: s.col===col && s.dir==='asc' ? 'desc' : 'asc' }));
     setPage(1);
@@ -334,6 +339,16 @@ export default function Clients({ user }) {
           )}
         </div>
         <div className="flex gap-2">
+          {canCreate && (
+            <button onClick={handleTemplate} className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
+              <Download size={16} strokeWidth={2.2}/> {t('clients.import.templateBtn')}
+            </button>
+          )}
+          {canCreate && (
+            <button onClick={() => setShowImport(true)} className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
+              <Upload size={16} strokeWidth={2.2}/> {t('clients.import.importBtn')}
+            </button>
+          )}
           <button onClick={handleExport} className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)] rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
             <Download size={16} strokeWidth={2.2}/> {t('common.excel')}
           </button>
@@ -777,6 +792,13 @@ export default function Clients({ user }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showImport && (
+        <ClientImportModal
+          onClose={() => setShowImport(false)}
+          onDone={() => { setShowImport(false); fetchClients(); }}
+        />
       )}
     </div>
   );
