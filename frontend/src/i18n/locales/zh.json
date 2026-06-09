@@ -289,6 +289,37 @@
       "curUsd": "USD (美元)",
       "deleteTitle": "删除合同",
       "deleteWarn": "如有关联的销售或收款，则无法删除。"
+    },
+    "import": {
+      "templateBtn": "模板",
+      "importBtn": "导入",
+      "title": "从 Excel 导入客户",
+      "selectFile": "选择 Excel 文件 (.xlsx)",
+      "downloadTemplateHint": "请先用「模板」按钮下载模板，填写后上传到此处。",
+      "parsing": "正在检查文件...",
+      "summary": {
+        "valid": "有效",
+        "incomplete": "不完整",
+        "duplicate": "重复",
+        "error": "错误"
+      },
+      "cat": {
+        "valid": "有效",
+        "incomplete": "不完整",
+        "duplicate": "重复",
+        "error": "错误"
+      },
+      "th": {
+        "row": "№",
+        "name": "名称",
+        "inn": "税号",
+        "status": "状态",
+        "reason": "说明"
+      },
+      "willImport": "将导入 {{count}} 行",
+      "confirm": "确认并导入",
+      "done": "已添加 {{inserted}} 个客户，跳过 {{skipped}} 个",
+      "nothingSelected": "未选择要导入的行"
     }
   },
   "contracts": {

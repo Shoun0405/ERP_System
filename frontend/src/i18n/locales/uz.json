@@ -292,6 +292,37 @@
       "curUsd": "USD (dollar)",
       "deleteTitle": "Shartnomani o'chirish",
       "deleteWarn": "Bog'langan savdo yoki to'lov bo'lsa o'chirib bo'lmaydi."
+    },
+    "import": {
+      "templateBtn": "Shablon",
+      "importBtn": "Import",
+      "title": "Mijozlarni Excel'dan import qilish",
+      "selectFile": "Excel faylni tanlang (.xlsx)",
+      "downloadTemplateHint": "Avval 'Shablon' tugmasi orqali shablonni yuklab oling, to'ldiring va shu yerga yuklang.",
+      "parsing": "Fayl tekshirilmoqda...",
+      "summary": {
+        "valid": "To'g'ri",
+        "incomplete": "To'liq emas",
+        "duplicate": "Dublikat",
+        "error": "Xato"
+      },
+      "cat": {
+        "valid": "To'g'ri",
+        "incomplete": "To'liq emas",
+        "duplicate": "Dublikat",
+        "error": "Xato"
+      },
+      "th": {
+        "row": "№",
+        "name": "Nomi",
+        "inn": "STIR",
+        "status": "Holat",
+        "reason": "Izoh"
+      },
+      "willImport": "{{count}} qator import qilinadi",
+      "confirm": "Tasdiqlash va import",
+      "done": "{{inserted}} mijoz qo'shildi, {{skipped}} ta o'tkazib yuborildi",
+      "nothingSelected": "Import uchun qator tanlanmagan"
     }
   },
   "contracts": {
