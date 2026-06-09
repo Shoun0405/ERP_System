@@ -1,9 +1,19 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
+const { z } = require('zod');
 const prisma = require('../prisma');
 const { Prisma } = require('@prisma/client');
+const ExcelJS = require('exceljs');
 const { clientSchema } = require('./_schemas');
 const { requireRole, requirePermission, requireSuperAdmin } = require('../middleware/rbac');
 const { logAudit } = require('../lib/audit');
+const { parseClientsXlsx, categorize } = require('../lib/clientImport');
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const MAX_IMPORT_ROWS = 2000;
+// .xlsx binar tanasini Buffer sifatida qabul qilish. Global express.json() faqat
+// application/json ni parse qiladi — shu sabab bu route'da ziddiyat yo'q.
+const rawXlsx = express.raw({ type: [XLSX_MIME, 'application/octet-stream'], limit: '10mb' });
 
 const SORT_COLS = {
   name:      'name',
@@ -102,6 +112,126 @@ router.get('/', requirePermission('clients', 'read'), async (req, res, next) => 
     next(e);
   }
 });
+
+// ─── Excel import ────────────────────────────────────────────────────────
+// Marshrutlar /:id dan oldin: '/import/*' ni :id deb o'qib qo'ymaslik uchun.
+
+// GET /api/clients/import/template — to'ldirish uchun tayyor .xlsx shablon
+router.get('/import/template', requirePermission('clients', 'create'), async (req, res, next) => {
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'ERP System';
+
+    const ws = wb.addWorksheet('Mijozlar');
+    ws.columns = [
+      { header: 'Nomi',         key: 'name',     width: 28 },
+      { header: 'STIR',         key: 'inn',      width: 16 },
+      { header: 'Telefon',      key: 'phone',    width: 16 },
+      { header: 'Direktor',     key: 'director', width: 24 },
+      { header: 'Manzil',       key: 'address',  width: 30 },
+      { header: 'Hisob raqami', key: 'account',  width: 24 },
+      { header: 'MFO',          key: 'mfo',      width: 10 },
+      { header: 'Bank',         key: 'bank',     width: 24 },
+      { header: 'Sotuvchi',     key: 'seller',   width: 20 },
+    ];
+    ws.getRow(1).font = { bold: true };
+
+    // STIR/Telefon/Hisob/MFO — matn formatida (uzun raqamlar yaxlitlanmasin)
+    ['B', 'C', 'F', 'G'].forEach(col => { ws.getColumn(col).numFmt = '@'; });
+
+    ws.addRow({
+      name: 'Namuna MChJ', inn: '123456789', phone: '901234567',
+      director: 'Aliyev Vali', address: 'Toshkent, Chilonzor',
+      account: '20208000000000000001', mfo: '00014', bank: 'Ipoteka Bank',
+      seller: 'Sotuvchi ismi',
+    });
+
+    const help = wb.addWorksheet("Yo'riqnoma");
+    help.getColumn(1).width = 95;
+    [
+      "MIJOZLARNI IMPORT QILISH — YO'RIQNOMA",
+      '',
+      "1. 'Mijozlar' varag'idagi sarlavha qatorini O'ZGARTIRMANG.",
+      "2. 'Nomi' ustuni MAJBURIY — bo'sh qator import qilinmaydi.",
+      "3. 'STIR' takrorlanmasin. Bazada mavjud STIR o'tkazib yuboriladi.",
+      "4. Bir qatorda STIR/Direktor/Manzil/Hisob/MFO/Bank/Sotuvchidan biri bo'sh bo'lsa,",
+      "   u 'to'liq emas' deb belgilanadi — qo'shish-qo'shmaslikni import paytida tanlaysiz.",
+      "5. STIR, Telefon, Hisob raqami, MFO ustunlari MATN formatida.",
+      "6. Namuna qatorni o'chirib, o'z ma'lumotlaringizni kiriting.",
+      "7. Bir faylda 2000 tagacha qator bo'lishi mumkin.",
+    ].forEach((line, i) => { const r = help.addRow([line]); if (i === 0) r.font = { bold: true }; });
+
+    res.setHeader('Content-Type', XLSX_MIME);
+    res.setHeader('Content-Disposition', 'attachment; filename="mijozlar-shablon.xlsx"');
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (e) { next(e); }
+});
+
+// Mavjud STIR lar to'plami (@unique soft-delete'larni ham qamraydi → deletedAt filtri YO'Q)
+async function loadExistingInns() {
+  const rows = await prisma.client.findMany({ where: { inn: { not: null } }, select: { inn: true } });
+  return new Set(rows.map(r => r.inn));
+}
+
+// POST /api/clients/import/preview — faylni tekshiradi va toifalaydi (DB ga YOZMAYDI)
+router.post('/import/preview', requirePermission('clients', 'create'), rawXlsx, async (req, res, next) => {
+  try {
+    if (!req.body || !req.body.length) {
+      return res.status(400).json({ error: 'Fayl yuborilmadi' });
+    }
+
+    let parsed;
+    try {
+      parsed = await parseClientsXlsx(req.body);
+    } catch {
+      return res.status(400).json({ error: "Faylni o'qib bo'lmadi. Shablon .xlsx ekanini tekshiring." });
+    }
+
+    if (!parsed.headerOk) {
+      return res.status(400).json({ error: "Shablon ustunlari topilmadi. 'Nomi' ustuni bo'lishi shart." });
+    }
+    if (parsed.rows.length > MAX_IMPORT_ROWS) {
+      return res.status(400).json({ error: `${MAX_IMPORT_ROWS} dan ortiq qator. Faylni bo'lib yuklang.` });
+    }
+
+    const existingInns = await loadExistingInns();
+    const rows = categorize(parsed.rows, existingInns);
+
+    const summary = { total: rows.length, valid: 0, incomplete: 0, duplicate: 0, error: 0 };
+    rows.forEach(r => { summary[r.category] += 1; });
+
+    res.json({ summary, rows });
+  } catch (e) { next(e); }
+});
+
+const importCommitSchema = z.object({
+  clients: z.array(clientSchema).min(1).max(MAX_IMPORT_ROWS),
+});
+
+// POST /api/clients/import/commit — tasdiqlangan qatorlarni qo'shadi
+router.post('/import/commit', requirePermission('clients', 'create'), async (req, res, next) => {
+  try {
+    const { clients } = importCommitSchema.parse(req.body);
+
+    const existingInns = await loadExistingInns();
+    const toInsert = clients.filter(c => !(c.inn && existingInns.has(c.inn)));
+    const data = toInsert.map(c => ({ ...c, createdById: req.user.id }));
+
+    const result = data.length
+      ? await prisma.client.createMany({ data, skipDuplicates: true })
+      : { count: 0 };
+
+    await logAudit(req.user.id, 'import', 'client', null, { inserted: result.count, requested: clients.length }, req);
+
+    res.json({
+      inserted: result.count,
+      skippedDuplicate: clients.length - result.count,
+      requested: clients.length,
+    });
+  } catch (e) { next(e); }
+});
+// ─── Excel import oxiri ──────────────────────────────────────────────────
 
 router.post('/', requirePermission('clients', 'create'), async (req, res, next) => {
   try {
